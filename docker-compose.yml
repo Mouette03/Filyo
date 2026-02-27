@@ -1,0 +1,54 @@
+services:
+  backend:
+    image: ghcr.io/${GITHUB_REPOSITORY:-your-username/filyo}/backend:latest
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: filyo-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      HOST: 0.0.0.0
+      DATABASE_URL: file:/data/filyo.db
+      UPLOAD_DIR: /data/uploads
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+      JWT_SECRET: ${JWT_SECRET:-filyo-super-secret-change-me-in-production}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    volumes:
+      - filyo_data:/data
+    networks:
+      - filyo_net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  frontend:
+    image: ghcr.io/${GITHUB_REPOSITORY:-your-username/filyo}/frontend:latest
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: filyo-frontend
+    restart: unless-stopped
+    ports:
+      - "${PORT:-80}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - filyo_net
+
+volumes:
+  filyo_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DATA_PATH:-./data}
+
+networks:
+  filyo_net:
+    driver: bridge

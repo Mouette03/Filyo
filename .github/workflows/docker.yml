@@ -1,0 +1,153 @@
+name: Build & Publish Docker Images
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*.*.*"]
+  pull_request:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_BACKEND: ghcr.io/${{ github.repository }}/backend
+  IMAGE_FRONTEND: ghcr.io/${{ github.repository }}/frontend
+
+jobs:
+  # ----------------------------------------------------------------
+  # Lint & type-check
+  # ----------------------------------------------------------------
+  lint:
+    name: Lint & type-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Install backend deps
+        run: npm ci
+        working-directory: ./backend
+
+      - name: Type-check backend
+        run: npx tsc --noEmit
+        working-directory: ./backend
+
+      - name: Install frontend deps
+        run: npm ci
+        working-directory: ./frontend
+
+      - name: Type-check frontend
+        run: npx tsc --noEmit
+        working-directory: ./frontend
+
+  # ----------------------------------------------------------------
+  # Build & push Docker images
+  # ----------------------------------------------------------------
+  docker:
+    name: Docker — ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    needs: lint
+    permissions:
+      contents: read
+      packages: write
+
+    strategy:
+      matrix:
+        service: [backend, frontend]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU (multi-arch)
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/${{ matrix.service }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=ref,event=branch
+            type=sha,prefix=sha-,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: ./${{ matrix.service }}
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+  # ----------------------------------------------------------------
+  # Create GitHub Release on tag push
+  # ----------------------------------------------------------------
+  release:
+    name: GitHub Release
+    runs-on: ubuntu-latest
+    needs: docker
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate docker-compose for release
+        run: |
+          VERSION=${GITHUB_REF_NAME}
+          REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          sed "s|your-username/filyo|${REPO}|g" docker-compose.yml \
+            | sed "s|:latest|:${VERSION}|g" \
+            > docker-compose.release.yml
+          cat docker-compose.release.yml
+
+      - name: Extract changelog
+        id: changelog
+        run: |
+          echo "## What's Changed" > /tmp/release_notes.md
+          git log $(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || git rev-list --max-parents=0 HEAD)..HEAD \
+            --pretty=format:"- %s (%h)" >> /tmp/release_notes.md || true
+          echo "" >> /tmp/release_notes.md
+          echo "## Docker Images" >> /tmp/release_notes.md
+          echo "\`\`\`bash" >> /tmp/release_notes.md
+          echo "# Télécharger et lancer Filyo ${{ github.ref_name }}" >> /tmp/release_notes.md
+          REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          echo "docker pull ghcr.io/${REPO}/backend:${{ github.ref_name }}" >> /tmp/release_notes.md
+          echo "docker pull ghcr.io/${REPO}/frontend:${{ github.ref_name }}" >> /tmp/release_notes.md
+          echo "" >> /tmp/release_notes.md
+          echo "# Ou via docker-compose (fichier joint) :" >> /tmp/release_notes.md
+          echo "docker compose -f docker-compose.release.yml up -d" >> /tmp/release_notes.md
+          echo "\`\`\`" >> /tmp/release_notes.md
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: /tmp/release_notes.md
+          files: docker-compose.release.yml
+          token: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,81 @@
+import Fastify, { FastifyRequest, FastifyReply } from 'fastify'
+import cors from '@fastify/cors'
+import multipart from '@fastify/multipart'
+import jwt from '@fastify/jwt'
+import staticFiles from '@fastify/static'
+import { fileRoutes } from './routes/files'
+import { shareRoutes } from './routes/shares'
+import { uploadRequestRoutes } from './routes/uploadRequests'
+import { adminRoutes } from './routes/admin'
+import { authRoutes } from './routes/auth'
+import { userRoutes } from './routes/users'
+import { settingsRoutes } from './routes/settings'
+
+const app = Fastify({
+  logger: {
+    level: process.env.LOG_LEVEL || 'info',
+    transport: {
+      target: 'pino-pretty',
+      options: { colorize: true }
+    }
+  },
+  bodyLimit: 10 * 1024 * 1024 * 1024 // 10 GB
+})
+
+// ── Décorateurs d'authentification ──────────────────────────────────────────
+app.decorate('authenticate', async function (req: FastifyRequest, reply: FastifyReply) {
+  try {
+    await req.jwtVerify()
+  } catch {
+    return reply.code(401).send({ error: 'Token invalide ou manquant' })
+  }
+})
+
+app.decorate('adminOnly', async function (req: FastifyRequest, reply: FastifyReply) {
+  const user = (req as any).user
+  if (!user || user.role !== 'ADMIN') {
+    return reply.code(403).send({ error: 'Accès réservé aux administrateurs' })
+  }
+})
+
+async function bootstrap() {
+  // CORS
+  await app.register(cors, {
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    credentials: true
+  })
+
+  // JWT
+  await app.register(jwt, {
+    secret: process.env.JWT_SECRET || 'filyo-super-secret-change-me-in-production'
+  })
+
+  // Multipart (file upload)
+  await app.register(multipart, {
+    limits: { fileSize: 10 * 1024 * 1024 * 1024 } // 10 GB
+  })
+
+  // Servir les fichiers statiques uploadés (logos…)
+  const UPLOAD_DIR = process.env.UPLOAD_DIR || '/data/uploads'
+  await app.register(staticFiles, { root: UPLOAD_DIR, prefix: '/uploads/' })
+
+  // ── Routes ──
+  await app.register(authRoutes,          { prefix: '/api/auth' })
+  await app.register(userRoutes,          { prefix: '/api/users' })
+  await app.register(settingsRoutes,      { prefix: '/api/settings' })
+  await app.register(fileRoutes,          { prefix: '/api/files' })
+  await app.register(shareRoutes,         { prefix: '/api/shares' })
+  await app.register(uploadRequestRoutes, { prefix: '/api/upload-requests' })
+  await app.register(adminRoutes,         { prefix: '/api/admin' })
+
+  // Health check
+  app.get('/health', async () => ({ status: 'ok', version: '1.0.0' }))
+
+  const port = parseInt(process.env.PORT || '3001')
+  const host = process.env.HOST || '0.0.0.0'
+
+  await app.listen({ port, host })
+  console.log(`🚀 Filyo backend running on http://${host}:${port}`)
+}
+
+bootstrap().catch(console.error)
