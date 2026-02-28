@@ -3,6 +3,9 @@ import cors from '@fastify/cors'
 import multipart from '@fastify/multipart'
 import jwt from '@fastify/jwt'
 import staticFiles from '@fastify/static'
+import path from 'path'
+import { existsSync } from 'fs'
+import { readFile } from 'fs/promises'
 import { fileRoutes } from './routes/files'
 import { shareRoutes } from './routes/shares'
 import { uploadRequestRoutes } from './routes/uploadRequests'
@@ -70,6 +73,27 @@ async function bootstrap() {
 
   // Health check
   app.get('/health', async () => ({ status: 'ok', version: '1.0.0' }))
+
+  // ── Servir le frontend React (production) ─────────────────────
+  const FRONTEND_DIST = process.env.FRONTEND_DIST
+  if (FRONTEND_DIST && existsSync(FRONTEND_DIST)) {
+    // Fichiers statiques (JS, CSS, images…)
+    await app.register(staticFiles, {
+      root: FRONTEND_DIST,
+      prefix: '/',
+      wildcard: false,
+      decorateReply: false, // déjà enregistré pour /uploads/
+    })
+
+    // SPA fallback : toute route non-API → index.html (React Router)
+    app.setNotFoundHandler(async (req, reply) => {
+      if (req.url.startsWith('/api/') || req.url.startsWith('/uploads/')) {
+        return reply.code(404).send({ error: 'Not found' })
+      }
+      const html = await readFile(path.join(FRONTEND_DIST, 'index.html'), 'utf-8')
+      return reply.type('text/html').send(html)
+    })
+  }
 
   const port = parseInt(process.env.PORT || '3001')
   const host = process.env.HOST || '0.0.0.0'
