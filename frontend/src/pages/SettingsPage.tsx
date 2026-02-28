@@ -5,10 +5,10 @@ import { getSettings, updateAppName, uploadLogo, deleteLogo, getSmtpSettings, up
 import { useAppSettingsStore } from '../stores/useAppSettingsStore'
 
 export default function SettingsPage() {
-  const { appName: storedName, logoUrl: storedLogo, setSettings } = useAppSettingsStore()
+  const { settings, setSettings } = useAppSettingsStore()
 
-  const [appName, setAppName] = useState(storedName || 'Filyo')
-  const [logoUrl, setLogoUrl] = useState(storedLogo || '')
+  const [appName, setAppName] = useState(settings.appName || 'Filyo')
+  const [logoUrl, setLogoUrl] = useState(settings.logoUrl || '')
   const [saving, setSaving] = useState(false)
   const [siteUrl, setSiteUrl] = useState('')
   const [savingUrl, setSavingUrl] = useState(false)
@@ -48,7 +48,7 @@ export default function SettingsPage() {
     setSaving(true)
     try {
       const res = await updateAppName(appName.trim())
-      setSettings(res.data.appName, logoUrl)
+      setSettings({ appName: res.data.appName, logoUrl: logoUrl || null })
       toast.success('Nom mis à jour')
     } catch { toast.error('Erreur lors de la sauvegarde') }
     setSaving(false)
@@ -76,7 +76,7 @@ export default function SettingsPage() {
       const res = await uploadLogo(form)
       const newLogoUrl = res.data.logoUrl
       setLogoUrl(newLogoUrl)
-      setSettings(appName, newLogoUrl)
+      setSettings({ appName, logoUrl: newLogoUrl })
       toast.success('Logo mis à jour')
     } catch { toast.error('Erreur lors du téléversement') }
     setUploading(false)
@@ -88,7 +88,7 @@ export default function SettingsPage() {
     try {
       await deleteLogo()
       setLogoUrl('')
-      setSettings(appName, '')
+      setSettings({ appName, logoUrl: null })
       toast.success('Logo supprimé')
     } catch { toast.error('Erreur lors de la suppression') }
     setDeleting(false)

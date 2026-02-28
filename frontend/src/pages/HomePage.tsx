@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
-import { Upload, X, Copy, Check, Lock, Clock, Download, Plus, Trash2, Link } from 'lucide-react'
+import { Upload, X, Copy, Check, Lock, Clock, Download, Plus, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { uploadFiles } from '../api/client'
 import { formatBytes, getFileIcon } from '../lib/utils'
