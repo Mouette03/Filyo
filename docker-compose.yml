@@ -12,11 +12,6 @@ services:
       - "${PORT:-3001}:3001"
     environment:
       NODE_ENV: production
-      PORT: 3001
-      HOST: 0.0.0.0
-      DATABASE_URL: file:/data/filyo.db
-      UPLOAD_DIR: /data/uploads
-      FRONTEND_DIST: /app/public
       JWT_SECRET: ${JWT_SECRET:-filyo-super-secret-change-me-in-production}
       LOG_LEVEL: ${LOG_LEVEL:-info}
     volumes:
