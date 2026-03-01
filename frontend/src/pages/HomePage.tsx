@@ -173,7 +173,7 @@ export default function HomePage() {
                   {emailSent ? 'Envoyé' : 'Envoyer'}
                 </button>
               </div>
-              <p className="text-xs text-white/25 mt-1.5">Le ou les liens de partage seront envoyés à cette adresse.</p>
+              <p className="text-xs text-white/40 mt-1.5">Le ou les liens de partage seront envoyés à cette adresse.</p>
             </div>
 
             {/* Actions */}

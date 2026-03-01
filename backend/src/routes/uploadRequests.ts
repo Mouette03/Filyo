@@ -71,10 +71,10 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
       where: { token: req.params.token }
     })
     if (!request || !request.active) {
-      return reply.code(404).send({ error: 'Lien invalide ou desactive' })
+      return reply.code(404).send({ error: 'Lien invalide ou désactivé' })
     }
     if (request.expiresAt && request.expiresAt < new Date()) {
-      return reply.code(410).send({ error: 'Ce lien de depot a expire' })
+      return reply.code(410).send({ error: 'Ce lien de dépôt a expiré' })
     }
 
     return {
@@ -95,10 +95,10 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
       include: { _count: { select: { receivedFiles: true } } }
     })
     if (!request || !request.active) {
-      return reply.code(404).send({ error: 'Lien invalide ou desactive' })
+      return reply.code(404).send({ error: 'Lien invalide ou désactivé' })
     }
     if (request.expiresAt && request.expiresAt < new Date()) {
-      return reply.code(410).send({ error: 'Lien expire' })
+      return reply.code(410).send({ error: 'Lien expiré' })
     }
     if (request.maxFiles && request._count.receivedFiles >= request.maxFiles) {
       return reply.code(429).send({ error: 'Limite de fichiers atteinte' })

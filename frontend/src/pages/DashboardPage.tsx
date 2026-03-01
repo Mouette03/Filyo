@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Trash2, Download, RefreshCw, Copy, Check, Eye, ToggleLeft, ToggleRight, HardDrive, Clock, Mail, Send, ExternalLink, User, TimerOff, AlertTriangle } from 'lucide-react'
+import { Trash2, Download, RefreshCw, Copy, Check, Eye, ToggleLeft, ToggleRight, HardDrive, Clock, Mail, Send, ExternalLink, User, TimerOff, AlertTriangle, MessageSquare } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { useAuthStore } from '../stores/useAuthStore'
 import {
   listFiles, deleteFile, listUploadRequests,
   deleteUploadRequest, toggleUploadRequest, getStats,
@@ -33,6 +34,7 @@ interface Stats {
 type Tab = 'sent' | 'requests'
 
 export default function DashboardPage() {
+  const isAdmin = useAuthStore(s => s.isAdmin())
   const [tab, setTab] = useState<Tab>('sent')
   const [files, setFiles] = useState<FileItem[]>([])
   const [requests, setRequests] = useState<UploadRequest[]>([])
@@ -53,11 +55,11 @@ export default function DashboardPage() {
     setLoading(true)
     try {
       const [filesRes, reqRes, statsRes] = await Promise.all([
-        listFiles(), listUploadRequests(), getStats()
+        listFiles(), listUploadRequests(), ...(isAdmin ? [getStats()] : [Promise.resolve(null)])
       ])
       setFiles(filesRes.data)
       setRequests(reqRes.data)
-      setStats(statsRes.data)
+      if (statsRes) setStats((statsRes as any).data)
     } catch { toast.error('Erreur de chargement') }
     setLoading(false)
   }
@@ -175,9 +177,11 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-2xl font-bold">Tableau de bord</h1>
         <div className="flex gap-2">
-          <button onClick={handleCleanup} className="btn-secondary flex items-center gap-2 text-sm">
-            <Trash2 size={14} /> Nettoyer expirés
-          </button>
+          {isAdmin && (
+            <button onClick={handleCleanup} className="btn-secondary flex items-center gap-2 text-sm">
+              <Trash2 size={14} /> Nettoyer expirés
+            </button>
+          )}
           <button onClick={load} className="btn-secondary flex items-center gap-2 text-sm">
             <RefreshCw size={14} /> Actualiser
           </button>
@@ -293,7 +297,11 @@ export default function DashboardPage() {
                       {f.maxDownloads !== null
                         ? <span className={f.downloads >= f.maxDownloads ? 'text-red-400' : ''}>{f.downloads}/{f.maxDownloads} téléchargement(s)</span>
                         : <>{f.downloads} téléchargement(s)</>}
-                      {f.expiresAt ? ` · Expire ${formatDate(f.expiresAt)}` : ' · Sans expiration'}
+                      {f.expiresAt
+                        ? new Date(f.expiresAt) <= new Date()
+                          ? <span className="text-red-400"> · Expiré</span>
+                          : ` · Expire ${formatDate(f.expiresAt)}`
+                        : ' · Sans expiration'}
                     </p>
                   </div>
                   {/* Boutons desktop */}
@@ -563,7 +571,12 @@ export default function DashboardPage() {
                         </div>
                       )}
                       {f.message && (
-                        <p className="text-xs text-white/50 italic mt-1.5 pl-7">"{f.message}"</p>
+                        <div className="mt-2 flex items-start gap-2 pt-2 border-t border-white/5">
+                          <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <MessageSquare size={10} className="text-white/50" />
+                          </div>
+                          <p className="text-xs text-white/60 italic">"{f.message}"</p>
+                        </div>
                       )}
                     </div>
                   ))}
