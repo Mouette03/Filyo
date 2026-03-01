@@ -160,14 +160,15 @@ export default function UsersPage() {
       </div>
 
       {/* Onglets */}
-      <div className="flex gap-1 mb-8 bg-surface-800 rounded-xl p-1.5">
+      <div className="mb-8 bg-surface-800 rounded-xl p-1.5 overflow-x-auto scrollbar-none">
+        <div className="flex gap-1 min-w-max">
         {tabs.map(t => {
           const Icon = t.icon
           return (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${
+              className={`flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
                 tab === t.id
                   ? 'bg-brand-500 text-white shadow-lg'
                   : 'text-white/50 hover:text-white/80'
@@ -183,6 +184,7 @@ export default function UsersPage() {
             </button>
           )
         })}
+        </div>
       </div>
 
       {/* Onglet Utilisateurs */}
@@ -285,8 +287,11 @@ export default function UsersPage() {
                           {u.id === me?.id && <span className="badge badge-orange">Vous</span>}
                         </div>
                         <p className="text-xs text-white/40 mt-0.5">
-                          {u.email}  Cree {formatDate(u.createdAt)}
-                          {u.lastLogin ? `  Derniere connexion ${formatDate(u.lastLogin)}` : '  Jamais connecte'}
+                          {u.email}
+                        </p>
+                        <p className="text-xs text-white/30 mt-0.5">
+                          Créé {formatDate(u.createdAt)}
+                          {u.lastLogin ? ` · Dernière connexion ${formatDate(u.lastLogin)}` : ' · Jamais connecté'}
                         </p>
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
@@ -323,7 +328,7 @@ export default function UsersPage() {
             </div>
           ) : (
             <div className="overflow-x-auto rounded-xl border border-white/5">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm min-w-[600px]">
                 <thead>
                   <tr className="border-b border-white/5 text-white/40 text-xs uppercase tracking-wider">
                     <th className="text-left px-4 py-3">Proprietaire</th>
@@ -390,7 +395,7 @@ export default function UsersPage() {
             </div>
           ) : (
             <div className="overflow-x-auto rounded-xl border border-white/5">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm min-w-[560px]">
                 <thead>
                   <tr className="border-b border-white/5 text-white/40 text-xs uppercase tracking-wider">
                     <th className="text-left px-4 py-3">Proprietaire</th>
