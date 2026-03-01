@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify'
-import bcrypt from 'bcrypt'
+import bcrypt from 'bcryptjs'
 import { prisma } from '../lib/prisma'
 
 // Toutes ces routes nécessitent d'être connecté en tant qu'ADMIN

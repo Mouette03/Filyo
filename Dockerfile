@@ -42,11 +42,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Backend compilé
+# Seulement le code compilé + manifeste (pas les node_modules du builder)
 COPY --from=backend-builder /app/backend/dist            ./dist
-COPY --from=backend-builder /app/backend/node_modules    ./node_modules
 COPY --from=backend-builder /app/backend/prisma          ./prisma
 COPY --from=backend-builder /app/backend/package.json    ./package.json
+
+# Installer les dépendances de production DANS le runner (bonne arch + bonne libc)
+RUN npm install --omit=dev --silent \
+    && npx prisma generate
 
 # Frontend buildé (servi par Fastify)
 COPY --from=frontend-builder /app/frontend/dist          ./public

@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify'
-import bcrypt from 'bcrypt'
+import bcrypt from 'bcryptjs'
 import path from 'path'
 import fs from 'fs-extra'
 import { nanoid } from 'nanoid'

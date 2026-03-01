@@ -3,7 +3,7 @@ import path from 'path'
 import fs from 'fs-extra'
 import { nanoid } from 'nanoid'
 import mime from 'mime-types'
-import bcrypt from 'bcrypt'
+import bcrypt from 'bcryptjs'
 import { prisma } from '../lib/prisma'
 
 const UPLOAD_DIR = process.env.UPLOAD_DIR || '/data/uploads'
