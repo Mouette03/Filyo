@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { Settings, Upload, Trash2, Check, Type, Image, RefreshCw, Mail, Eye, EyeOff, Wifi, Globe, Users, Palette, Moon, Sun, Monitor } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { getSettings, updateAppName, uploadLogo, deleteLogo, getSmtpSettings, updateSmtpSettings, testSmtp, updateSiteUrl, updateUploaderFields } from '../api/client'
+import { getSettings, updateAppName, uploadLogo, deleteLogo, getSmtpSettings, updateSmtpSettings, testSmtp, updateSiteUrl, updateUploaderFields, updateAllowRegistration } from '../api/client'
 import { useAppSettingsStore } from '../stores/useAppSettingsStore'
 import { usePreferencesStore, ACCENT_PRESETS, BG_PRESETS, type ThemeMode, type AccentKey, type BgColorKey } from '../stores/usePreferencesStore'
 
@@ -43,6 +43,10 @@ export default function SettingsPage() {
   const [uploaderMsgReq, setUploaderMsgReq] = useState<FieldReq>('optional')
   const [savingFields, setSavingFields] = useState(false)
 
+  // Inscription
+  const [allowRegistration, setAllowRegistration] = useState(false)
+  const [savingRegistration, setSavingRegistration] = useState(false)
+
   useEffect(() => {
     getSettings().then(res => {
       setAppName(res.data.appName || 'Filyo')
@@ -51,6 +55,7 @@ export default function SettingsPage() {
       setUploaderNameReq(res.data.uploaderNameReq || 'optional')
       setUploaderEmailReq(res.data.uploaderEmailReq || 'optional')
       setUploaderMsgReq(res.data.uploaderMsgReq || 'optional')
+      setAllowRegistration(res.data.allowRegistration ?? false)
     }).catch(() => {})
     getSmtpSettings().then(res => {
       setSmtpHost(res.data.smtpHost || '')
@@ -420,6 +425,38 @@ export default function SettingsPage() {
           {savingFields ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
           Enregistrer
         </button>
+      </div>
+
+      {/* Section : Authentification */}
+      <div className="card mt-5">
+        <div className="flex items-center gap-2 mb-5">
+          <Users size={16} className="text-brand-400" />
+          <h3 className="font-semibold">Authentification</h3>
+        </div>
+        <div className="flex items-center justify-between py-3 px-4 bg-white/3 rounded-xl">
+          <div>
+            <p className="text-sm font-medium">Inscription libre</p>
+            <p className="text-xs text-white/40 mt-0.5">Affiche un bouton &laquo;&nbsp;Créer un compte&nbsp;&raquo; sur la page de connexion</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {savingRegistration && <div className="w-4 h-4 border-2 border-brand-500/30 border-t-brand-500 rounded-full animate-spin" />}
+            <div
+              onClick={async () => {
+                const next = !allowRegistration
+                setSavingRegistration(true)
+                try {
+                  await updateAllowRegistration(next)
+                  setAllowRegistration(next)
+                  toast.success(next ? 'Inscription libre activée' : 'Inscription libre désactivée')
+                } catch { toast.error('Erreur lors de la sauvegarde') }
+                setSavingRegistration(false)
+              }}
+              className={`w-11 h-6 rounded-full cursor-pointer transition-colors relative flex-shrink-0 ${allowRegistration ? 'bg-brand-500' : 'bg-white/20'}`}
+            >
+              <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${allowRegistration ? 'translate-x-6' : 'translate-x-1'}`} />
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Section : Apparence */}

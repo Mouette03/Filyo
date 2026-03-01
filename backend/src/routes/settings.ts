@@ -27,6 +27,7 @@ export async function settingsRoutes(app: FastifyInstance) {
       uploaderNameReq: s.uploaderNameReq ?? 'optional',
       uploaderEmailReq: s.uploaderEmailReq ?? 'optional',
       uploaderMsgReq: s.uploaderMsgReq ?? 'optional',
+      allowRegistration: s.allowRegistration ?? false,
       updatedAt: s.updatedAt
     }
   })
@@ -84,6 +85,22 @@ export async function settingsRoutes(app: FastifyInstance) {
       return reply.code(502).send({ error: `Connexion échouée : ${err.message}` })
     }
   })
+
+  // PATCH /api/settings/registration — activer/désactiver l'inscription libre
+  app.patch<{ Body: { allowRegistration: boolean } }>(
+    '/registration',
+    { onRequest: [app.authenticate, app.adminOnly] },
+    async (req, reply) => {
+      const { allowRegistration } = req.body
+      if (typeof allowRegistration !== 'boolean') return reply.code(400).send({ error: 'Valeur invalide' })
+      const s = await prisma.appSettings.upsert({
+        where: { id: 'singleton' },
+        update: { allowRegistration },
+        create: { id: 'singleton', appName: 'Filyo', allowRegistration }
+      })
+      return { allowRegistration: s.allowRegistration }
+    }
+  )
 
   // PATCH /api/settings/name — changer le nom de l'app
   app.patch<{ Body: { appName: string } }>(

@@ -3,6 +3,7 @@ import { create } from 'zustand'
 interface AppSettings {
   appName: string
   logoUrl: string | null
+  allowRegistration: boolean
 }
 
 interface AppSettingsStore {
@@ -11,6 +12,6 @@ interface AppSettingsStore {
 }
 
 export const useAppSettingsStore = create<AppSettingsStore>()(set => ({
-  settings: { appName: 'Filyo', logoUrl: null },
+  settings: { appName: 'Filyo', logoUrl: null, allowRegistration: false },
   setSettings: (s) => set(prev => ({ settings: { ...prev.settings, ...s } }))
 }))

@@ -132,6 +132,9 @@ export const updateUploaderFields = (data: {
   uploaderMsgReq?: string
 }) => api.patch('/settings/uploader-fields', data)
 
+export const updateAllowRegistration = (allowRegistration: boolean) =>
+  api.patch('/settings/registration', { allowRegistration })
+
 // ---- Admin ----
 export const getStats = () => api.get('/admin/stats')
 export const runCleanup = () => api.post('/admin/cleanup')

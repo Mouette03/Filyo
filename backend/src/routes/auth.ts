@@ -68,18 +68,22 @@ export async function authRoutes(app: FastifyInstance) {
 
     const count = await prisma.user.count()
     // Le 1er utilisateur est toujours admin
-    const role = count === 0 ? 'ADMIN' : (body.data.role ?? 'USER')
+    const role = count === 0 ? 'ADMIN' : 'USER'
 
-    // Si ce n'est pas le premier, vérifier que l'appelant est admin
+    // Si ce n'est pas le premier, vérifier que l'appelant est admin OU que l'inscription libre est activée
     if (count > 0) {
+      let isAdmin = false
       try {
         await req.jwtVerify()
         const caller = (req as any).user
-        if (caller.role !== 'ADMIN') {
-          return reply.code(403).send({ error: 'Accès refusé' })
+        if (caller.role === 'ADMIN') isAdmin = true
+      } catch { /* non authentifié */ }
+
+      if (!isAdmin) {
+        const settings = await prisma.appSettings.findUnique({ where: { id: 'singleton' } })
+        if (!settings?.allowRegistration) {
+          return reply.code(403).send({ error: 'Les inscriptions sont désactivées' })
         }
-      } catch {
-        return reply.code(401).send({ error: 'Authentification requise' })
       }
     }
 

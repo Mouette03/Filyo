@@ -36,6 +36,7 @@ model AppSettings {
   uploaderNameReq   String   @default("optional")  // hidden | optional | required
   uploaderEmailReq  String   @default("optional")
   uploaderMsgReq    String   @default("optional")
+  allowRegistration Boolean  @default(false)
   updatedAt         DateTime @updatedAt
 }
 
