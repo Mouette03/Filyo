@@ -23,7 +23,7 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/package.json ./package.json
 
 # Create entrypoint to fix permissions at runtime
-RUN printf '#!/bin/sh\nset -e\nmkdir -p /data/uploads\nchown -R node:node /data /app\nexec su-exec node sh -c "npx prisma db push --accept-data-loss --skip-generate && node dist/index.js"\n' > /entrypoint.sh && chmod +x /entrypoint.sh
+RUN printf '#!/bin/sh\nset -e\nmkdir -p /data/uploads\nchown -R node:node /data /app\nexport NPM_CONFIG_UPDATE_NOTIFIER=false\nset +e\nsu-exec node npx prisma db push --accept-data-loss --skip-generate\nPRISMA_EXIT=$?\nset -e\nif [ "$PRISMA_EXIT" -ne 0 ] && [ "$PRISMA_EXIT" -ne 139 ]; then\n  echo "ERROR: prisma db push failed with exit code $PRISMA_EXIT"\n  exit "$PRISMA_EXIT"\nfi\nexec su-exec node node dist/index.js\n' > /entrypoint.sh && chmod +x /entrypoint.sh
 
 ENV NODE_ENV=production
 ENV PORT=3001
