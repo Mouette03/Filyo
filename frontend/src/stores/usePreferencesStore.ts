@@ -76,19 +76,21 @@ export type BgColorKey = keyof typeof BG_PRESETS
 export function applyBgColor(key: BgColorKey) {
   const preset = BG_PRESETS[key]
   if (!preset) return
-  const target = preset.theme === 'light' ? document.body : document.documentElement
-  target.style.setProperty('--s900', preset.s900)
-  target.style.setProperty('--s800', preset.s800)
-  target.style.setProperty('--s700', preset.s700)
+  // Applique sur :root pour que les deux thèmes soient couverts
+  const root = document.documentElement
+  root.style.setProperty('--surface-900', preset.s900)
+  root.style.setProperty('--surface-800', preset.s800)
+  root.style.setProperty('--surface-700', preset.s700)
 }
 
 export function resetBgColor() {
-  document.documentElement.style.removeProperty('--s900')
-  document.documentElement.style.removeProperty('--s800')
-  document.documentElement.style.removeProperty('--s700')
-  document.body.style.removeProperty('--s900')
-  document.body.style.removeProperty('--s800')
-  document.body.style.removeProperty('--s700')
+  const root = document.documentElement
+  root.style.removeProperty('--surface-900')
+  root.style.removeProperty('--surface-800')
+  root.style.removeProperty('--surface-700')
+  document.body.style.removeProperty('--surface-900')
+  document.body.style.removeProperty('--surface-800')
+  document.body.style.removeProperty('--surface-700')
 }
 
 interface PreferencesStore {

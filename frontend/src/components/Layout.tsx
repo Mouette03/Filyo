@@ -85,7 +85,8 @@ export default function Layout() {
             </button>
 
             {userMenuOpen && (
-              <div className="absolute right-0 top-full mt-2 w-52 glass rounded-xl py-1 overflow-hidden shadow-xl border border-white/10 z-50">
+              <div className="absolute right-0 top-full mt-2 w-52 rounded-xl py-1 overflow-hidden shadow-xl border border-white/10 z-50"
+                style={{ background: 'var(--surface-800)', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
                 <div className="px-4 py-3 border-b border-white/10">
                   {user?.avatarUrl && (
                     <img src={user.avatarUrl} alt="Avatar" className="w-10 h-10 rounded-xl object-cover mb-2" />

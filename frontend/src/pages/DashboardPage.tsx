@@ -6,7 +6,7 @@ import {
   deleteUploadRequest, toggleUploadRequest, getStats,
   runCleanup, getReceivedFiles, downloadReceivedFile
 } from '../api/client'
-import { formatBytes, formatDate, getFileIcon, downloadBlob } from '../lib/utils'
+import { formatBytes, formatDate, getFileIcon, downloadBlob, copyToClipboard } from '../lib/utils'
 
 interface FileItem {
   id: string; originalName: string; mimeType: string; size: string
@@ -79,18 +79,22 @@ export default function DashboardPage() {
     } catch { toast.error('Erreur') }
   }
 
-  const copyShareLink = (token: string) => {
-    navigator.clipboard.writeText(`${window.location.origin}/s/${token}`)
-    setCopiedToken(token)
-    toast.success('Lien copié !')
-    setTimeout(() => setCopiedToken(null), 2000)
+  const copyShareLink = async (token: string) => {
+    try {
+      await copyToClipboard(`${window.location.origin}/s/${token}`)
+      setCopiedToken(token)
+      toast.success('Lien copié !')
+      setTimeout(() => setCopiedToken(null), 2000)
+    } catch { toast.error('Impossible de copier le lien') }
   }
 
-  const copyRequestLink = (token: string) => {
-    navigator.clipboard.writeText(`${window.location.origin}/r/${token}`)
-    setCopiedToken(token)
-    toast.success('Lien copié !')
-    setTimeout(() => setCopiedToken(null), 2000)
+  const copyRequestLink = async (token: string) => {
+    try {
+      await copyToClipboard(`${window.location.origin}/r/${token}`)
+      setCopiedToken(token)
+      toast.success('Lien copié !')
+      setTimeout(() => setCopiedToken(null), 2000)
+    } catch { toast.error('Impossible de copier le lien') }
   }
 
   const toggleExpandRequest = async (id: string) => {

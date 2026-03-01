@@ -117,6 +117,10 @@ export const downloadReceivedFile = (requestId: string, fileId: string) =>
     responseType: 'blob'
   })
 
+// ---- Envoi email ----
+export const sendShareByEmail = (to: string, tokens: string[]) =>
+  api.post('/shares/send-email', { to, tokens })
+
 // ---- Admin ----
 export const getStats = () => api.get('/admin/stats')
 export const runCleanup = () => api.post('/admin/cleanup')

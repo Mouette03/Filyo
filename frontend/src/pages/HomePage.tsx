@@ -1,9 +1,9 @@
 import { useState, useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
-import { Upload, X, Copy, Check, Lock, Clock, Download, Plus, Trash2 } from 'lucide-react'
+import { Upload, X, Copy, Check, Lock, Clock, Download, Plus, Trash2, Share2, Mail, Send } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { uploadFiles } from '../api/client'
-import { formatBytes, getFileIcon } from '../lib/utils'
+import { uploadFiles, sendShareByEmail } from '../api/client'
+import { formatBytes, getFileIcon, copyToClipboard } from '../lib/utils'
 
 interface UploadedResult {
   id: string
@@ -22,6 +22,10 @@ export default function HomePage() {
   const [progress, setProgress] = useState(0)
   const [results, setResults] = useState<UploadedResult[]>([])
   const [copiedToken, setCopiedToken] = useState<string | null>(null)
+  const [showShareModal, setShowShareModal] = useState(false)
+  const [emailTo, setEmailTo] = useState('')
+  const [emailSending, setEmailSending] = useState(false)
+  const [emailSent, setEmailSent] = useState(false)
 
   const onDrop = useCallback((accepted: File[]) => {
     setFiles(prev => [...prev, ...accepted])
@@ -54,6 +58,7 @@ export default function HomePage() {
       const res = await uploadFiles(formData, setProgress)
       setResults(res.data)
       setFiles([])
+      setShowShareModal(true)
       toast.success(`${res.data.length} fichier(s) envoyé(s) !`)
     } catch {
       toast.error("Échec de l'envoi, veuillez réessayer.")
@@ -62,16 +67,130 @@ export default function HomePage() {
     }
   }
 
-  const copyLink = (token: string) => {
+  const handleSendEmail = async () => {
+    if (!emailTo.trim()) return toast.error('Entrez une adresse email')
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTo)) return toast.error('Adresse email invalide')
+    setEmailSending(true)
+    try {
+      await sendShareByEmail(emailTo.trim(), results.map(r => r.shareToken))
+      setEmailSent(true)
+      toast.success(`Lien${results.length > 1 ? 's' : ''} envoyé${results.length > 1 ? 's' : ''} à ${emailTo}`)
+      setTimeout(() => setEmailSent(false), 3000)
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Erreur lors de l'envoi")
+    }
+    setEmailSending(false)
+  }
+
+  const closeModal = () => { setShowShareModal(false); setResults([]); setEmailTo(''); setEmailSent(false) }
+
+  const copyLink = async (token: string) => {
     const url = `${window.location.origin}/s/${token}`
-    navigator.clipboard.writeText(url)
-    setCopiedToken(token)
-    toast.success('Lien copié !')
-    setTimeout(() => setCopiedToken(null), 2000)
+    try {
+      await copyToClipboard(url)
+      setCopiedToken(token)
+      toast.success('Lien copié !')
+      setTimeout(() => setCopiedToken(null), 2000)
+    } catch { toast.error('Impossible de copier le lien') }
   }
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-12">
+      {/* Modale de partage post-upload */}
+      {showShareModal && results.length > 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)' }}>
+          <div className="card w-full max-w-md relative animate-fadeIn">
+            {/* En-tête */}
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 bg-emerald-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Share2 size={20} className="text-emerald-400" />
+              </div>
+              <div className="flex-1">
+                <h2 className="text-lg font-bold">Fichiers envoyés !</h2>
+                <p className="text-xs text-white/40">
+                  {results.length === 1 ? '1 lien de partage disponible' : `${results.length} liens de partage disponibles`}
+                </p>
+              </div>
+              <button onClick={closeModal}
+                className="text-white/30 hover:text-white/70 transition-colors ml-2">
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Liste des liens */}
+            <div className="space-y-2 mb-5 max-h-72 overflow-y-auto pr-1">
+              {results.map(r => {
+                const url = `${window.location.origin}/s/${r.shareToken}`
+                return (
+                  <div key={r.id} className="flex items-center gap-3 bg-white/5 rounded-xl px-3 py-2.5">
+                    <span className="text-xl flex-shrink-0">{getFileIcon(r.originalName.split('.').pop() || '')}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{r.originalName}</p>
+                      <p className="text-xs text-white/30 truncate font-mono">{url}</p>
+                    </div>
+                    <button
+                      onClick={() => copyLink(r.shareToken)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex-shrink-0
+                        ${ copiedToken === r.shareToken
+                          ? 'bg-emerald-500/20 text-emerald-400'
+                          : 'btn-secondary' }`}
+                    >
+                      {copiedToken === r.shareToken ? <Check size={12} /> : <Copy size={12} />}
+                      {copiedToken === r.shareToken ? 'Copié' : 'Copier'}
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Envoi par email */}
+            <div className="pt-4 border-t border-white/10 mb-4">
+              <label className="text-xs text-white/50 mb-2 flex items-center gap-1.5 uppercase tracking-wider">
+                <Mail size={11} /> Envoyer par email
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="email"
+                  value={emailTo}
+                  onChange={e => { setEmailTo(e.target.value); setEmailSent(false) }}
+                  onKeyDown={e => e.key === 'Enter' && handleSendEmail()}
+                  placeholder="destinataire@exemple.fr"
+                  className="input text-sm py-2 flex-1"
+                />
+                <button
+                  onClick={handleSendEmail}
+                  disabled={emailSending || !emailTo.trim()}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all disabled:opacity-40
+                    ${ emailSent
+                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                      : 'btn-primary' }`}
+                >
+                  {emailSending
+                    ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    : emailSent ? <Check size={14} /> : <Send size={14} />}
+                  {emailSent ? 'Envoyé' : 'Envoyer'}
+                </button>
+              </div>
+              <p className="text-xs text-white/25 mt-1.5">Le ou les liens de partage seront envoyés à cette adresse.</p>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3">
+              <button
+                onClick={closeModal}
+                className="btn-secondary flex items-center justify-center gap-2 flex-1 py-2.5">
+                <Plus size={15} /> Nouvel envoi
+              </button>
+              <button
+                onClick={closeModal}
+                className="btn-primary flex items-center justify-center gap-2 flex-1 py-2.5">
+                <Check size={15} /> Terminé
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="text-center mb-10">
         <h1 className="text-4xl font-bold mb-3">
@@ -217,8 +336,8 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Résultats */}
-      {results.length > 0 && (
+      {/* Résultats inline (fallback si la modale est fermée sans réinitialiser) */}
+      {!showShareModal && results.length > 0 && (
         <div className="space-y-4">
           <div className="text-center">
             <div className="w-14 h-14 bg-emerald-500/20 rounded-2xl flex items-center justify-center mx-auto mb-3">
