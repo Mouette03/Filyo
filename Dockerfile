@@ -4,8 +4,11 @@
 #  Le backend Fastify sert l'API ET les fichiers React statiques
 # ================================================================
 
+# Permet aux stages de build de tourner nativement (évite QEMU / Illegal instruction)
+ARG BUILDPLATFORM
+
 # ── Stage 1 : Build du frontend React/Vite ──────────────────────
-FROM node:20-alpine AS frontend-builder
+FROM --platform=$BUILDPLATFORM node:20-alpine AS frontend-builder
 
 RUN npm install -g npm@latest --quiet
 
@@ -17,7 +20,7 @@ RUN npm run build
 
 
 # ── Stage 2 : Build du backend TypeScript ───────────────────────
-FROM node:20-alpine AS backend-builder
+FROM --platform=$BUILDPLATFORM node:20-alpine AS backend-builder
 
 RUN npm install -g npm@latest --quiet
 
