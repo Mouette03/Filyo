@@ -35,6 +35,7 @@ export default function UsersPage() {
   const [newName, setNewName] = useState('')
   const [newEmail, setNewEmail] = useState('')
   const [newPassword, setNewPassword] = useState('')
+  const [newConfirmPassword, setNewConfirmPassword] = useState('')
   const [newRole, setNewRole] = useState('USER')
   const [creating, setCreating] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
@@ -87,13 +88,15 @@ export default function UsersPage() {
   useEffect(() => { if (tab === 'deposits') loadDeposits() }, [tab])
 
   const handleCreate = async () => {
-    if (!newName || !newEmail || !newPassword) return toast.error('Tous les champs sont requis')
+    if (!newName || !newEmail || !newPassword || !newConfirmPassword) return toast.error('Tous les champs sont requis')
+    if (newPassword.length < 8) return toast.error('Le mot de passe doit faire au moins 8 caractères')
+    if (newPassword !== newConfirmPassword) return toast.error('Les mots de passe ne correspondent pas')
     setCreating(true)
     try {
       const res = await createUser({ name: newName, email: newEmail, password: newPassword, role: newRole })
       setUsers(prev => [...prev, res.data])
       setShowCreate(false)
-      setNewName(''); setNewEmail(''); setNewPassword(''); setNewRole('USER')
+      setNewName(''); setNewEmail(''); setNewPassword(''); setNewConfirmPassword(''); setNewRole('USER')
       toast.success('Utilisateur cree')
     } catch (err: any) {
       toast.error(err.response?.data?.error || 'Erreur lors de la creation')
@@ -210,9 +213,13 @@ export default function UsersPage() {
                 </div>
                 <div>
                   <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">Mot de passe</label>
-                  <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Min. 8 caracteres" className="input" />
+                  <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Min. 8 caractères" className="input" />
                 </div>
                 <div>
+                  <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">Confirmer le mot de passe</label>
+                  <input type="password" value={newConfirmPassword} onChange={e => setNewConfirmPassword(e.target.value)} placeholder="Répétez le mot de passe" className="input" />
+                </div>
+                <div className="col-span-2">
                   <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">Role</label>
                   <select value={newRole} onChange={e => setNewRole(e.target.value)} className="input bg-surface-700">
                     <option value="USER">Utilisateur standard</option>
