@@ -1,4 +1,4 @@
-import { FastifyInstance, FastifyRequest } from 'fastify'
+import { FastifyInstance } from 'fastify'
 import bcrypt from 'bcrypt'
 import path from 'path'
 import fs from 'fs-extra'

@@ -29,14 +29,12 @@ WORKDIR /app/backend
 COPY backend/package*.json ./
 RUN npm install --silent
 COPY backend/ ./
-RUN npx prisma generate
 RUN npm run build
 
 
 # ── Stage 3 : Image de production ───────────────────────────────
 FROM node:20-alpine AS runner
 
-RUN npm install -g npm@latest --quiet
 RUN apk add --no-cache dumb-init openssl su-exec
 
 WORKDIR /app
@@ -53,9 +51,6 @@ COPY --from=frontend-builder /app/frontend/dist          ./public
 # Script d'entrypoint (corrige les permissions du volume au démarrage)
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
-
-# Dossier données (permissions fixées à l'exécution via entrypoint)
-RUN mkdir -p /data/uploads
 
 ENV NODE_ENV=production
 ENV PORT=3001

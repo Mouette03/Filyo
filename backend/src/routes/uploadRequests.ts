@@ -118,11 +118,6 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
         if (part.fieldname === 'message') message = part.value as string
         if (part.fieldname === 'password') rawPassword = part.value as string
       } else {
-        if (request.password) {
-          const ok = await bcrypt.compare(rawPassword || '', request.password)
-          if (!ok) return reply.code(401).send({ error: 'Mot de passe incorrect' })
-        }
-
         const ext = path.extname(part.filename || '') || ''
         const filename = `recv_${nanoid(12)}${ext}`
         const destDir = path.join(UPLOAD_DIR, 'received', request.id)
@@ -156,10 +151,19 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
       }
     }
 
+    // Vérifier le mot de passe APRÈS la boucle pour s'assurer que le champ a bien été lu
+    if (request.password) {
+      const ok = await bcrypt.compare(rawPassword || '', request.password)
+      if (!ok) {
+        // Supprimer les fichiers temporaires déjà écrits
+        await Promise.all(savedFiles.map((f: any) => fs.remove(f.path).catch(() => {})))
+        return reply.code(401).send({ error: 'Mot de passe incorrect' })
+      }
+    }
+
     const created = await Promise.all(
       savedFiles.map((f: any) => prisma.receivedFile.create({ data: f }))
     )
-
     return reply.code(201).send(
       created.map((f: any) => ({
         id: f.id,
@@ -182,7 +186,7 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
       where: { uploadRequestId: req.params.id },
       orderBy: { uploadedAt: 'desc' }
     })
-    return files.map(f => ({ ...f, size: f.size.toString() }))
+    return files.map((f: any) => ({ ...f, size: f.size.toString() }))
   })
 
   // GET /api/upload-requests/:id/received/:fileId/download

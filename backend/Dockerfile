@@ -8,14 +8,12 @@ COPY package*.json ./
 RUN npm install
 
 COPY . .
-RUN npx prisma generate
 RUN npm run build
 
 # ---- Production stage ----
 FROM node:20-alpine AS runner
 
-RUN npm install -g npm@latest --quiet
-RUN apk add --no-cache dumb-init openssl
+RUN apk add --no-cache dumb-init openssl su-exec
 
 WORKDIR /app
 
@@ -24,8 +22,8 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/package.json ./package.json
 
-# Create upload data directory
-RUN mkdir -p /data/uploads && chown node:node /data
+# Create entrypoint to fix permissions at runtime
+RUN printf '#!/bin/sh\nset -e\nmkdir -p /data/uploads\nchown -R node:node /data /app\nexec su-exec node sh -c "npx prisma db push --accept-data-loss --skip-generate && node dist/index.js"\n' > /entrypoint.sh && chmod +x /entrypoint.sh
 
 ENV NODE_ENV=production
 ENV PORT=3001
@@ -37,7 +35,4 @@ VOLUME ["/data"]
 
 EXPOSE 3001
 
-USER node
-
-ENTRYPOINT ["dumb-init", "--"]
-CMD ["sh", "-c", "npx prisma db push --accept-data-loss && node dist/index.js"]
+ENTRYPOINT ["dumb-init", "--", "/entrypoint.sh"]
