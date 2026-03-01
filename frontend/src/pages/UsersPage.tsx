@@ -339,7 +339,7 @@ export default function UsersPage() {
         </>
       )}
 
-      {/* Onglet Fichiers partagés */}}
+      {/* Onglet Fichiers partagés */}
       {tab === 'files' && (
         <div>
           {filesLoading ? (
@@ -406,7 +406,7 @@ export default function UsersPage() {
         </div>
       )}
 
-      {/* Onglet Demandes de dépôt */}}
+      {/* Onglet Demandes de dépôt */}
       {tab === 'deposits' && (
         <div>
           {depositsLoading ? (
