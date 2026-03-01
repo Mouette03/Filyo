@@ -33,9 +33,11 @@ RUN npm run build
 
 
 # ── Stage 3 : Image de production ───────────────────────────────
-FROM node:20-alpine AS runner
+FROM node:20-slim AS runner
 
-RUN apk add --no-cache dumb-init openssl su-exec \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        dumb-init openssl gosu \
+    && rm -rf /var/lib/apt/lists/* \
     && npm install -g npm@latest --quiet
 
 WORKDIR /app
