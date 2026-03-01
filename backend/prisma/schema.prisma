@@ -23,17 +23,20 @@ model User {
 }
 
 model AppSettings {
-  id         String   @id @default("singleton")
-  appName    String   @default("Filyo")
-  logoUrl    String?
-  siteUrl    String?
-  smtpHost   String?
-  smtpPort   Int?
-  smtpFrom   String?
-  smtpUser   String?
-  smtpPass   String?
-  smtpSecure Boolean  @default(true)
-  updatedAt  DateTime @updatedAt
+  id                String   @id @default("singleton")
+  appName           String   @default("Filyo")
+  logoUrl           String?
+  siteUrl           String?
+  smtpHost          String?
+  smtpPort          Int?
+  smtpFrom          String?
+  smtpUser          String?
+  smtpPass          String?
+  smtpSecure        Boolean  @default(true)
+  uploaderNameReq   String   @default("optional")  // hidden | optional | required
+  uploaderEmailReq  String   @default("optional")
+  uploaderMsgReq    String   @default("optional")
+  updatedAt         DateTime @updatedAt
 }
 
 model File {

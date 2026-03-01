@@ -53,17 +53,17 @@ export default function Layout() {
 
           {/* Nav links - actions utilisateur seulement */}
           <nav className="flex items-center gap-1">
+            <NavLink to="/dashboard" className={navClass}>
+              <LayoutDashboard size={15} />
+              <span className="hidden sm:inline">Dashboard</span>
+            </NavLink>
             <NavLink to="/" end className={navClass}>
               <Upload size={15} />
               <span className="hidden sm:inline">Envoyer</span>
             </NavLink>
             <NavLink to="/request/new" className={navClass}>
               <Plus size={15} />
-              <span className="hidden sm:inline">Demande de dépôt</span>
-            </NavLink>
-            <NavLink to="/dashboard" className={navClass}>
-              <LayoutDashboard size={15} />
-              <span className="hidden sm:inline">Dashboard</span>
+              <span className="hidden sm:inline">Partage inversé</span>
             </NavLink>
           </nav>
 

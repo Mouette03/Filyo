@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Copy, Check, Plus, ArrowDownUp, Clock, FileUp, Lock, Hash } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { createUploadRequest } from '../api/client'
+import { copyToClipboard } from '../lib/utils'
 
 interface CreatedRequest {
   id: string
@@ -47,11 +48,15 @@ export default function CreateRequestPage() {
 
   const link = result ? `${window.location.origin}/r/${result.token}` : ''
 
-  const copyLink = () => {
-    navigator.clipboard.writeText(link)
-    setCopied(true)
-    toast.success('Lien copié !')
-    setTimeout(() => setCopied(false), 2000)
+  const copyLink = async () => {
+    try {
+      await copyToClipboard(link)
+      setCopied(true)
+      toast.success('Lien copié !')
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      toast.error('Impossible de copier le lien')
+    }
   }
 
   return (

@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
-import { Settings, Upload, Trash2, Check, Type, Image, RefreshCw, Mail, Eye, EyeOff, Wifi, Globe } from 'lucide-react'
+import { Settings, Upload, Trash2, Check, Type, Image, RefreshCw, Mail, Eye, EyeOff, Wifi, Globe, Users } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { getSettings, updateAppName, uploadLogo, deleteLogo, getSmtpSettings, updateSmtpSettings, testSmtp, updateSiteUrl } from '../api/client'
+import { getSettings, updateAppName, uploadLogo, deleteLogo, getSmtpSettings, updateSmtpSettings, testSmtp, updateSiteUrl, updateUploaderFields } from '../api/client'
 import { useAppSettingsStore } from '../stores/useAppSettingsStore'
 
 export default function SettingsPage() {
@@ -27,11 +27,21 @@ export default function SettingsPage() {
   const [savingSmtp, setSavingSmtp] = useState(false)
   const [testingSmtp, setTestingSmtp] = useState(false)
 
+  // Champs déposant
+  type FieldReq = 'hidden' | 'optional' | 'required'
+  const [uploaderNameReq, setUploaderNameReq] = useState<FieldReq>('optional')
+  const [uploaderEmailReq, setUploaderEmailReq] = useState<FieldReq>('optional')
+  const [uploaderMsgReq, setUploaderMsgReq] = useState<FieldReq>('optional')
+  const [savingFields, setSavingFields] = useState(false)
+
   useEffect(() => {
     getSettings().then(res => {
       setAppName(res.data.appName || 'Filyo')
       setLogoUrl(res.data.logoUrl || '')
       setSiteUrl(res.data.siteUrl || '')
+      setUploaderNameReq(res.data.uploaderNameReq || 'optional')
+      setUploaderEmailReq(res.data.uploaderEmailReq || 'optional')
+      setUploaderMsgReq(res.data.uploaderMsgReq || 'optional')
     }).catch(() => {})
     getSmtpSettings().then(res => {
       setSmtpHost(res.data.smtpHost || '')
@@ -108,6 +118,15 @@ export default function SettingsPage() {
       toast.success('Configuration SMTP enregistrée')
     } catch { toast.error('Erreur lors de la sauvegarde SMTP') }
     setSavingSmtp(false)
+  }
+
+  const handleSaveFields = async () => {
+    setSavingFields(true)
+    try {
+      await updateUploaderFields({ uploaderNameReq, uploaderEmailReq, uploaderMsgReq })
+      toast.success('Configuration enregistrée')
+    } catch { toast.error('Erreur lors de la sauvegarde') }
+    setSavingFields(false)
   }
 
   const handleTestSmtp = async () => {
@@ -349,6 +368,49 @@ export default function SettingsPage() {
         <p className="text-xs text-white/30 mt-3">
           Le test vérifie uniquement l'accessibilité réseau du serveur SMTP. La fonctionnalité d'envoi d'emails sera disponible dans une prochaine version.
         </p>
+      </div>
+
+      {/* Section : Champs formulaire déposant */}
+      <div className="card mt-5">
+        <div className="flex items-center gap-2 mb-5">
+          <Users size={16} className="text-brand-400" />
+          <h3 className="font-semibold">Formulaire du déposant</h3>
+          <span className="text-xs text-white/30 ml-auto">Contrôle les champs affichés lors d'un partage inversé</span>
+        </div>
+
+        {([
+          { label: 'Nom', key: 'uploaderNameReq', value: uploaderNameReq, set: setUploaderNameReq },
+          { label: 'Adresse email', key: 'uploaderEmailReq', value: uploaderEmailReq, set: setUploaderEmailReq },
+          { label: 'Message', key: 'uploaderMsgReq', value: uploaderMsgReq, set: setUploaderMsgReq },
+        ] as { label: string; key: string; value: string; set: (v: any) => void }[]).map(field => (
+          <div key={field.key} className="flex items-center justify-between py-3 px-4 bg-white/3 rounded-xl mb-3">
+            <div>
+              <p className="text-sm font-medium">{field.label}</p>
+              <p className="text-xs text-white/40 mt-0.5">
+                {field.value === 'hidden' && 'Non affiché dans le formulaire'}
+                {field.value === 'optional' && 'Affiché, remplissage facultatif'}
+                {field.value === 'required' && 'Affiché, remplissage obligatoire'}
+              </p>
+            </div>
+            <select
+              value={field.value}
+              onChange={e => field.set(e.target.value)}
+              className="input text-sm py-1.5 w-40"
+            >
+              <option value="hidden">Masqué</option>
+              <option value="optional">Facultatif</option>
+              <option value="required">Obligatoire</option>
+            </select>
+          </div>
+        ))}
+
+        <button
+          onClick={handleSaveFields}
+          disabled={savingFields}
+          className="btn-primary flex items-center gap-2 py-2.5 px-5 mt-2">
+          {savingFields ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
+          Enregistrer
+        </button>
       </div>
     </div>
   )

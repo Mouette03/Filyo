@@ -125,6 +125,13 @@ export const sendShareByEmail = (to: string, tokens: string[]) =>
 export const updateFileExpiry = (id: string, expiresAt: string | null) =>
   api.patch(`/files/${id}/expiry`, { expiresAt })
 
+// ---- Champs formulaire déposant ----
+export const updateUploaderFields = (data: {
+  uploaderNameReq?: string
+  uploaderEmailReq?: string
+  uploaderMsgReq?: string
+}) => api.patch('/settings/uploader-fields', data)
+
 // ---- Admin ----
 export const getStats = () => api.get('/admin/stats')
 export const runCleanup = () => api.post('/admin/cleanup')

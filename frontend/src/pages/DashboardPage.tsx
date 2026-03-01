@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Trash2, Download, RefreshCw, Copy, Check, Eye, ToggleLeft, ToggleRight, HardDrive, Clock, Mail, Send, ExternalLink } from 'lucide-react'
+import { Trash2, Download, RefreshCw, Copy, Check, Eye, ToggleLeft, ToggleRight, HardDrive, Clock, Mail, Send, ExternalLink, User, TimerOff, AlertTriangle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import {
   listFiles, deleteFile, listUploadRequests,
@@ -11,8 +11,8 @@ import { formatBytes, formatDate, getFileIcon, downloadBlob, copyToClipboard } f
 
 interface FileItem {
   id: string; originalName: string; mimeType: string; size: string
-  uploadedAt: string; expiresAt: string | null; downloads: number
-  shares: { token: string }[]
+  uploadedAt: string; expiresAt: string | null; downloads: number; maxDownloads: number | null
+  shares: { token: string; downloads: number; maxDownloads: number | null }[]
 }
 interface UploadRequest {
   id: string; token: string; title: string; message: string | null
@@ -47,6 +47,7 @@ export default function DashboardPage() {
   const [expiryEditId, setExpiryEditId] = useState<string | null>(null)
   const [expiryValue, setExpiryValue] = useState('')
   const [savingExpiryId, setSavingExpiryId] = useState<string | null>(null)
+  const [expiringNowId, setExpiringNowId] = useState<string | null>(null)
 
   const load = async () => {
     setLoading(true)
@@ -135,6 +136,17 @@ export default function DashboardPage() {
       toast.error(err.response?.data?.error || "Erreur lors de l'envoi")
     }
     setEmailSendingToken(null)
+  }
+
+  const handleExpireNow = async (fileId: string) => {
+    setExpiringNowId(fileId)
+    try {
+      const expiresAt = new Date().toISOString()
+      await updateFileExpiry(fileId, expiresAt)
+      setFiles(prev => prev.map(f => f.id === fileId ? { ...f, expiresAt } : f))
+      toast.success('Fichier expiré immédiatement')
+    } catch { toast.error('Erreur lors de l\'expiration') }
+    setExpiringNowId(null)
   }
 
   const handleSaveExpiry = async (fileId: string, clear = false) => {
@@ -233,7 +245,7 @@ export default function DashboardPage() {
         <button onClick={() => setTab('requests')}
           className={`px-5 py-2 rounded-lg text-sm font-medium transition-all
             ${tab === 'requests' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white'}`}>
-          Demandes de dépôt ({requests.length})
+          Partages inversés ({requests.length})
         </button>
       </div>
 
@@ -257,9 +269,19 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-4">
                   <span className="text-2xl flex-shrink-0">{getFileIcon(f.mimeType)}</span>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{f.originalName}</p>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <p className="font-medium truncate">{f.originalName}</p>
+                      {f.maxDownloads !== null && f.downloads >= f.maxDownloads && (
+                        <span className="flex-shrink-0 flex items-center gap-1 text-xs font-medium text-red-400 bg-red-500/15 px-2 py-0.5 rounded-full">
+                          <AlertTriangle size={10} /> Limite atteinte
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs text-white/40 mt-0.5">
-                      {formatBytes(f.size)} · {formatDate(f.uploadedAt)} · {f.downloads} téléchargement(s)
+                      {formatBytes(f.size)} · {formatDate(f.uploadedAt)} ·{' '}
+                      {f.maxDownloads !== null
+                        ? <span className={f.downloads >= f.maxDownloads ? 'text-red-400' : ''}>{f.downloads}/{f.maxDownloads} téléchargement(s)</span>
+                        : <>{f.downloads} téléchargement(s)</>}
                       {f.expiresAt ? ` · Expire ${formatDate(f.expiresAt)}` : ' · Sans expiration'}
                     </p>
                   </div>
@@ -268,20 +290,20 @@ export default function DashboardPage() {
                       <>
                         <button
                           onClick={() => window.open(`${window.location.origin}/s/${share.token}`, '_blank')}
-                          className="btn-secondary flex items-center gap-1 text-xs px-2.5 py-1.5"
+                          className="btn-secondary flex items-center gap-1.5 text-xs px-2.5 h-7"
                           title="Voir la page de partage">
                           <ExternalLink size={12} /> Voir
                         </button>
                         <button
                           onClick={() => copyShareLink(share.token)}
-                          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all
+                          className={`flex items-center gap-1.5 px-2.5 h-7 rounded-lg text-xs font-medium transition-all
                             ${copiedToken === share.token ? 'bg-emerald-500/20 text-emerald-400' : 'btn-secondary'}`}>
                           {copiedToken === share.token ? <Check size={12} /> : <Copy size={12} />}
                           Copier
                         </button>
                         <button
                           onClick={() => { setEmailingFileId(emailingFileId === f.id ? null : f.id); setEmailToFile('') }}
-                          className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all
+                          className={`flex items-center justify-center w-7 h-7 rounded-lg text-xs font-medium transition-all
                             ${emailingFileId === f.id ? 'bg-brand-500/20 text-brand-400' : 'btn-secondary'}`}
                           title="Envoyer par email">
                           <Mail size={12} />
@@ -293,12 +315,21 @@ export default function DashboardPage() {
                         setExpiryEditId(expiryEditId === f.id ? null : f.id)
                         setExpiryValue(f.expiresAt ? f.expiresAt.substring(0, 10) : '')
                       }}
-                      className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all
+                      className={`flex items-center justify-center w-7 h-7 rounded-lg text-xs font-medium transition-all
                         ${expiryEditId === f.id ? 'bg-brand-500/20 text-brand-400' : 'btn-secondary'}`}
                       title="Modifier l'expiration">
                       <Clock size={12} />
                     </button>
-                    <button onClick={() => handleDeleteFile(f.id)} className="btn-danger flex items-center gap-1 text-xs px-2.5 py-1.5">
+                    <button
+                      onClick={() => handleExpireNow(f.id)}
+                      disabled={expiringNowId === f.id}
+                      className="btn-secondary flex items-center justify-center w-7 h-7 disabled:opacity-40"
+                      title="Faire expirer maintenant">
+                      {expiringNowId === f.id
+                        ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        : <TimerOff size={12} />}
+                    </button>
+                    <button onClick={() => handleDeleteFile(f.id)} className="btn-danger flex items-center justify-center w-7 h-7">
                       <Trash2 size={12} />
                     </button>
                   </div>
@@ -421,22 +452,40 @@ export default function DashboardPage() {
                     <p className="text-white/40 text-sm text-center py-2">Aucun fichier reçu pour l'instant.</p>
                   )}
                   {receivedFiles[r.id]?.map(f => (
-                    <div key={f.id} className="flex items-center gap-3 bg-white/5 rounded-xl px-3 py-2.5">
-                      <span className="text-lg">{getFileIcon(f.originalName.split('.').pop() || '')}</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{f.originalName}</p>
-                        <p className="text-xs text-white/40">
-                          {formatBytes(f.size)}
-                          {f.uploaderName ? ` · De : ${f.uploaderName}` : ''}
-                          {f.uploaderEmail ? ` (${f.uploaderEmail})` : ''}
-                          {` · ${formatDate(f.uploadedAt)}`}
-                        </p>
-                        {f.message && <p className="text-xs text-white/50 italic mt-0.5">"{f.message}"</p>}
+                    <div key={f.id} className="bg-white/5 rounded-xl px-3 py-2.5">
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg flex-shrink-0">{getFileIcon(f.originalName.split('.').pop() || '')}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{f.originalName}</p>
+                          <p className="text-xs text-white/40">{formatBytes(f.size)} · {formatDate(f.uploadedAt)}</p>
+                        </div>
+                        <button onClick={() => handleDownloadReceived(r.id, f.id, f.originalName)}
+                          className="btn-secondary flex items-center gap-1.5 text-xs px-2.5 py-1.5 flex-shrink-0">
+                          <Download size={12} /> Télécharger
+                        </button>
                       </div>
-                      <button onClick={() => handleDownloadReceived(r.id, f.id, f.originalName)}
-                        className="btn-secondary flex items-center gap-1.5 text-xs px-2.5 py-1.5">
-                        <Download size={12} /> Télécharger
-                      </button>
+                      {/* Infos déposant */}
+                      {(f.uploaderName || f.uploaderEmail) && (
+                        <div className="mt-2 flex items-center gap-2 pt-2 border-t border-white/5">
+                          <div className="w-5 h-5 rounded-full bg-brand-500/20 flex items-center justify-center flex-shrink-0">
+                            <User size={10} className="text-brand-400" />
+                          </div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {f.uploaderName && (
+                              <span className="text-xs font-medium text-white/70">{f.uploaderName}</span>
+                            )}
+                            {f.uploaderEmail && (
+                              <a href={`mailto:${f.uploaderEmail}`}
+                                className="text-xs text-brand-400 hover:text-brand-300 transition-colors font-mono">
+                                {f.uploaderEmail}
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      {f.message && (
+                        <p className="text-xs text-white/50 italic mt-1.5 pl-7">"{f.message}"</p>
+                      )}
                     </div>
                   ))}
                 </div>

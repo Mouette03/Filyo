@@ -19,7 +19,16 @@ export async function settingsRoutes(app: FastifyInstance) {
   // GET /api/settings — public (pour charger le nom/logo au démarrage), sans données SMTP
   app.get('/', async () => {
     const s = await getSettings()
-    return { id: s.id, appName: s.appName, logoUrl: s.logoUrl, siteUrl: s.siteUrl ?? '', updatedAt: s.updatedAt }
+    return {
+      id: s.id,
+      appName: s.appName,
+      logoUrl: s.logoUrl,
+      siteUrl: s.siteUrl ?? '',
+      uploaderNameReq: s.uploaderNameReq ?? 'optional',
+      uploaderEmailReq: s.uploaderEmailReq ?? 'optional',
+      uploaderMsgReq: s.uploaderMsgReq ?? 'optional',
+      updatedAt: s.updatedAt
+    }
   })
 
   // GET /api/settings/smtp — config SMTP (admin uniquement)
@@ -91,6 +100,27 @@ export async function settingsRoutes(app: FastifyInstance) {
       return settings
     }
   )
+
+  // PATCH /api/settings/uploader-fields — configurer les champs du formulaire déposant
+  app.patch<{
+    Body: { uploaderNameReq?: string; uploaderEmailReq?: string; uploaderMsgReq?: string }
+  }>('/uploader-fields', { onRequest: [app.authenticate, app.adminOnly] }, async (req, reply) => {
+    const valid = ['hidden', 'optional', 'required']
+    const { uploaderNameReq, uploaderEmailReq, uploaderMsgReq } = req.body
+    if (uploaderNameReq && !valid.includes(uploaderNameReq)) return reply.code(400).send({ error: 'Valeur invalide' })
+    if (uploaderEmailReq && !valid.includes(uploaderEmailReq)) return reply.code(400).send({ error: 'Valeur invalide' })
+    if (uploaderMsgReq && !valid.includes(uploaderMsgReq)) return reply.code(400).send({ error: 'Valeur invalide' })
+    const updated = await prisma.appSettings.upsert({
+      where: { id: 'singleton' },
+      update: { uploaderNameReq, uploaderEmailReq, uploaderMsgReq },
+      create: { id: 'singleton', appName: 'Filyo', uploaderNameReq, uploaderEmailReq, uploaderMsgReq }
+    })
+    return {
+      uploaderNameReq: updated.uploaderNameReq,
+      uploaderEmailReq: updated.uploaderEmailReq,
+      uploaderMsgReq: updated.uploaderMsgReq
+    }
+  })
 
   // PATCH /api/settings/site-url — changer l'URL publique du site
   app.patch<{ Body: { siteUrl: string } }>(

@@ -3,8 +3,10 @@ import { useParams } from 'react-router-dom'
 import { useDropzone } from 'react-dropzone'
 import { Upload, ArrowDownUp, AlertTriangle, Clock, Check, Lock, User, Mail, MessageSquare } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { getUploadRequestInfo, submitToUploadRequest } from '../api/client'
+import { getUploadRequestInfo, submitToUploadRequest, getSettings } from '../api/client'
 import { formatBytes, formatDate, getFileIcon } from '../lib/utils'
+
+type FieldReq = 'hidden' | 'optional' | 'required'
 
 interface RequestInfo {
   token: string
@@ -29,6 +31,18 @@ export default function RequestUploadPage() {
   const [message, setMessage] = useState('')
   const [password, setPassword] = useState('')
   const [progress, setProgress] = useState(0)
+  const [nameReq, setNameReq] = useState<FieldReq>('optional')
+  const [emailReq, setEmailReq] = useState<FieldReq>('optional')
+  const [msgReq, setMsgReq] = useState<FieldReq>('optional')
+
+  useEffect(() => {
+    // Charger config champs déposant
+    getSettings().then(r => {
+      setNameReq(r.data.uploaderNameReq || 'optional')
+      setEmailReq(r.data.uploaderEmailReq || 'optional')
+      setMsgReq(r.data.uploaderMsgReq || 'optional')
+    }).catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (!token) return
@@ -53,6 +67,16 @@ export default function RequestUploadPage() {
 
   const handleSubmit = async () => {
     if (!files.length || !token) return
+    // Validation champs obligatoires
+    if (nameReq === 'required' && !uploaderName.trim()) {
+      return toast.error('Le nom est obligatoire')
+    }
+    if (emailReq === 'required' && !uploaderEmail.trim()) {
+      return toast.error('L\'adresse email est obligatoire')
+    }
+    if (msgReq === 'required' && !message.trim()) {
+      return toast.error('Le message est obligatoire')
+    }
     setStatus('uploading')
     setProgress(0)
 
@@ -151,42 +175,83 @@ export default function RequestUploadPage() {
             </div>
 
             {/* Sender info */}
-            <div className="card space-y-3">
-              <h3 className="text-sm font-semibold text-white/60 uppercase tracking-wider">Vos informations (optionnel)</h3>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
-                    <User size={11} /> Nom
-                  </label>
-                  <input type="text" value={uploaderName} onChange={e => setUploaderName(e.target.value)}
-                    placeholder="Votre nom" className="input text-sm py-2.5" />
-                </div>
-                <div>
-                  <label className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
-                    <Mail size={11} /> Email
-                  </label>
-                  <input type="email" value={uploaderEmail} onChange={e => setUploaderEmail(e.target.value)}
-                    placeholder="votre@email.fr" className="input text-sm py-2.5" />
-                </div>
+            {(nameReq !== 'hidden' || emailReq !== 'hidden' || msgReq !== 'hidden') && (
+              <div className="card space-y-3">
+                {/* Titre dynamique */}
+                {(() => {
+                  const hasRequired = nameReq === 'required' || emailReq === 'required' || msgReq === 'required'
+                  const hasOptional = nameReq === 'optional' || emailReq === 'optional' || msgReq === 'optional'
+                  const allRequired = [nameReq, emailReq, msgReq].filter(r => r !== 'hidden').every(r => r === 'required')
+                  return (
+                    <h3 className="text-sm font-semibold text-white/60 uppercase tracking-wider">
+                      Vos informations
+                      {!allRequired && hasOptional && hasRequired && (
+                        <span className="ml-2 text-white/30 normal-case tracking-normal font-normal text-xs">(* obligatoire)</span>
+                      )}
+                    </h3>
+                  )
+                })()}
+                {(nameReq !== 'hidden' || emailReq !== 'hidden') && (
+                  <div className={`grid gap-3 ${
+                    nameReq !== 'hidden' && emailReq !== 'hidden' ? 'grid-cols-2' : 'grid-cols-1'
+                  }`}>
+                    {nameReq !== 'hidden' && (
+                      <div>
+                        <label className="text-xs text-white/50 mb-1.5 flex items-center gap-1">
+                          <User size={11} /> Nom
+                          {nameReq === 'required' && <span className="text-red-400 ml-0.5">*</span>}
+                        </label>
+                        <input type="text" value={uploaderName} onChange={e => setUploaderName(e.target.value)}
+                          placeholder={nameReq === 'required' ? 'Votre nom (obligatoire)' : 'Votre nom'}
+                          className="input text-sm py-2.5" required={nameReq === 'required'} />
+                      </div>
+                    )}
+                    {emailReq !== 'hidden' && (
+                      <div>
+                        <label className="text-xs text-white/50 mb-1.5 flex items-center gap-1">
+                          <Mail size={11} /> Email
+                          {emailReq === 'required' && <span className="text-red-400 ml-0.5">*</span>}
+                        </label>
+                        <input type="email" value={uploaderEmail} onChange={e => setUploaderEmail(e.target.value)}
+                          placeholder={emailReq === 'required' ? 'votre@email.fr (obligatoire)' : 'votre@email.fr'}
+                          className="input text-sm py-2.5" required={emailReq === 'required'} />
+                      </div>
+                    )}
+                  </div>
+                )}
+                {msgReq !== 'hidden' && (
+                  <div>
+                    <label className="text-xs text-white/50 mb-1.5 flex items-center gap-1">
+                      <MessageSquare size={11} /> Message
+                      {msgReq === 'required' && <span className="text-red-400 ml-0.5">*</span>}
+                      {msgReq === 'optional' && <span className="text-white/25 ml-1">(optionnel)</span>}
+                    </label>
+                    <textarea value={message} onChange={e => setMessage(e.target.value)}
+                      placeholder={msgReq === 'required' ? 'Un mot pour accompagner votre envoi… (obligatoire)' : 'Un mot pour accompagner votre envoi…'}
+                      rows={2} className="input text-sm py-2.5 resize-none" />
+                  </div>
+                )}
+                {info.hasPassword && (
+                  <div>
+                    <label className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
+                      <Lock size={11} /> Mot de passe requis
+                    </label>
+                    <input type="password" value={password} onChange={e => setPassword(e.target.value)}
+                      placeholder="Entrez le mot de passe" className="input text-sm py-2.5" />
+                  </div>
+                )}
               </div>
-              <div>
+            )}
+            {/* Mot de passe seul si tous les champs déposant masqués */}
+            {nameReq === 'hidden' && emailReq === 'hidden' && msgReq === 'hidden' && info.hasPassword && (
+              <div className="card">
                 <label className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
-                  <MessageSquare size={11} /> Message (optionnel)
+                  <Lock size={11} /> Mot de passe requis
                 </label>
-                <textarea value={message} onChange={e => setMessage(e.target.value)}
-                  placeholder="Un mot pour accompagner votre envoi…"
-                  rows={2} className="input text-sm py-2.5 resize-none" />
+                <input type="password" value={password} onChange={e => setPassword(e.target.value)}
+                  placeholder="Entrez le mot de passe" className="input text-sm py-2.5" />
               </div>
-              {info.hasPassword && (
-                <div>
-                  <label className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
-                    <Lock size={11} /> Mot de passe requis
-                  </label>
-                  <input type="password" value={password} onChange={e => setPassword(e.target.value)}
-                    placeholder="Entrez le mot de passe" className="input text-sm py-2.5" />
-                </div>
-              )}
-            </div>
+            )}
 
             {/* Drop zone */}
             <div
