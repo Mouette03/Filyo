@@ -101,7 +101,7 @@ async function bootstrap() {
   const host = process.env.HOST || '0.0.0.0'
 
   await app.listen({ port, host })
-  console.log(`🚀 Filyo backend running on http://${host}:${port}`)
+  app.log.info(`🚀 Filyo backend running on http://${host}:${port}`)
 }
 
 bootstrap().catch(console.error)

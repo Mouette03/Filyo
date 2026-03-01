@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState } from 'react'
-import { Users, Plus, Trash2, Pencil, Check, X, ShieldCheck, User, Files, FolderInput } from 'lucide-react'
+import { Users, Plus, Trash2, Pencil, Check, X, ShieldCheck, User, Files, FolderInput, ChevronDown } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { listUsers, createUser, updateUser, deleteUser, getAllFilesAdmin, getAllUploadRequestsAdmin, deleteFile, deleteUploadRequest } from '../api/client'
 import { formatDate, formatBytes, getFileIcon } from '../lib/utils'
@@ -165,11 +165,11 @@ export default function UsersPage() {
       {/* Onglets — select sur mobile, boutons sur sm+ */}
       <div className="mb-8">
         {/* Select mobile */}
-        <div className="sm:hidden">
+        <div className="sm:hidden relative">
           <select
             value={tab}
             onChange={e => setTab(e.target.value as Tab)}
-            className="w-full bg-surface-800 text-white text-sm font-medium rounded-xl px-4 py-3 border border-white/10 focus:outline-none focus:ring-2 focus:ring-brand-500 appearance-none cursor-pointer"
+            className="w-full bg-surface-800 text-white text-sm font-medium rounded-xl px-4 pr-10 py-3 border border-white/10 focus:outline-none focus:ring-2 focus:ring-brand-500 appearance-none cursor-pointer"
           >
             {tabs.map(t => (
               <option key={t.id} value={t.id}>
@@ -177,6 +177,7 @@ export default function UsersPage() {
               </option>
             ))}
           </select>
+          <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 pointer-events-none" />
         </div>
 
         {/* Boutons desktop */}
@@ -220,7 +221,7 @@ export default function UsersPage() {
           {showCreate && (
             <div className="card mb-6 space-y-4">
               <h3 className="font-semibold text-white/80">Creer un utilisateur</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">Nom</label>
                   <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Prenom Nom" className="input" />
@@ -237,7 +238,7 @@ export default function UsersPage() {
                   <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">Confirmer le mot de passe</label>
                   <input type="password" value={newConfirmPassword} onChange={e => setNewConfirmPassword(e.target.value)} placeholder="Répétez le mot de passe" className="input" />
                 </div>
-                <div className="col-span-2">
+                <div className="sm:col-span-2">
                   <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">Role</label>
                   <select value={newRole} onChange={e => setNewRole(e.target.value)} className="input bg-surface-700">
                     <option value="USER">Utilisateur standard</option>

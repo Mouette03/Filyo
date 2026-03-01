@@ -56,7 +56,7 @@ export async function adminRoutes(app: FastifyInstance) {
   })
 
   // POST /api/admin/cleanup - Supprimer les fichiers expirés
-  app.post('/cleanup', authHook, async () => {
+  app.post('/cleanup', authHook, async (req: any) => {
     const now = new Date()
 
     const expiredFiles = await prisma.file.findMany({
@@ -74,17 +74,18 @@ export async function adminRoutes(app: FastifyInstance) {
       where: { expiresAt: { lt: now } },
       include: { receivedFiles: true }
     })
-    for (const req of expiredRequests) {
-      for (const f of req.receivedFiles) {
+    for (const expiredReq of expiredRequests) {
+      for (const f of expiredReq.receivedFiles) {
         await fs.remove(f.path).catch(() => {})
       }
       // Supprimer le dossier du partage inversé
-      await fs.remove(path.join(UPLOAD_DIR, 'received', req.id)).catch(() => {})
+      await fs.remove(path.join(UPLOAD_DIR, 'received', expiredReq.id)).catch(() => {})
     }
     const deletedRequests = await prisma.uploadRequest.deleteMany({
       where: { expiresAt: { lt: now } }
     })
 
+    req.log.info({ deletedFiles: deletedFiles.count, deletedRequests: deletedRequests.count }, 'Nettoyage effectué')
     return {
       deletedFiles: deletedFiles.count,
       deletedUploadRequests: deletedRequests.count

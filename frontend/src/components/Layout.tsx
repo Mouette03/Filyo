@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
-import { Upload, LayoutDashboard, ArrowDownUp, Plus, Settings, Users, LogOut, ChevronDown, User } from 'lucide-react'
+import { Upload, LayoutDashboard, ArrowDownUp, Plus, Settings, Users, LogOut, ChevronDown, User, Github } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { useAuthStore } from '../stores/useAuthStore'
 import { useAppSettingsStore } from '../stores/useAppSettingsStore'
@@ -139,8 +139,18 @@ export default function Layout() {
         <Outlet />
       </main>
 
-      <footer className="border-t border-white/5 py-4 text-center text-white/25 text-xs">
-        {settings.appName} — Transfert de fichiers local &amp; privé
+      <footer className="border-t border-white/5 py-4 px-6 text-white/25 text-xs relative flex items-center justify-center">
+        <span>{settings.appName} — Transfert de fichiers local &amp; privé</span>
+        <a
+          href="https://github.com/Mouette03/Filyo"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="absolute right-6 flex items-center gap-1.5 hover:text-white/60 transition-colors"
+          title="Voir sur GitHub"
+        >
+          <Github size={14} />
+          <span className="hidden sm:inline">GitHub</span>
+        </a>
       </footer>
     </div>
   )

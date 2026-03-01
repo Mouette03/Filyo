@@ -31,6 +31,7 @@ export async function userRoutes(app: FastifyInstance) {
         data: { email, name, password: hashed, role: role === 'ADMIN' ? 'ADMIN' : 'USER' },
         select: { id: true, email: true, name: true, role: true, active: true, createdAt: true }
       })
+      req.log.info({ email, role: user.role }, 'Utilisateur créé par admin')
       return reply.code(201).send(user)
     }
   )
@@ -54,6 +55,7 @@ export async function userRoutes(app: FastifyInstance) {
           data,
           select: { id: true, email: true, name: true, role: true, active: true, createdAt: true }
         })
+        req.log.info({ id: req.params.id }, 'Utilisateur modifié par admin')
         return user
       } catch {
         return reply.code(404).send({ error: 'Utilisateur introuvable' })
@@ -69,6 +71,7 @@ export async function userRoutes(app: FastifyInstance) {
     }
     try {
       await prisma.user.delete({ where: { id: req.params.id } })
+      req.log.info({ id: req.params.id }, 'Utilisateur supprimé par admin')
       return { success: true }
     } catch {
       return reply.code(404).send({ error: 'Utilisateur introuvable' })
