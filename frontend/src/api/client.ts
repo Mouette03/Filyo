@@ -121,6 +121,10 @@ export const downloadReceivedFile = (requestId: string, fileId: string) =>
 export const sendShareByEmail = (to: string, tokens: string[]) =>
   api.post('/shares/send-email', { to, tokens })
 
+// ---- Expiration fichier ----
+export const updateFileExpiry = (id: string, expiresAt: string | null) =>
+  api.patch(`/files/${id}/expiry`, { expiresAt })
+
 // ---- Admin ----
 export const getStats = () => api.get('/admin/stats')
 export const runCleanup = () => api.post('/admin/cleanup')

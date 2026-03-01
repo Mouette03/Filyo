@@ -122,4 +122,20 @@ export async function fileRoutes(app: FastifyInstance) {
     await prisma.file.delete({ where: { id: req.params.id } })
     return { success: true }
   })
+
+  // PATCH /api/files/:id/expiry - Modifier l'expiration (propriétaire uniquement)
+  app.patch<{ Params: { id: string }; Body: { expiresAt: string | null } }>(
+    '/:id/expiry',
+    auth,
+    async (req: any, reply) => {
+      const file = await prisma.file.findFirst({
+        where: { id: req.params.id, userId: req.user.id }
+      })
+      if (!file) return reply.code(404).send({ error: 'Fichier introuvable' })
+      const expiresAt = req.body.expiresAt ? new Date(req.body.expiresAt) : null
+      await prisma.file.update({ where: { id: req.params.id }, data: { expiresAt } })
+      await prisma.share.updateMany({ where: { fileId: req.params.id }, data: { expiresAt } })
+      return { expiresAt }
+    }
+  )
 }

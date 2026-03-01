@@ -8,6 +8,7 @@ import { formatBytes, getFileIcon, copyToClipboard } from '../lib/utils'
 interface UploadedResult {
   id: string
   originalName: string
+  mimeType: string
   size: string
   shareToken: string
   expiresAt: string | null
@@ -124,7 +125,7 @@ export default function HomePage() {
                 const url = `${window.location.origin}/s/${r.shareToken}`
                 return (
                   <div key={r.id} className="flex items-center gap-3 bg-white/5 rounded-xl px-3 py-2.5">
-                    <span className="text-xl flex-shrink-0">{getFileIcon(r.originalName.split('.').pop() || '')}</span>
+                    <span className="text-xl flex-shrink-0">{getFileIcon(r.mimeType)}</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{r.originalName}</p>
                       <p className="text-xs text-white/30 truncate font-mono">{url}</p>

@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Trash2, Download, RefreshCw, Copy, Check, Eye, ToggleLeft, ToggleRight, HardDrive } from 'lucide-react'
+import { Trash2, Download, RefreshCw, Copy, Check, Eye, ToggleLeft, ToggleRight, HardDrive, Clock, Mail, Send, ExternalLink } from 'lucide-react'
 import toast from 'react-hot-toast'
 import {
   listFiles, deleteFile, listUploadRequests,
   deleteUploadRequest, toggleUploadRequest, getStats,
-  runCleanup, getReceivedFiles, downloadReceivedFile
+  runCleanup, getReceivedFiles, downloadReceivedFile,
+  sendShareByEmail, updateFileExpiry
 } from '../api/client'
 import { formatBytes, formatDate, getFileIcon, downloadBlob, copyToClipboard } from '../lib/utils'
 
@@ -40,6 +41,12 @@ export default function DashboardPage() {
   const [copiedToken, setCopiedToken] = useState<string | null>(null)
   const [expandedRequest, setExpandedRequest] = useState<string | null>(null)
   const [receivedFiles, setReceivedFiles] = useState<Record<string, ReceivedFile[]>>({})
+  const [emailingFileId, setEmailingFileId] = useState<string | null>(null)
+  const [emailToFile, setEmailToFile] = useState('')
+  const [emailSendingToken, setEmailSendingToken] = useState<string | null>(null)
+  const [expiryEditId, setExpiryEditId] = useState<string | null>(null)
+  const [expiryValue, setExpiryValue] = useState('')
+  const [savingExpiryId, setSavingExpiryId] = useState<string | null>(null)
 
   const load = async () => {
     setLoading(true)
@@ -113,6 +120,33 @@ export default function DashboardPage() {
       const res = await downloadReceivedFile(requestId, fileId)
       downloadBlob(res.data, filename)
     } catch { toast.error('Erreur de téléchargement') }
+  }
+
+  const handleSendFileEmail = async (token: string) => {
+    if (!emailToFile.trim()) return toast.error('Entrez une adresse email')
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailToFile)) return toast.error('Adresse email invalide')
+    setEmailSendingToken(token)
+    try {
+      await sendShareByEmail(emailToFile.trim(), [token])
+      toast.success(`Lien envoyé à ${emailToFile}`)
+      setEmailingFileId(null)
+      setEmailToFile('')
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Erreur lors de l'envoi")
+    }
+    setEmailSendingToken(null)
+  }
+
+  const handleSaveExpiry = async (fileId: string, clear = false) => {
+    setSavingExpiryId(fileId)
+    try {
+      const expiresAt = (!clear && expiryValue) ? new Date(expiryValue).toISOString() : null
+      await updateFileExpiry(fileId, expiresAt)
+      setFiles(prev => prev.map(f => f.id === fileId ? { ...f, expiresAt } : f))
+      setExpiryEditId(null)
+      toast.success(expiresAt ? 'Expiration mise à jour' : 'Expiration supprimée')
+    } catch { toast.error('Erreur lors de la mise à jour') }
+    setSavingExpiryId(null)
   }
 
   const handleCleanup = async () => {
@@ -216,31 +250,118 @@ export default function DashboardPage() {
           {files.length === 0 && (
             <div className="card text-center py-12 text-white/40">Aucun fichier envoyé pour l'instant.</div>
           )}
-          {files.map(f => (
-            <div key={f.id} className="card flex items-center gap-4">
-              <span className="text-2xl flex-shrink-0">{getFileIcon(f.mimeType)}</span>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium truncate">{f.originalName}</p>
-                <p className="text-xs text-white/40 mt-0.5">
-                  {formatBytes(f.size)} · {formatDate(f.uploadedAt)} · {f.downloads} téléchargement(s)
-                  {f.expiresAt && ` · Expire ${formatDate(f.expiresAt)}`}
-                </p>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                {f.shares[0] && (
-                  <button onClick={() => copyShareLink(f.shares[0].token)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all
-                      ${copiedToken === f.shares[0].token ? 'bg-emerald-500/20 text-emerald-400' : 'btn-secondary'}`}>
-                    {copiedToken === f.shares[0].token ? <Check size={12} /> : <Copy size={12} />}
-                    Partager
-                  </button>
+          {files.map(f => {
+            const share = f.shares[0]
+            return (
+              <div key={f.id} className="card overflow-hidden">
+                <div className="flex items-center gap-4">
+                  <span className="text-2xl flex-shrink-0">{getFileIcon(f.mimeType)}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate">{f.originalName}</p>
+                    <p className="text-xs text-white/40 mt-0.5">
+                      {formatBytes(f.size)} · {formatDate(f.uploadedAt)} · {f.downloads} téléchargement(s)
+                      {f.expiresAt ? ` · Expire ${formatDate(f.expiresAt)}` : ' · Sans expiration'}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    {share && (
+                      <>
+                        <button
+                          onClick={() => window.open(`${window.location.origin}/s/${share.token}`, '_blank')}
+                          className="btn-secondary flex items-center gap-1 text-xs px-2.5 py-1.5"
+                          title="Voir la page de partage">
+                          <ExternalLink size={12} /> Voir
+                        </button>
+                        <button
+                          onClick={() => copyShareLink(share.token)}
+                          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all
+                            ${copiedToken === share.token ? 'bg-emerald-500/20 text-emerald-400' : 'btn-secondary'}`}>
+                          {copiedToken === share.token ? <Check size={12} /> : <Copy size={12} />}
+                          Copier
+                        </button>
+                        <button
+                          onClick={() => { setEmailingFileId(emailingFileId === f.id ? null : f.id); setEmailToFile('') }}
+                          className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all
+                            ${emailingFileId === f.id ? 'bg-brand-500/20 text-brand-400' : 'btn-secondary'}`}
+                          title="Envoyer par email">
+                          <Mail size={12} />
+                        </button>
+                      </>
+                    )}
+                    <button
+                      onClick={() => {
+                        setExpiryEditId(expiryEditId === f.id ? null : f.id)
+                        setExpiryValue(f.expiresAt ? f.expiresAt.substring(0, 10) : '')
+                      }}
+                      className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all
+                        ${expiryEditId === f.id ? 'bg-brand-500/20 text-brand-400' : 'btn-secondary'}`}
+                      title="Modifier l'expiration">
+                      <Clock size={12} />
+                    </button>
+                    <button onClick={() => handleDeleteFile(f.id)} className="btn-danger flex items-center gap-1 text-xs px-2.5 py-1.5">
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Inline : envoyer par email */}
+                {emailingFileId === f.id && share && (
+                  <div className="mt-3 pt-3 border-t border-white/10 flex gap-2 items-center">
+                    <Mail size={13} className="text-white/30 flex-shrink-0" />
+                    <input
+                      type="email"
+                      value={emailToFile}
+                      onChange={e => setEmailToFile(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && handleSendFileEmail(share.token)}
+                      placeholder="destinataire@exemple.fr"
+                      className="input text-sm py-1.5 flex-1"
+                      autoFocus
+                    />
+                    <button
+                      onClick={() => handleSendFileEmail(share.token)}
+                      disabled={emailSendingToken === share.token || !emailToFile.trim()}
+                      className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1.5 disabled:opacity-40">
+                      {emailSendingToken === share.token
+                        ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        : <Send size={12} />}
+                      Envoyer
+                    </button>
+                    <button onClick={() => setEmailingFileId(null)} className="btn-secondary text-xs px-2.5 py-1.5">✕</button>
+                  </div>
                 )}
-                <button onClick={() => handleDeleteFile(f.id)} className="btn-danger flex items-center gap-1 text-xs px-2.5 py-1.5">
-                  <Trash2 size={12} />
-                </button>
+
+                {/* Inline : modifier expiration */}
+                {expiryEditId === f.id && (
+                  <div className="mt-3 pt-3 border-t border-white/10 flex flex-wrap gap-2 items-center">
+                    <Clock size={13} className="text-white/30 flex-shrink-0" />
+                    <input
+                      type="date"
+                      value={expiryValue}
+                      onChange={e => setExpiryValue(e.target.value)}
+                      min={new Date().toISOString().substring(0, 10)}
+                      className="input text-sm py-1.5 flex-1 min-w-36"
+                    />
+                    <button
+                      onClick={() => handleSaveExpiry(f.id)}
+                      disabled={savingExpiryId === f.id || !expiryValue}
+                      className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1.5 disabled:opacity-40">
+                      {savingExpiryId === f.id
+                        ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        : <Check size={12} />}
+                      Enregistrer
+                    </button>
+                    <button
+                      onClick={() => handleSaveExpiry(f.id, true)}
+                      disabled={savingExpiryId === f.id}
+                      className="btn-secondary text-xs px-2.5 py-1.5 disabled:opacity-40">
+                      Sans expiration
+                    </button>
+                    <button onClick={() => setExpiryEditId(null)} className="btn-secondary text-xs px-2.5 py-1.5">✕</button>
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
