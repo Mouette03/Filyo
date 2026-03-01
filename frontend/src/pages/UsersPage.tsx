@@ -162,31 +162,49 @@ export default function UsersPage() {
         </div>
       </div>
 
-      {/* Onglets */}
-      <div className="mb-8 bg-surface-800 rounded-xl p-1.5 overflow-x-auto scrollbar-none">
-        <div className="flex gap-1 min-w-max">
-        {tabs.map(t => {
-          const Icon = t.icon
-          return (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              className={`flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
-                tab === t.id
-                  ? 'bg-brand-500 text-white shadow-lg'
-                  : 'text-white/50 hover:text-white/80'
-              }`}
-            >
-              <Icon size={15} />
-              {t.label}
-              {t.count !== undefined && (
-                <span className={`text-xs px-1.5 py-0.5 rounded-full ${tab === t.id ? 'bg-white/20' : 'bg-white/10'}`}>
-                  {t.count}
-                </span>
-              )}
-            </button>
-          )
-        })}
+      {/* Onglets — select sur mobile, boutons sur sm+ */}
+      <div className="mb-8">
+        {/* Select mobile */}
+        <div className="sm:hidden">
+          <select
+            value={tab}
+            onChange={e => setTab(e.target.value as Tab)}
+            className="w-full bg-surface-800 text-white text-sm font-medium rounded-xl px-4 py-3 border border-white/10 focus:outline-none focus:ring-2 focus:ring-brand-500 appearance-none cursor-pointer"
+          >
+            {tabs.map(t => (
+              <option key={t.id} value={t.id}>
+                {t.label}{t.count !== undefined ? ` (${t.count})` : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Boutons desktop */}
+        <div className="hidden sm:block bg-surface-800 rounded-xl p-1.5">
+          <div className="flex gap-1">
+            {tabs.map(t => {
+              const Icon = t.icon
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => setTab(t.id)}
+                  className={`flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+                    tab === t.id
+                      ? 'bg-brand-500 text-white shadow-lg'
+                      : 'text-white/50 hover:text-white/80'
+                  }`}
+                >
+                  <Icon size={15} />
+                  {t.label}
+                  {t.count !== undefined && (
+                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${tab === t.id ? 'bg-white/20' : 'bg-white/10'}`}>
+                      {t.count}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
         </div>
       </div>
 
