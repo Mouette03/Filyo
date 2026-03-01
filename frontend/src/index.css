@@ -180,7 +180,6 @@
     appearance: none;
     -webkit-appearance: none;
   }
-}
 
   .input {
     @apply px-4 py-3 rounded-xl w-full transition-all duration-200;
