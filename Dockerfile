@@ -23,6 +23,7 @@ RUN npm run build
 FROM --platform=$BUILDPLATFORM node:20-alpine AS backend-builder
 
 RUN npm install -g npm@latest --quiet
+RUN apk add --no-cache openssl
 
 WORKDIR /app/backend
 COPY backend/package*.json ./
