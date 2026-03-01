@@ -102,7 +102,7 @@ export default function CreateRequestPage() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Expiry */}
             <div>
               <label className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
