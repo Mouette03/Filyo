@@ -210,24 +210,34 @@ export default function DashboardPage() {
             const pct = Math.round((usedBytes / totalBytes) * 100)
             const barColor = pct >= 90 ? 'bg-red-500' : pct >= 70 ? 'bg-amber-500' : 'bg-brand-500'
             return (
-              <div className="card mb-8 flex items-center gap-5">
-                <div className="w-10 h-10 bg-brand-500/15 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <HardDrive size={18} className="text-brand-400" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <p className="text-sm font-medium">Espace disque</p>
-                    <p className="text-xs text-white/40">
-                      {stats.disk.used} / {stats.disk.total} utilisés
+              <div className="card mb-8">
+                <div className="flex items-center gap-3 sm:gap-5">
+                  <div className="w-10 h-10 bg-brand-500/15 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <HardDrive size={18} className="text-brand-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1.5 gap-2">
+                      <p className="text-sm font-medium flex-shrink-0">Espace disque</p>
+                      <p className="text-xs text-white/40 truncate text-right hidden sm:block">
+                        {stats.disk.used} / {stats.disk.total} utilisés
+                        &nbsp;·&nbsp;
+                        <span className="text-brand-300">{stats.disk.free} libres</span>
+                      </p>
+                    </div>
+                    <div className="h-2.5 rounded-full bg-white/10 overflow-hidden">
+                      <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
+                    </div>
+                    {/* Infos mobile sous la barre */}
+                    <p className="text-xs text-white/40 mt-1.5 sm:hidden">
+                      {stats.disk.used} / {stats.disk.total}
                       &nbsp;·&nbsp;
                       <span className="text-brand-300">{stats.disk.free} libres</span>
                     </p>
                   </div>
-                  <div className="h-2 rounded-full bg-white/10 overflow-hidden">
-                    <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
-                  </div>
+                  <span className={`text-2xl font-bold flex-shrink-0 tabular-nums ${
+                    pct >= 90 ? 'text-red-400' : pct >= 70 ? 'text-amber-400' : 'text-brand-400'
+                  }`}>{pct}%</span>
                 </div>
-                <span className={`text-sm font-semibold flex-shrink-0 ${ pct >= 90 ? 'text-red-400' : pct >= 70 ? 'text-amber-400' : 'text-brand-400' }`}>{pct}%</span>
               </div>
             )
           })()}

@@ -74,12 +74,22 @@ export default function Layout() {
               className="flex items-center gap-2 glass-hover rounded-xl px-3 py-2"
             >
               {user?.avatarUrl ? (
-                <img src={user.avatarUrl} alt="Avatar" className="w-7 h-7 rounded-lg object-cover" />
-              ) : (
-                <div className="w-7 h-7 rounded-lg bg-brand-500/30 flex items-center justify-center text-brand-400 text-xs font-bold">
-                  {user?.name?.charAt(0).toUpperCase()}
-                </div>
-              )}
+                <img
+                  src={user.avatarUrl}
+                  alt={user.name?.charAt(0).toUpperCase()}
+                  className="w-7 h-7 rounded-lg object-cover"
+                  onError={e => {
+                    e.currentTarget.style.display = 'none';
+                    (e.currentTarget.nextElementSibling as HTMLElement | null)?.style.setProperty('display', 'flex')
+                  }}
+                />
+              ) : null}
+              <div
+                className="w-7 h-7 rounded-lg bg-brand-500/30 items-center justify-center text-brand-400 text-xs font-bold"
+                style={{ display: user?.avatarUrl ? 'none' : 'flex' }}
+              >
+                {user?.name?.charAt(0).toUpperCase()}
+              </div>
               <span className="hidden sm:block text-sm font-medium text-white/80">{user?.name}</span>
               <ChevronDown size={14} className={`text-white/40 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
             </button>
