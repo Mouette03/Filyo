@@ -98,7 +98,7 @@ export async function adminRoutes(app: FastifyInstance) {
         user: { select: { id: true, name: true, email: true } }
       }
     })
-    return files.map(f => ({
+    return files.map((f: any) => ({
       ...f,
       size: f.size.toString()
     }))
@@ -113,7 +113,7 @@ export async function adminRoutes(app: FastifyInstance) {
         user: { select: { id: true, name: true, email: true } }
       }
     })
-    return requests.map(r => ({
+    return requests.map((r: any) => ({
       ...r,
       maxSizeBytes: r.maxSizeBytes?.toString(),
       filesCount: r._count.receivedFiles

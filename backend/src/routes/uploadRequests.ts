@@ -58,7 +58,7 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
       orderBy: { createdAt: 'desc' },
       include: { _count: { select: { receivedFiles: true } } }
     })
-    return requests.map(r => ({
+    return requests.map((r: any) => ({
       ...r,
       maxSizeBytes: r.maxSizeBytes?.toString(),
       filesCount: r._count.receivedFiles
@@ -157,11 +157,11 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
     }
 
     const created = await Promise.all(
-      savedFiles.map(f => prisma.receivedFile.create({ data: f }))
+      savedFiles.map((f: any) => prisma.receivedFile.create({ data: f }))
     )
 
     return reply.code(201).send(
-      created.map(f => ({
+      created.map((f: any) => ({
         id: f.id,
         originalName: f.originalName,
         size: f.size.toString()

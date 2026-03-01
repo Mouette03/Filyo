@@ -79,7 +79,7 @@ export async function fileRoutes(app: FastifyInstance) {
     )
 
     return reply.code(201).send(
-      files.map(f => ({
+      files.map((f: any) => ({
         id: f.id,
         originalName: f.originalName,
         mimeType: f.mimeType,
@@ -97,7 +97,7 @@ export async function fileRoutes(app: FastifyInstance) {
       orderBy: { uploadedAt: 'desc' },
       include: { shares: true }
     })
-    return files.map(f => ({ ...f, size: f.size.toString() }))
+    return files.map((f: any) => ({ ...f, size: f.size.toString() }))
   })
 
   // GET /api/files/:id - Infos d un fichier (proprietaire uniquement)
