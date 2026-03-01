@@ -85,10 +85,10 @@ export default function LoginPage() {
               <ArrowDownUp size={26} className="text-white" />
             </div>
           )}
-          <h1 className="text-2xl font-bold tracking-tight">
+          <h1 className="text-2xl font-bold tracking-tight text-white">
             {settings.appName}
           </h1>
-          <p className="text-white/40 text-sm mt-1">
+          <p className="text-white/50 text-sm mt-1">
             {setupNeeded ? 'Créez votre compte administrateur' : 'Connectez-vous pour continuer'}
           </p>
         </div>
@@ -212,7 +212,7 @@ export default function LoginPage() {
           </form>
         )}
 
-        <p className="text-center text-white/20 text-xs mt-6">
+        <p className="text-center text-white/40 text-xs mt-6">
           {settings.appName} — Hébergé localement &amp; privé
         </p>
       </div>

@@ -479,9 +479,9 @@ export default function DashboardPage() {
                       {r.active ? 'Actif' : 'Désactivé'}
                     </span>
                   </div>
-                  <p className="text-xs text-white/40 mt-0.5 truncate">
+                  <p className="text-xs text-white/40 mt-0.5 leading-relaxed">
                     {r.filesCount} fichier(s) · {formatDate(r.createdAt)}
-                    {r.expiresAt && ` · Expire ${formatDate(r.expiresAt)}`}
+                    {r.expiresAt && <><br className="sm:hidden" /><span>{` · Expire ${formatDate(r.expiresAt)}`}</span></>}
                   </p>
                 </div>
                 {/* Boutons desktop */}

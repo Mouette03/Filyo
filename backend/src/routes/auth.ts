@@ -152,7 +152,7 @@ export async function authRoutes(app: FastifyInstance) {
     const user = await prisma.user.findUnique({ where: { id: req.user.id } })
     if (!user) return reply.code(404).send({ error: 'Introuvable' })
     const ok = await bcrypt.compare(currentPassword, user.password)
-    if (!ok) return reply.code(401).send({ error: 'Mot de passe actuel incorrect' })
+    if (!ok) return reply.code(400).send({ error: 'Mot de passe actuel incorrect' })
     const hashed = await bcrypt.hash(newPassword, 12)
     await prisma.user.update({ where: { id: req.user.id }, data: { password: hashed } })
     return { success: true }
