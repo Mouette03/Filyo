@@ -28,7 +28,7 @@ RUN npm run build
 # ── Stage 3 : Image de production ───────────────────────────────
 FROM node:20-alpine AS runner
 
-RUN apk add --no-cache dumb-init openssl
+RUN apk add --no-cache dumb-init openssl su-exec
 
 WORKDIR /app
 
@@ -41,9 +41,12 @@ COPY --from=backend-builder /app/backend/package.json    ./package.json
 # Frontend buildé (servi par Fastify)
 COPY --from=frontend-builder /app/frontend/dist          ./public
 
-# Dossier données
-RUN mkdir -p /data/uploads \
-    && chown -R node:node /data /app
+# Script d'entrypoint (corrige les permissions du volume au démarrage)
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Dossier données (permissions fixées à l'exécution via entrypoint)
+RUN mkdir -p /data/uploads
 
 ENV NODE_ENV=production
 ENV PORT=3001
@@ -55,8 +58,5 @@ ENV FRONTEND_DIST=/app/public
 VOLUME ["/data"]
 EXPOSE 3001
 
-USER node
-
-ENTRYPOINT ["dumb-init", "--"]
-# Synchronise le schéma sur la DB (crée les tables si besoin) puis démarre
-CMD ["sh", "-c", "npx prisma db push --accept-data-loss && node dist/index.js"]
+# L'entrypoint tourne en root pour fixer /data, puis bascule sur node via su-exec
+ENTRYPOINT ["dumb-init", "--", "/entrypoint.sh"]
