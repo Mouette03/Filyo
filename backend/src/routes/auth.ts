@@ -22,6 +22,12 @@ const registerSchema = z.object({
 })
 
 export async function authRoutes(app: FastifyInstance) {
+  // GET /api/auth/setup — vérifie si le premier utilisateur doit être créé
+  app.get('/setup', async (_req, reply) => {
+    const count = await prisma.user.count()
+    return reply.send({ setupNeeded: count === 0 })
+  })
+
   // POST /api/auth/login
   app.post('/login', async (req, reply) => {
     const body = loginSchema.safeParse(req.body)

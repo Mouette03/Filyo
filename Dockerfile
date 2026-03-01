@@ -7,6 +7,8 @@
 # ── Stage 1 : Build du frontend React/Vite ──────────────────────
 FROM node:20-alpine AS frontend-builder
 
+RUN npm install -g npm@latest --quiet
+
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
 RUN npm install --silent
@@ -16,6 +18,8 @@ RUN npm run build
 
 # ── Stage 2 : Build du backend TypeScript ───────────────────────
 FROM node:20-alpine AS backend-builder
+
+RUN npm install -g npm@latest --quiet
 
 WORKDIR /app/backend
 COPY backend/package*.json ./
@@ -28,6 +32,7 @@ RUN npm run build
 # ── Stage 3 : Image de production ───────────────────────────────
 FROM node:20-alpine AS runner
 
+RUN npm install -g npm@latest --quiet
 RUN apk add --no-cache dumb-init openssl su-exec
 
 WORKDIR /app

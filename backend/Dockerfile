@@ -1,6 +1,8 @@
 # ---- Build stage ----
 FROM node:20-alpine AS builder
 
+RUN npm install -g npm@latest --quiet
+
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
@@ -12,6 +14,7 @@ RUN npm run build
 # ---- Production stage ----
 FROM node:20-alpine AS runner
 
+RUN npm install -g npm@latest --quiet
 RUN apk add --no-cache dumb-init openssl
 
 WORKDIR /app

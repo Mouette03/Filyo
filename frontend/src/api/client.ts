@@ -26,6 +26,8 @@ api.interceptors.response.use(
 )
 
 // ---- Auth ----
+export const checkSetup = () => api.get('/auth/setup')
+
 export const login = (email: string, password: string) =>
   api.post('/auth/login', { email, password })
 
