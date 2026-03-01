@@ -78,6 +78,8 @@ export async function adminRoutes(app: FastifyInstance) {
       for (const f of req.receivedFiles) {
         await fs.remove(f.path).catch(() => {})
       }
+      // Supprimer le dossier du partage inversé
+      await fs.remove(path.join(UPLOAD_DIR, 'received', req.id)).catch(() => {})
     }
     const deletedRequests = await prisma.uploadRequest.deleteMany({
       where: { expiresAt: { lt: now } }

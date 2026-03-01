@@ -448,44 +448,68 @@ export default function DashboardPage() {
           )}
           {requests.map(r => (
             <div key={r.id} className="card space-y-0 overflow-hidden">
-                <div className="flex items-start sm:items-center gap-3 sm:gap-4">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 sm:mt-0
-                    ${r.active ? 'bg-brand-500/20' : 'bg-white/5'}`}>
-                    <Download size={18} className={r.active ? 'text-brand-400' : 'text-white/30'} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-medium truncate">{r.title}</p>
-                      <span className={r.active ? 'badge-green' : 'badge-red'}>
-                        {r.active ? 'Actif' : 'Désactivé'}
-                      </span>
-                    </div>
-                    <p className="text-xs text-white/40 mt-0.5">
-                      {r.filesCount} fichier(s) reçu(s) · Créé {formatDate(r.createdAt)}
-                      {r.expiresAt && ` · Expire ${formatDate(r.expiresAt)}`}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
-                    <button onClick={() => toggleExpandRequest(r.id)}
-                      className="btn-secondary flex items-center gap-1.5 text-xs px-2.5 h-8">
-                      <Eye size={12} /> Fichiers
-                    </button>
-                    <button onClick={() => copyRequestLink(r.token)}
-                      className={`flex items-center gap-1.5 px-2.5 h-8 rounded-lg text-xs font-medium transition-all
-                        ${copiedToken === r.token ? 'bg-emerald-500/20 text-emerald-400' : 'btn-secondary'}`}>
-                      {copiedToken === r.token ? <Check size={12} /> : <Copy size={12} />}
-                      Lien
-                    </button>
-                    <button onClick={() => handleToggleRequest(r.id)}
-                      className="btn-icon"
-                      title={r.active ? 'Désactiver' : 'Activer'}>
-                      {r.active ? <ToggleRight size={15} className="text-brand-400" /> : <ToggleLeft size={15} />}
-                    </button>
-                    <button onClick={() => handleDeleteRequest(r.id)} className="btn-icon-danger" title="Supprimer">
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
+              {/* Ligne principale */}
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0
+                  ${r.active ? 'bg-brand-500/20' : 'bg-white/5'}`}>
+                  <Download size={18} className={r.active ? 'text-brand-400' : 'text-white/30'} />
                 </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium truncate text-sm">{r.title}</p>
+                    <span className={`flex-shrink-0 ${r.active ? 'badge-green' : 'badge-red'}`}>
+                      {r.active ? 'Actif' : 'Désactivé'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-white/40 mt-0.5 truncate">
+                    {r.filesCount} fichier(s) · {formatDate(r.createdAt)}
+                    {r.expiresAt && ` · Expire ${formatDate(r.expiresAt)}`}
+                  </p>
+                </div>
+                {/* Boutons desktop */}
+                <div className="hidden sm:flex items-center gap-1.5 flex-shrink-0">
+                  <button onClick={() => toggleExpandRequest(r.id)}
+                    className="btn-secondary flex items-center gap-1.5 text-xs px-2.5 h-8">
+                    <Eye size={12} /> Fichiers
+                  </button>
+                  <button onClick={() => copyRequestLink(r.token)}
+                    className={`flex items-center gap-1.5 px-2.5 h-8 rounded-lg text-xs font-medium transition-all
+                      ${copiedToken === r.token ? 'bg-emerald-500/20 text-emerald-400' : 'btn-secondary'}`}>
+                    {copiedToken === r.token ? <Check size={12} /> : <Copy size={12} />}
+                    Lien
+                  </button>
+                  <button onClick={() => handleToggleRequest(r.id)}
+                    className="btn-icon"
+                    title={r.active ? 'Désactiver' : 'Activer'}>
+                    {r.active ? <ToggleRight size={15} className="text-brand-400" /> : <ToggleLeft size={15} />}
+                  </button>
+                  <button onClick={() => handleDeleteRequest(r.id)} className="btn-icon-danger" title="Supprimer">
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Boutons mobile */}
+              <div className="flex sm:hidden items-center gap-1.5 mt-3 pt-3 border-t border-white/5">
+                <button onClick={() => toggleExpandRequest(r.id)}
+                  className="btn-secondary flex items-center gap-1.5 text-xs px-2.5 h-8 flex-1 justify-center">
+                  <Eye size={12} /> Fichiers
+                </button>
+                <button onClick={() => copyRequestLink(r.token)}
+                  className={`flex items-center gap-1.5 px-2.5 h-8 rounded-lg text-xs font-medium transition-all flex-1 justify-center
+                    ${copiedToken === r.token ? 'bg-emerald-500/20 text-emerald-400' : 'btn-secondary'}`}>
+                  {copiedToken === r.token ? <Check size={12} /> : <Copy size={12} />}
+                  Lien
+                </button>
+                <button onClick={() => handleToggleRequest(r.id)}
+                  className="btn-icon flex-shrink-0"
+                  title={r.active ? 'Désactiver' : 'Activer'}>
+                  {r.active ? <ToggleRight size={15} className="text-brand-400" /> : <ToggleLeft size={15} />}
+                </button>
+                <button onClick={() => handleDeleteRequest(r.id)} className="btn-icon-danger flex-shrink-0" title="Supprimer">
+                  <Trash2 size={13} />
+                </button>
+              </div>
 
               {/* Expanded received files */}
               {expandedRequest === r.id && (

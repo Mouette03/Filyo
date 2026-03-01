@@ -248,6 +248,9 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
     for (const f of files) {
       await fs.remove(f.path).catch(() => {})
     }
+    // Supprimer le dossier du partage inversé (même s'il est vide)
+    const requestDir = path.join(UPLOAD_DIR, 'received', request.id)
+    await fs.remove(requestDir).catch(() => {})
     await prisma.uploadRequest.delete({ where: { id: req.params.id } })
     return { success: true }
   })

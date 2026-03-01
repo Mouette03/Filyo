@@ -71,8 +71,6 @@ filyo/
 
 | Variable | Défaut | Description |
 |---|---|---|
-| `PORT` | `80` | Port exposé |
-| `FRONTEND_URL` | `http://localhost` | URL publique |
 | `DATA_PATH` | `./data` | Dossier données hôte |
 | `LOG_LEVEL` | `info` | Niveau de log |
 
