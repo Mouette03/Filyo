@@ -114,7 +114,7 @@ filyo/
 | `DATA_PATH` | `./data` | Dossier données hôte |
 | `LOG_LEVEL` | `info` | Niveau de log (`silent`, `error`, `warn`, `info`, `debug`) |
 | `JWT_SECRET` | *(généré)* | Clé secrète JWT — à changer en production |
-| `PORT` | `3001` | Port d'écoute |
+
 
 ## CI/CD — GitHub Actions
 
