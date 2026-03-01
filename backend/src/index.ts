@@ -19,9 +19,11 @@ const app = Fastify({
     level: process.env.LOG_LEVEL || 'info',
     transport: {
       target: 'pino-pretty',
+      level: process.env.LOG_LEVEL || 'info',
       options: { colorize: true }
     }
   },
+  disableRequestLogging: true,
   bodyLimit: 10 * 1024 * 1024 * 1024 // 10 GB
 })
 
