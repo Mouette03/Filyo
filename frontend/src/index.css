@@ -146,6 +146,42 @@
     color: rgb(252,165,165);
   }
 
+  .btn-icon {
+    @apply rounded-xl transition-all duration-200 active:scale-95 flex items-center justify-center flex-shrink-0;
+    width: 2rem; height: 2rem;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    color: var(--text-80);
+  }
+  .btn-icon:hover {
+    background: var(--glass-hover-bg);
+    color: var(--text-base);
+  }
+  .btn-icon:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .btn-icon-danger {
+    @apply rounded-xl transition-all duration-200 active:scale-95 flex items-center justify-center flex-shrink-0;
+    width: 2rem; height: 2rem;
+    background: rgba(239,68,68,0.15);
+    border: 1px solid rgba(239,68,68,0.30);
+    color: rgb(248,113,113);
+  }
+  .btn-icon-danger:hover { background: rgba(239,68,68,0.25); color: rgb(252,165,165); }
+  .btn-icon-danger:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Select sombre natif */
+  select.input {
+    color-scheme: dark;
+    background: var(--surface-800);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.4)' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    padding-right: 2rem;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+}
+
   .input {
     @apply px-4 py-3 rounded-xl w-full transition-all duration-200;
     background: var(--input-bg);
@@ -174,6 +210,12 @@
   .badge-orange { @apply badge bg-orange-500/20 text-orange-400 border border-orange-500/30; }
   .badge-red    { @apply badge bg-red-500/20 text-red-400 border border-red-500/30; }
   .badge-blue   { @apply badge; background: rgb(var(--brand-500)/0.18); color: rgb(var(--brand-400)); border: 1px solid rgb(var(--brand-500)/0.35); }
+}
+
+/* ─── Overrides select pour le thème clair ─── */
+[data-theme="light"] select.input {
+  color-scheme: light;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(12,14,42,0.4)' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
 }
 
 /* ─── Overrides texte pour le thème clair ─── */

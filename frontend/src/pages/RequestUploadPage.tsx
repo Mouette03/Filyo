@@ -193,7 +193,7 @@ export default function RequestUploadPage() {
                 })()}
                 {(nameReq !== 'hidden' || emailReq !== 'hidden') && (
                   <div className={`grid gap-3 ${
-                    nameReq !== 'hidden' && emailReq !== 'hidden' ? 'grid-cols-2' : 'grid-cols-1'
+                    nameReq !== 'hidden' && emailReq !== 'hidden' ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'
                   }`}>
                     {nameReq !== 'hidden' && (
                       <div>

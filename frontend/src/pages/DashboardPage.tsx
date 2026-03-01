@@ -266,10 +266,11 @@ export default function DashboardPage() {
             const share = f.shares[0]
             return (
               <div key={f.id} className="card overflow-hidden">
-                <div className="flex items-center gap-4">
-                  <span className="text-2xl flex-shrink-0">{getFileIcon(f.mimeType)}</span>
+                {/* Ligne principale */}
+                <div className="flex items-start sm:items-center gap-3 sm:gap-4">
+                  <span className="text-2xl flex-shrink-0 mt-0.5 sm:mt-0">{getFileIcon(f.mimeType)}</span>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 min-w-0">
                       <p className="font-medium truncate">{f.originalName}</p>
                       {f.maxDownloads !== null && f.downloads >= f.maxDownloads && (
                         <span className="flex-shrink-0 flex items-center gap-1 text-xs font-medium text-red-400 bg-red-500/15 px-2 py-0.5 rounded-full">
@@ -285,28 +286,28 @@ export default function DashboardPage() {
                       {f.expiresAt ? ` · Expire ${formatDate(f.expiresAt)}` : ' · Sans expiration'}
                     </p>
                   </div>
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                  {/* Boutons desktop */}
+                  <div className="hidden sm:flex items-center gap-1.5 flex-shrink-0">
                     {share && (
                       <>
                         <button
                           onClick={() => window.open(`${window.location.origin}/s/${share.token}`, '_blank')}
-                          className="btn-secondary flex items-center gap-1.5 text-xs px-2.5 h-7"
+                          className="btn-secondary flex items-center gap-1.5 text-xs px-2.5 h-8 flex-shrink-0"
                           title="Voir la page de partage">
                           <ExternalLink size={12} /> Voir
                         </button>
                         <button
                           onClick={() => copyShareLink(share.token)}
-                          className={`flex items-center gap-1.5 px-2.5 h-7 rounded-lg text-xs font-medium transition-all
+                          className={`flex items-center gap-1.5 px-2.5 h-8 rounded-lg text-xs font-medium transition-all flex-shrink-0
                             ${copiedToken === share.token ? 'bg-emerald-500/20 text-emerald-400' : 'btn-secondary'}`}>
                           {copiedToken === share.token ? <Check size={12} /> : <Copy size={12} />}
                           Copier
                         </button>
                         <button
                           onClick={() => { setEmailingFileId(emailingFileId === f.id ? null : f.id); setEmailToFile('') }}
-                          className={`flex items-center justify-center w-7 h-7 rounded-lg text-xs font-medium transition-all
-                            ${emailingFileId === f.id ? 'bg-brand-500/20 text-brand-400' : 'btn-secondary'}`}
+                          className={`btn-icon ${emailingFileId === f.id ? '!bg-brand-500/20 !text-brand-400 !border-brand-500/30' : ''}`}
                           title="Envoyer par email">
-                          <Mail size={12} />
+                          <Mail size={13} />
                         </button>
                       </>
                     )}
@@ -315,24 +316,67 @@ export default function DashboardPage() {
                         setExpiryEditId(expiryEditId === f.id ? null : f.id)
                         setExpiryValue(f.expiresAt ? f.expiresAt.substring(0, 10) : '')
                       }}
-                      className={`flex items-center justify-center w-7 h-7 rounded-lg text-xs font-medium transition-all
-                        ${expiryEditId === f.id ? 'bg-brand-500/20 text-brand-400' : 'btn-secondary'}`}
+                      className={`btn-icon ${expiryEditId === f.id ? '!bg-brand-500/20 !text-brand-400 !border-brand-500/30' : ''}`}
                       title="Modifier l'expiration">
-                      <Clock size={12} />
+                      <Clock size={13} />
                     </button>
                     <button
                       onClick={() => handleExpireNow(f.id)}
                       disabled={expiringNowId === f.id}
-                      className="btn-secondary flex items-center justify-center w-7 h-7 disabled:opacity-40"
+                      className="btn-icon"
                       title="Faire expirer maintenant">
                       {expiringNowId === f.id
-                        ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        : <TimerOff size={12} />}
+                        ? <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" />
+                        : <TimerOff size={13} />}
                     </button>
-                    <button onClick={() => handleDeleteFile(f.id)} className="btn-danger flex items-center justify-center w-7 h-7">
-                      <Trash2 size={12} />
+                    <button onClick={() => handleDeleteFile(f.id)} className="btn-icon-danger" title="Supprimer">
+                      <Trash2 size={13} />
                     </button>
                   </div>
+                </div>
+
+                {/* Barre de boutons mobile */}
+                <div className="flex sm:hidden items-center gap-1.5 mt-3 pt-3 border-t border-white/5 overflow-x-auto">
+                  {share && (
+                    <>
+                      <button
+                        onClick={() => window.open(`${window.location.origin}/s/${share.token}`, '_blank')}
+                        className="btn-secondary flex items-center gap-1.5 text-xs px-2.5 h-8 flex-shrink-0">
+                        <ExternalLink size={12} /> Voir
+                      </button>
+                      <button
+                        onClick={() => copyShareLink(share.token)}
+                        className={`flex items-center gap-1.5 px-2.5 h-8 rounded-lg text-xs font-medium transition-all flex-shrink-0
+                          ${copiedToken === share.token ? 'bg-emerald-500/20 text-emerald-400' : 'btn-secondary'}`}>
+                        {copiedToken === share.token ? <Check size={12} /> : <Copy size={12} />}
+                        Copier
+                      </button>
+                      <button
+                        onClick={() => { setEmailingFileId(emailingFileId === f.id ? null : f.id); setEmailToFile('') }}
+                        className={`btn-icon flex-shrink-0 ${emailingFileId === f.id ? '!bg-brand-500/20 !text-brand-400 !border-brand-500/30' : ''}`}>
+                        <Mail size={13} />
+                      </button>
+                    </>
+                  )}
+                  <button
+                    onClick={() => {
+                      setExpiryEditId(expiryEditId === f.id ? null : f.id)
+                      setExpiryValue(f.expiresAt ? f.expiresAt.substring(0, 10) : '')
+                    }}
+                    className={`btn-icon flex-shrink-0 ${expiryEditId === f.id ? '!bg-brand-500/20 !text-brand-400 !border-brand-500/30' : ''}`}>
+                    <Clock size={13} />
+                  </button>
+                  <button
+                    onClick={() => handleExpireNow(f.id)}
+                    disabled={expiringNowId === f.id}
+                    className="btn-icon flex-shrink-0">
+                    {expiringNowId === f.id
+                      ? <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" />
+                      : <TimerOff size={13} />}
+                  </button>
+                  <button onClick={() => handleDeleteFile(f.id)} className="btn-icon-danger flex-shrink-0">
+                    <Trash2 size={13} />
+                  </button>
                 </div>
 
                 {/* Inline : envoyer par email */}
@@ -404,43 +448,44 @@ export default function DashboardPage() {
           )}
           {requests.map(r => (
             <div key={r.id} className="card space-y-0 overflow-hidden">
-              <div className="flex items-center gap-4">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0
-                  ${r.active ? 'bg-brand-500/20' : 'bg-white/5'}`}>
-                  <Download size={18} className={r.active ? 'text-brand-400' : 'text-white/30'} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium truncate">{r.title}</p>
-                    <span className={r.active ? 'badge-green' : 'badge-red'}>
-                      {r.active ? 'Actif' : 'Désactivé'}
-                    </span>
+                <div className="flex items-start sm:items-center gap-3 sm:gap-4">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 sm:mt-0
+                    ${r.active ? 'bg-brand-500/20' : 'bg-white/5'}`}>
+                    <Download size={18} className={r.active ? 'text-brand-400' : 'text-white/30'} />
                   </div>
-                  <p className="text-xs text-white/40 mt-0.5">
-                    {r.filesCount} fichier(s) reçu(s) · Créé {formatDate(r.createdAt)}
-                    {r.expiresAt && ` · Expire ${formatDate(r.expiresAt)}`}
-                  </p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-medium truncate">{r.title}</p>
+                      <span className={r.active ? 'badge-green' : 'badge-red'}>
+                        {r.active ? 'Actif' : 'Désactivé'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-white/40 mt-0.5">
+                      {r.filesCount} fichier(s) reçu(s) · Créé {formatDate(r.createdAt)}
+                      {r.expiresAt && ` · Expire ${formatDate(r.expiresAt)}`}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <button onClick={() => toggleExpandRequest(r.id)}
+                      className="btn-secondary flex items-center gap-1.5 text-xs px-2.5 h-8">
+                      <Eye size={12} /> Fichiers
+                    </button>
+                    <button onClick={() => copyRequestLink(r.token)}
+                      className={`flex items-center gap-1.5 px-2.5 h-8 rounded-lg text-xs font-medium transition-all
+                        ${copiedToken === r.token ? 'bg-emerald-500/20 text-emerald-400' : 'btn-secondary'}`}>
+                      {copiedToken === r.token ? <Check size={12} /> : <Copy size={12} />}
+                      Lien
+                    </button>
+                    <button onClick={() => handleToggleRequest(r.id)}
+                      className="btn-icon"
+                      title={r.active ? 'Désactiver' : 'Activer'}>
+                      {r.active ? <ToggleRight size={15} className="text-brand-400" /> : <ToggleLeft size={15} />}
+                    </button>
+                    <button onClick={() => handleDeleteRequest(r.id)} className="btn-icon-danger" title="Supprimer">
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <button onClick={() => toggleExpandRequest(r.id)}
-                    className="btn-secondary flex items-center gap-1.5 text-xs px-2.5 py-1.5">
-                    <Eye size={12} /> Fichiers
-                  </button>
-                  <button onClick={() => copyRequestLink(r.token)}
-                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all
-                      ${copiedToken === r.token ? 'bg-emerald-500/20 text-emerald-400' : 'btn-secondary'}`}>
-                    {copiedToken === r.token ? <Check size={12} /> : <Copy size={12} />}
-                    Lien
-                  </button>
-                  <button onClick={() => handleToggleRequest(r.id)}
-                    className="btn-secondary flex items-center gap-1 text-xs px-2.5 py-1.5">
-                    {r.active ? <ToggleRight size={14} className="text-brand-400" /> : <ToggleLeft size={14} />}
-                  </button>
-                  <button onClick={() => handleDeleteRequest(r.id)} className="btn-danger flex items-center gap-1 text-xs px-2.5 py-1.5">
-                    <Trash2 size={12} />
-                  </button>
-                </div>
-              </div>
 
               {/* Expanded received files */}
               {expandedRequest === r.id && (

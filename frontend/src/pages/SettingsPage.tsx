@@ -395,7 +395,7 @@ export default function SettingsPage() {
             <select
               value={field.value}
               onChange={e => field.set(e.target.value)}
-              className="input text-sm py-1.5 w-40"
+              className="input select text-sm py-1.5 w-40"
             >
               <option value="hidden">Masqué</option>
               <option value="optional">Facultatif</option>
