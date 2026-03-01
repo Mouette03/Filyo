@@ -48,7 +48,7 @@ export default function UsersPage() {
   const [filesLoading, setFilesLoading] = useState(false)
   const [filesLoaded, setFilesLoaded] = useState(false)
 
-  // --- Onglet Depots ---
+  // --- Onglet Dépôts ---
   const [allDeposits, setAllDeposits] = useState<AdminUploadRequest[]>([])
   const [depositsLoading, setDepositsLoading] = useState(false)
   const [depositsLoaded, setDepositsLoaded] = useState(false)
@@ -79,7 +79,7 @@ export default function UsersPage() {
       const res = await getAllUploadRequestsAdmin()
       setAllDeposits(res.data)
       setDepositsLoaded(true)
-    } catch { toast.error('Erreur de chargement des depots') }
+    } catch { toast.error('Erreur de chargement des dépôts') }
     setDepositsLoading(false)
   }
 
@@ -97,7 +97,7 @@ export default function UsersPage() {
       setUsers(prev => [...prev, res.data])
       setShowCreate(false)
       setNewName(''); setNewEmail(''); setNewPassword(''); setNewConfirmPassword(''); setNewRole('USER')
-      toast.success('Utilisateur cree')
+      toast.success('Utilisateur créé')
     } catch (err: any) {
       toast.error(err.response?.data?.error || 'Erreur lors de la creation')
     }
@@ -113,7 +113,7 @@ export default function UsersPage() {
       const res = await updateUser(id, { name: editName, role: editRole, active: editActive })
       setUsers(prev => prev.map(u => u.id === id ? { ...u, ...res.data } : u))
       setEditId(null)
-      toast.success('Modifie')
+      toast.success('Modifié')
     } catch { toast.error('Erreur') }
   }
 
@@ -146,8 +146,8 @@ export default function UsersPage() {
 
   const tabs: { id: Tab; label: string; icon: any; count?: number }[] = [
     { id: 'users', label: 'Utilisateurs', icon: Users, count: users.length },
-    { id: 'files', label: 'Fichiers partages', icon: Files, count: filesLoaded ? allFiles.length : undefined },
-    { id: 'deposits', label: 'Demandes de depot', icon: FolderInput, count: depositsLoaded ? allDeposits.length : undefined }
+    { id: 'files', label: 'Fichiers partagés', icon: Files, count: filesLoaded ? allFiles.length : undefined },
+    { id: 'deposits', label: 'Demandes de dépôt', icon: FolderInput, count: depositsLoaded ? allDeposits.length : undefined }
   ]
 
   return (
@@ -220,11 +220,11 @@ export default function UsersPage() {
 
           {showCreate && (
             <div className="card mb-6 space-y-4">
-              <h3 className="font-semibold text-white/80">Creer un utilisateur</h3>
+              <h3 className="font-semibold text-white/80">Créer un utilisateur</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">Nom</label>
-                  <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Prenom Nom" className="input" />
+                  <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Prénom Nom" className="input" />
                 </div>
                 <div>
                   <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">Email</label>
@@ -249,7 +249,7 @@ export default function UsersPage() {
               <div className="flex gap-3 pt-1">
                 <button onClick={handleCreate} disabled={creating} className="btn-primary flex items-center gap-2 py-2.5 px-5">
                   {creating ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Check size={15} />}
-                  Creer
+                  Créer
                 </button>
                 <button onClick={() => setShowCreate(false)} className="btn-secondary py-2.5 px-5">Annuler</button>
               </div>
@@ -339,7 +339,7 @@ export default function UsersPage() {
         </>
       )}
 
-      {/* Onglet Fichiers partages */}
+      {/* Onglet Fichiers partagés */}}
       {tab === 'files' && (
         <div>
           {filesLoading ? (
@@ -350,18 +350,18 @@ export default function UsersPage() {
           ) : allFiles.length === 0 ? (
             <div className="text-center py-16 text-white/30">
               <Files size={40} className="mx-auto mb-3 opacity-30" />
-              <p>Aucun fichier envoye</p>
+              <p>Aucun fichier envoyé</p>
             </div>
           ) : (
             <div className="overflow-x-auto rounded-xl border border-white/5">
               <table className="w-full text-sm min-w-[600px]">
                 <thead>
                   <tr className="border-b border-white/5 text-white/40 text-xs uppercase tracking-wider">
-                    <th className="text-left px-4 py-3">Proprietaire</th>
+                    <th className="text-left px-4 py-3">Propriétaire</th>
                     <th className="text-left px-4 py-3">Fichier</th>
                     <th className="text-left px-4 py-3">Taille</th>
                     <th className="text-left px-4 py-3">Date</th>
-                    <th className="text-left px-4 py-3">Telechgt.</th>
+                    <th className="text-left px-4 py-3">Téléchargements</th>
                     <th className="px-4 py-3" />
                   </tr>
                 </thead>
@@ -406,7 +406,7 @@ export default function UsersPage() {
         </div>
       )}
 
-      {/* Onglet Demandes de depot */}
+      {/* Onglet Demandes de dépôt */}}
       {tab === 'deposits' && (
         <div>
           {depositsLoading ? (
@@ -417,18 +417,18 @@ export default function UsersPage() {
           ) : allDeposits.length === 0 ? (
             <div className="text-center py-16 text-white/30">
               <FolderInput size={40} className="mx-auto mb-3 opacity-30" />
-              <p>Aucune demande de depot</p>
+              <p>Aucune demande de dépôt</p>
             </div>
           ) : (
             <div className="overflow-x-auto rounded-xl border border-white/5">
               <table className="w-full text-sm min-w-[560px]">
                 <thead>
                   <tr className="border-b border-white/5 text-white/40 text-xs uppercase tracking-wider">
-                    <th className="text-left px-4 py-3">Proprietaire</th>
+                    <th className="text-left px-4 py-3">Propriétaire</th>
                     <th className="text-left px-4 py-3">Titre</th>
                     <th className="text-left px-4 py-3">Statut</th>
-                    <th className="text-left px-4 py-3">Fichiers recus</th>
-                    <th className="text-left px-4 py-3">Cree le</th>
+                    <th className="text-left px-4 py-3">Fichiers reçus</th>
+                    <th className="text-left px-4 py-3">Créé le</th>
                     <th className="px-4 py-3" />
                   </tr>
                 </thead>
