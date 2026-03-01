@@ -1,20 +1,11 @@
 import { useState, useRef } from 'react'
-import { User, Camera, Trash2, Lock, RefreshCw, Check, Pencil, Palette, Moon, Sun, Monitor } from 'lucide-react'
+import { User, Camera, Trash2, Lock, RefreshCw, Check, Pencil } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { uploadAvatar, deleteAvatar, changePassword, updateProfile } from '../api/client'
 import { useAuthStore } from '../stores/useAuthStore'
-import { usePreferencesStore, ACCENT_PRESETS, BG_PRESETS, type ThemeMode, type AccentKey, type BgColorKey } from '../stores/usePreferencesStore'
 
 export default function ProfilePage() {
   const { user, updateAvatar, updateName } = useAuthStore()
-  const { theme, accentColor, bgColorKey, setTheme, setAccentColor, setBgColor } = usePreferencesStore()
-  const isDark = theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)
-
-  const THEME_OPTIONS: { value: ThemeMode; label: string; icon: typeof Moon }[] = [
-    { value: 'dark',  label: 'Sombre',    icon: Moon },
-    { value: 'light', label: 'Clair',     icon: Sun },
-    { value: 'auto',  label: 'Automatique', icon: Monitor },
-  ]
 
   // --- Avatar ---
   const avatarInput = useRef<HTMLInputElement>(null)

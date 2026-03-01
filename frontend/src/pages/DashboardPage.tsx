@@ -538,48 +538,63 @@ export default function DashboardPage() {
                   {receivedFiles[r.id]?.length === 0 && (
                     <p className="text-white/40 text-sm text-center py-2">Aucun fichier reçu pour l'instant.</p>
                   )}
-                  {receivedFiles[r.id]?.map(f => (
-                    <div key={f.id} className="bg-white/5 rounded-xl px-3 py-2.5">
-                      <div className="flex items-center gap-3">
-                        <span className="text-lg flex-shrink-0">{getFileIcon(f.originalName.split('.').pop() || '')}</span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{f.originalName}</p>
-                          <p className="text-xs text-white/40">{formatBytes(f.size)} · {formatDate(f.uploadedAt)}</p>
-                        </div>
-                        <button onClick={() => handleDownloadReceived(r.id, f.id, f.originalName)}
-                          className="btn-secondary flex items-center gap-1.5 text-xs px-2.5 py-1.5 flex-shrink-0">
-                          <Download size={12} /> Télécharger
-                        </button>
+                  {(() => {
+                    // Grouper les fichiers par envoi (même déposant + message = même dépôt)
+                    const groups: { key: string; uploaderName: string | null; uploaderEmail: string | null; message: string | null; files: ReceivedFile[] }[] = []
+                    for (const f of receivedFiles[r.id] || []) {
+                      const key = `${f.uploaderName ?? ''}|${f.uploaderEmail ?? ''}|${f.message ?? ''}`
+                      const existing = groups.find(g => g.key === key)
+                      if (existing) existing.files.push(f)
+                      else groups.push({ key, uploaderName: f.uploaderName, uploaderEmail: f.uploaderEmail, message: f.message, files: [f] })
+                    }
+                    return groups.map(group => (
+                      <div key={group.key} className="bg-white/5 rounded-xl overflow-hidden">
+                        {/* Infos déposant — affichées une seule fois par groupe */}
+                        {(group.uploaderName || group.uploaderEmail || group.message) && (
+                          <div className="px-3 py-2 border-b border-white/8 bg-white/3 flex flex-col gap-1.5">
+                            {(group.uploaderName || group.uploaderEmail) && (
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <div className="w-5 h-5 rounded-full bg-brand-500/20 flex items-center justify-center flex-shrink-0">
+                                  <User size={10} className="text-brand-400" />
+                                </div>
+                                {group.uploaderName && (
+                                  <span className="text-xs font-medium text-white/70">{group.uploaderName}</span>
+                                )}
+                                {group.uploaderEmail && (
+                                  <a href={`mailto:${group.uploaderEmail}`}
+                                    className="text-xs text-brand-400 hover:text-brand-300 transition-colors font-mono">
+                                    {group.uploaderEmail}
+                                  </a>
+                                )}
+                              </div>
+                            )}
+                            {group.message && (
+                              <div className="flex items-start gap-2">
+                                <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                  <MessageSquare size={10} className="text-white/50" />
+                                </div>
+                                <p className="text-xs text-white/60 italic">"{group.message}"</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {/* Fichiers du groupe */}
+                        {group.files.map((f, i) => (
+                          <div key={f.id} className={`flex items-center gap-3 px-3 py-2.5 ${i < group.files.length - 1 ? 'border-b border-white/5' : ''}`}>
+                            <span className="text-lg flex-shrink-0">{getFileIcon(f.originalName.split('.').pop() || '')}</span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{f.originalName}</p>
+                              <p className="text-xs text-white/40">{formatBytes(f.size)} · {formatDate(f.uploadedAt)}</p>
+                            </div>
+                            <button onClick={() => handleDownloadReceived(r.id, f.id, f.originalName)}
+                              className="btn-secondary flex items-center gap-1.5 text-xs px-2.5 py-1.5 flex-shrink-0">
+                              <Download size={12} /> Télécharger
+                            </button>
+                          </div>
+                        ))}
                       </div>
-                      {/* Infos déposant */}
-                      {(f.uploaderName || f.uploaderEmail) && (
-                        <div className="mt-2 flex items-center gap-2 pt-2 border-t border-white/5">
-                          <div className="w-5 h-5 rounded-full bg-brand-500/20 flex items-center justify-center flex-shrink-0">
-                            <User size={10} className="text-brand-400" />
-                          </div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            {f.uploaderName && (
-                              <span className="text-xs font-medium text-white/70">{f.uploaderName}</span>
-                            )}
-                            {f.uploaderEmail && (
-                              <a href={`mailto:${f.uploaderEmail}`}
-                                className="text-xs text-brand-400 hover:text-brand-300 transition-colors font-mono">
-                                {f.uploaderEmail}
-                              </a>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                      {f.message && (
-                        <div className="mt-2 flex items-start gap-2 pt-2 border-t border-white/5">
-                          <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <MessageSquare size={10} className="text-white/50" />
-                          </div>
-                          <p className="text-xs text-white/60 italic">"{f.message}"</p>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                    ))
+                  })()}
                 </div>
               )}
             </div>
