@@ -1,6 +1,6 @@
 # Filyo — Transfert de fichiers local & privé
 
-Application de partage de fichiers **auto-hébergée**, sans stockage S3. Alternative à Palmr avec un design glassmorphism sombre et une fonctionnalité de **partage inversé**.
+Application de partage de fichiers **auto-hébergée**, sans stockage S3. Avec un design glassmorphism sombre et une fonctionnalité de **partage inversé**.
 
 ## Captures d'écran
 
