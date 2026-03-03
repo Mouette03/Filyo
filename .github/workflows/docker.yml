@@ -24,7 +24,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-          # Pas de cache: npm — nécessite package-lock.json commité
+          cache: "npm"
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
 
       - name: Install & type-check backend
         working-directory: ./backend
