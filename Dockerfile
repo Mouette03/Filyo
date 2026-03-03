@@ -61,7 +61,6 @@ ENV DATABASE_URL=file:/data/filyo.db
 ENV UPLOAD_DIR=/data/uploads
 ENV FRONTEND_DIST=/app/public
 
-VOLUME ["/data"]
 EXPOSE 3001
 
 # L'entrypoint tourne en root pour fixer /data, puis bascule sur node via su-exec
