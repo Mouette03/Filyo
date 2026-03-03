@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+﻿import { useEffect, useState, useRef } from 'react'
 import { Settings, Upload, Trash2, Check, Type, Image, RefreshCw, Mail, Eye, EyeOff, Wifi, Globe, Users, Palette, Moon, Sun, Monitor } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { getSettings, updateAppName, uploadLogo, deleteLogo, getSmtpSettings, updateSmtpSettings, testSmtp, updateSiteUrl, updateUploaderFields, updateAllowRegistration } from '../api/client'
@@ -168,7 +168,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Section : Nom de l'application */}
-      <div className="card mb-5">
+      <div className="card mb-6">
         <div className="flex items-center gap-2 mb-4">
           <Type size={16} className="text-brand-400" />
           <h3 className="font-semibold">Nom de l'application</h3>
@@ -194,37 +194,8 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      {/* Section : Adresse du site */}
-      <div className="card mb-5">
-        <div className="flex items-center gap-2 mb-4">
-          <Globe size={16} className="text-brand-400" />
-          <h3 className="font-semibold">Adresse du site</h3>
-        </div>
-        <div className="flex gap-3">
-          <input
-            value={siteUrl}
-            onChange={e => setSiteUrl(e.target.value)}
-            className="input flex-1"
-            placeholder="https://filyo.mondomaine.fr"
-          />
-          <button onClick={handleSaveUrl} disabled={savingUrl}
-            className="btn-primary flex items-center gap-2 px-5 whitespace-nowrap">
-            {savingUrl ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
-            Enregistrer
-          </button>
-        </div>
-        {siteUrl && (
-          <p className="text-xs text-white/30 mt-2">
-            Exemple : <span className="text-brand-400 font-mono">{siteUrl}/s/xK9mPqR3</span>
-          </p>
-        )}
-        <p className="text-xs text-white/30 mt-1">
-          Utilisée pour générer les liens de partage envoyés par email.
-        </p>
-      </div>
-
       {/* Section : Logo */}
-      <div className="card">
+      <div className="card mb-6">
         <div className="flex items-center gap-2 mb-4">
           <Image size={16} className="text-brand-400" />
           <h3 className="font-semibold">Logo</h3>
@@ -276,8 +247,216 @@ export default function SettingsPage() {
         </p>
       </div>
 
+      {/* Section : Apparence */}
+      <div className="card mb-6">
+        <div className="flex items-center gap-2 mb-5">
+          <Palette size={16} className="text-brand-400" />
+          <h3 className="font-semibold">Apparence</h3>
+          <span className="text-xs text-white/30 ml-auto">S'applique à tous les utilisateurs</span>
+        </div>
+
+        {/* Thème */}
+        <div className="mb-6">
+          <label className="text-xs text-white/50 mb-3 block uppercase tracking-wider">Thème</label>
+          <div className="grid grid-cols-3 gap-2">
+            {THEME_OPTIONS.map(opt => {
+              const Icon = opt.icon
+              const active = theme === opt.value
+              return (
+                <button
+                  key={opt.value}
+                  onClick={() => setTheme(opt.value)}
+                  className={`flex flex-col items-center gap-2 py-3 px-2 rounded-xl border transition-all ${
+                    active
+                      ? 'border-brand-500 bg-brand-500/15 text-brand-400'
+                      : 'border-white/10 bg-white/5 text-white/50 hover:text-white/80 hover:bg-white/10'
+                  }`}
+                >
+                  <Icon size={20} />
+                  <span className="text-xs font-medium">{opt.label}</span>
+                </button>
+              )
+            })}
+          </div>
+          <p className="text-xs text-white/30 mt-2">
+            {theme === 'auto' ? "Suit automatiquement le réglage du système d'exploitation." : ''}
+          </p>
+        </div>
+
+        {/* Couleur d'accent */}
+        <div>
+          <label className="text-xs text-white/50 mb-3 block uppercase tracking-wider">Couleur principale</label>
+          <div className="flex flex-wrap gap-3">
+            {(Object.entries(ACCENT_PRESETS) as [AccentKey, typeof ACCENT_PRESETS[AccentKey]][]).map(([key, preset]) => {
+              const active = accentColor === key
+              return (
+                <button
+                  key={key}
+                  onClick={() => setAccentColor(key)}
+                  title={preset.name}
+                  className={`w-9 h-9 rounded-xl transition-all ${
+                    active ? 'scale-110 ring-2 ring-offset-2 ring-offset-surface-800' : 'hover:scale-105 opacity-80 hover:opacity-100'
+                  }`}
+                  style={{ background: preset.hex }}
+                >
+                  {active && (
+                    <span className="flex items-center justify-center w-full h-full">
+                      <Check size={14} className="text-white drop-shadow" />
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+          <p className="text-xs text-white/30 mt-3">
+            Couleur actuelle : <span className="font-medium" style={{ color: ACCENT_PRESETS[accentColor].hex }}>{ACCENT_PRESETS[accentColor].name}</span>
+          </p>
+        </div>
+
+        {/* Couleur de fond */}
+        <div className="mt-6">
+          <label className="text-xs text-white/50 mb-3 block uppercase tracking-wider">Couleur d'arrière-plan</label>
+          <div className="flex flex-wrap gap-3 mb-3">
+            <button
+              onClick={() => setBgColor(null)}
+              title="Défaut"
+              className={`w-9 h-9 rounded-xl border-2 transition-all flex items-center justify-center bg-surface-700 ${
+                !bgColorKey
+                  ? 'border-brand-500 ring-2 ring-offset-2 ring-offset-surface-800 ring-brand-500'
+                  : 'border-white/10 hover:border-white/30'
+              }`}
+            >
+              {!bgColorKey && <Check size={14} className="text-white" />}
+            </button>
+            {(Object.entries(BG_PRESETS) as [BgColorKey, typeof BG_PRESETS[BgColorKey]][]).filter(([, p]) => p.theme === (isDark ? 'dark' : 'light')).map(([key, preset]) => {
+              const active = bgColorKey === key
+              return (
+                <button
+                  key={key}
+                  onClick={() => setBgColor(key)}
+                  title={preset.label}
+                  className={`w-9 h-9 rounded-xl transition-all ${
+                    active ? 'scale-110 ring-2 ring-offset-2 ring-offset-surface-800' : 'hover:scale-105 opacity-80 hover:opacity-100'
+                  }`}
+                  style={{ background: preset.s900, border: '2px solid', borderColor: active ? 'white' : 'transparent' }}
+                >
+                  {active && (
+                    <span className="flex items-center justify-center w-full h-full">
+                      <Check size={14} className="text-white drop-shadow" />
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+          <p className="text-xs text-white/30">Teinte de fond de l'interface. Se réinitialise au changement de thème.</p>
+        </div>
+      </div>
+      {/* Section : Adresse du site */}
+      <div className="card mb-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Globe size={16} className="text-brand-400" />
+          <h3 className="font-semibold">Adresse du site</h3>
+        </div>
+        <div className="flex gap-3">
+          <input
+            value={siteUrl}
+            onChange={e => setSiteUrl(e.target.value)}
+            className="input flex-1"
+            placeholder="https://filyo.mondomaine.fr"
+          />
+          <button onClick={handleSaveUrl} disabled={savingUrl}
+            className="btn-primary flex items-center gap-2 px-5 whitespace-nowrap">
+            {savingUrl ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
+            Enregistrer
+          </button>
+        </div>
+        {siteUrl && (
+          <p className="text-xs text-white/30 mt-2">
+            Exemple : <span className="text-brand-400 font-mono">{siteUrl}/s/xK9mPqR3</span>
+          </p>
+        )}
+        <p className="text-xs text-white/30 mt-1">
+          Utilisée pour générer les liens de partage envoyés par email.
+        </p>
+      </div>
+      {/* Section : Authentification */}
+      <div className="card mb-6">
+        <div className="flex items-center gap-2 mb-5">
+          <Users size={16} className="text-brand-400" />
+          <h3 className="font-semibold">Authentification</h3>
+        </div>
+        <div className="flex items-center justify-between py-3 px-4 bg-white/3 rounded-xl">
+          <div>
+            <p className="text-sm font-medium">Inscription libre</p>
+            <p className="text-xs text-white/40 mt-0.5">Affiche un bouton &laquo;&nbsp;Créer un compte&nbsp;&raquo; sur la page de connexion</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {savingRegistration && <div className="w-4 h-4 border-2 border-brand-500/30 border-t-brand-500 rounded-full animate-spin" />}
+            <div
+              onClick={async () => {
+                const next = !allowRegistration
+                setSavingRegistration(true)
+                try {
+                  await updateAllowRegistration(next)
+                  setAllowRegistration(next)
+                  toast.success(next ? 'Inscription libre activée' : 'Inscription libre désactivée')
+                } catch { toast.error('Erreur lors de la sauvegarde') }
+                setSavingRegistration(false)
+              }}
+              className={`w-11 h-6 rounded-full cursor-pointer transition-colors relative flex-shrink-0 ${allowRegistration ? 'bg-brand-500' : 'bg-white/20'}`}
+            >
+              <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${allowRegistration ? 'translate-x-6' : 'translate-x-1'}`} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Section : Champs formulaire déposant */}
+      <div className="card mb-6">
+        <div className="flex items-center gap-2 mb-5">
+          <Users size={16} className="text-brand-400" />
+          <h3 className="font-semibold">Formulaire du déposant</h3>
+          <span className="text-xs text-white/30 ml-auto">Contrôle les champs affichés lors d'un partage inversé</span>
+        </div>
+
+        {([
+          { label: 'Nom', key: 'uploaderNameReq', value: uploaderNameReq, set: setUploaderNameReq },
+          { label: 'Adresse email', key: 'uploaderEmailReq', value: uploaderEmailReq, set: setUploaderEmailReq },
+          { label: 'Message', key: 'uploaderMsgReq', value: uploaderMsgReq, set: setUploaderMsgReq },
+        ] as { label: string; key: string; value: string; set: (v: any) => void }[]).map(field => (
+          <div key={field.key} className="flex items-center justify-between py-3 px-4 bg-white/3 rounded-xl mb-3">
+            <div>
+              <p className="text-sm font-medium">{field.label}</p>
+              <p className="text-xs text-white/40 mt-0.5">
+                {field.value === 'hidden' && 'Non affiché dans le formulaire'}
+                {field.value === 'optional' && 'Affiché, remplissage facultatif'}
+                {field.value === 'required' && 'Affiché, remplissage obligatoire'}
+              </p>
+            </div>
+            <select
+              value={field.value}
+              onChange={e => field.set(e.target.value)}
+              className="input text-sm py-1.5 w-40"
+            >
+              <option value="hidden">Masqué</option>
+              <option value="optional">Facultatif</option>
+              <option value="required">Obligatoire</option>
+            </select>
+          </div>
+        ))}
+
+        <button
+          onClick={handleSaveFields}
+          disabled={savingFields}
+          className="btn-primary flex items-center gap-2 py-2.5 px-5 mt-2">
+          {savingFields ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
+          Enregistrer
+        </button>
+      </div>
+
       {/* Section : Serveur SMTP */}
-      <div className="card mt-5">
+      <div className="card">
         <div className="flex items-center gap-2 mb-5">
           <Mail size={16} className="text-brand-400" />
           <h3 className="font-semibold">Serveur SMTP</h3>
@@ -384,186 +563,6 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      {/* Section : Champs formulaire déposant */}
-      <div className="card mt-5">
-        <div className="flex items-center gap-2 mb-5">
-          <Users size={16} className="text-brand-400" />
-          <h3 className="font-semibold">Formulaire du déposant</h3>
-          <span className="text-xs text-white/30 ml-auto">Contrôle les champs affichés lors d'un partage inversé</span>
-        </div>
-
-        {([
-          { label: 'Nom', key: 'uploaderNameReq', value: uploaderNameReq, set: setUploaderNameReq },
-          { label: 'Adresse email', key: 'uploaderEmailReq', value: uploaderEmailReq, set: setUploaderEmailReq },
-          { label: 'Message', key: 'uploaderMsgReq', value: uploaderMsgReq, set: setUploaderMsgReq },
-        ] as { label: string; key: string; value: string; set: (v: any) => void }[]).map(field => (
-          <div key={field.key} className="flex items-center justify-between py-3 px-4 bg-white/3 rounded-xl mb-3">
-            <div>
-              <p className="text-sm font-medium">{field.label}</p>
-              <p className="text-xs text-white/40 mt-0.5">
-                {field.value === 'hidden' && 'Non affiché dans le formulaire'}
-                {field.value === 'optional' && 'Affiché, remplissage facultatif'}
-                {field.value === 'required' && 'Affiché, remplissage obligatoire'}
-              </p>
-            </div>
-            <select
-              value={field.value}
-              onChange={e => field.set(e.target.value)}
-              className="input text-sm py-1.5 w-40"
-            >
-              <option value="hidden">Masqué</option>
-              <option value="optional">Facultatif</option>
-              <option value="required">Obligatoire</option>
-            </select>
-          </div>
-        ))}
-
-        <button
-          onClick={handleSaveFields}
-          disabled={savingFields}
-          className="btn-primary flex items-center gap-2 py-2.5 px-5 mt-2">
-          {savingFields ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
-          Enregistrer
-        </button>
-      </div>
-
-      {/* Section : Authentification */}
-      <div className="card mt-5">
-        <div className="flex items-center gap-2 mb-5">
-          <Users size={16} className="text-brand-400" />
-          <h3 className="font-semibold">Authentification</h3>
-        </div>
-        <div className="flex items-center justify-between py-3 px-4 bg-white/3 rounded-xl">
-          <div>
-            <p className="text-sm font-medium">Inscription libre</p>
-            <p className="text-xs text-white/40 mt-0.5">Affiche un bouton &laquo;&nbsp;Créer un compte&nbsp;&raquo; sur la page de connexion</p>
-          </div>
-          <div className="flex items-center gap-2">
-            {savingRegistration && <div className="w-4 h-4 border-2 border-brand-500/30 border-t-brand-500 rounded-full animate-spin" />}
-            <div
-              onClick={async () => {
-                const next = !allowRegistration
-                setSavingRegistration(true)
-                try {
-                  await updateAllowRegistration(next)
-                  setAllowRegistration(next)
-                  toast.success(next ? 'Inscription libre activée' : 'Inscription libre désactivée')
-                } catch { toast.error('Erreur lors de la sauvegarde') }
-                setSavingRegistration(false)
-              }}
-              className={`w-11 h-6 rounded-full cursor-pointer transition-colors relative flex-shrink-0 ${allowRegistration ? 'bg-brand-500' : 'bg-white/20'}`}
-            >
-              <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${allowRegistration ? 'translate-x-6' : 'translate-x-1'}`} />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Section : Apparence */}
-      <div className="card mt-5">
-        <div className="flex items-center gap-2 mb-5">
-          <Palette size={16} className="text-brand-400" />
-          <h3 className="font-semibold">Apparence</h3>
-          <span className="text-xs text-white/30 ml-auto">S’applique à tous les utilisateurs</span>
-        </div>
-
-        {/* Thème */}
-        <div className="mb-6">
-          <label className="text-xs text-white/50 mb-3 block uppercase tracking-wider">Thème</label>
-          <div className="grid grid-cols-3 gap-2">
-            {THEME_OPTIONS.map(opt => {
-              const Icon = opt.icon
-              const active = theme === opt.value
-              return (
-                <button
-                  key={opt.value}
-                  onClick={() => setTheme(opt.value)}
-                  className={`flex flex-col items-center gap-2 py-3 px-2 rounded-xl border transition-all ${
-                    active
-                      ? 'border-brand-500 bg-brand-500/15 text-brand-400'
-                      : 'border-white/10 bg-white/5 text-white/50 hover:text-white/80 hover:bg-white/10'
-                  }`}
-                >
-                  <Icon size={20} />
-                  <span className="text-xs font-medium">{opt.label}</span>
-                </button>
-              )
-            })}
-          </div>
-          <p className="text-xs text-white/30 mt-2">
-            {theme === 'auto' ? 'Suit automatiquement le réglage du système d’exploitation.' : ''}
-          </p>
-        </div>
-
-        {/* Couleur d’accent */}
-        <div>
-          <label className="text-xs text-white/50 mb-3 block uppercase tracking-wider">Couleur principale</label>
-          <div className="flex flex-wrap gap-3">
-            {(Object.entries(ACCENT_PRESETS) as [AccentKey, typeof ACCENT_PRESETS[AccentKey]][]).map(([key, preset]) => {
-              const active = accentColor === key
-              return (
-                <button
-                  key={key}
-                  onClick={() => setAccentColor(key)}
-                  title={preset.name}
-                  className={`w-9 h-9 rounded-xl transition-all ${
-                    active ? 'scale-110 ring-2 ring-offset-2 ring-offset-surface-800' : 'hover:scale-105 opacity-80 hover:opacity-100'
-                  }`}
-                  style={{ background: preset.hex }}
-                >
-                  {active && (
-                    <span className="flex items-center justify-center w-full h-full">
-                      <Check size={14} className="text-white drop-shadow" />
-                    </span>
-                  )}
-                </button>
-              )
-            })}
-          </div>
-          <p className="text-xs text-white/30 mt-3">
-            Couleur actuelle : <span className="font-medium" style={{ color: ACCENT_PRESETS[accentColor].hex }}>{ACCENT_PRESETS[accentColor].name}</span>
-          </p>
-        </div>
-
-        {/* Couleur de fond */}
-        <div className="mt-6">
-          <label className="text-xs text-white/50 mb-3 block uppercase tracking-wider">Couleur d’arrière-plan</label>
-          <div className="flex flex-wrap gap-3 mb-3">
-            <button
-              onClick={() => setBgColor(null)}
-              title="Défaut"
-              className={`w-9 h-9 rounded-xl border-2 transition-all flex items-center justify-center bg-surface-700 ${
-                !bgColorKey
-                  ? 'border-brand-500 ring-2 ring-offset-2 ring-offset-surface-800 ring-brand-500'
-                  : 'border-white/10 hover:border-white/30'
-              }`}
-            >
-              {!bgColorKey && <Check size={14} className="text-white" />}
-            </button>
-            {(Object.entries(BG_PRESETS) as [BgColorKey, typeof BG_PRESETS[BgColorKey]][]).filter(([, p]) => p.theme === (isDark ? 'dark' : 'light')).map(([key, preset]) => {
-              const active = bgColorKey === key
-              return (
-                <button
-                  key={key}
-                  onClick={() => setBgColor(key)}
-                  title={preset.label}
-                  className={`w-9 h-9 rounded-xl transition-all ${
-                    active ? 'scale-110 ring-2 ring-offset-2 ring-offset-surface-800' : 'hover:scale-105 opacity-80 hover:opacity-100'
-                  }`}
-                  style={{ background: preset.s900, border: '2px solid', borderColor: active ? 'white' : 'transparent' }}
-                >
-                  {active && (
-                    <span className="flex items-center justify-center w-full h-full">
-                      <Check size={14} className="text-white drop-shadow" />
-                    </span>
-                  )}
-                </button>
-              )
-            })}
-          </div>
-          <p className="text-xs text-white/30">Teinte de fond de l’interface. Se réinitialise au changement de thème.</p>
-        </div>
-      </div>
     </div>
   )
 }
