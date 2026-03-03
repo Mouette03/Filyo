@@ -10,8 +10,6 @@ ARG BUILDPLATFORM
 # ── Stage 1 : Build du frontend React/Vite ──────────────────────
 FROM --platform=$BUILDPLATFORM node:20-alpine AS frontend-builder
 
-RUN npm install -g npm@latest --quiet
-
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
 RUN npm install --silent
@@ -22,7 +20,6 @@ RUN npm run build
 # ── Stage 2 : Build du backend TypeScript ───────────────────────
 FROM --platform=$BUILDPLATFORM node:20-alpine AS backend-builder
 
-RUN npm install -g npm@latest --quiet
 RUN apk add --no-cache openssl
 
 WORKDIR /app/backend
@@ -36,9 +33,8 @@ RUN npm run build
 FROM node:20-slim AS runner
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        dumb-init openssl gosu \
-    && rm -rf /var/lib/apt/lists/* \
-    && npm install -g npm@latest --quiet
+        dumb-init openssl gosu wget \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
