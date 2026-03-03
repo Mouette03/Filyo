@@ -43,7 +43,7 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
       }
     })
 
-    req.log.info({ userId, token: request.token, title }, 'Demande de dépôt créée')
+    req.log.info({ userId, token: request.token, title }, 'Upload request created')
     return reply.code(201).send({
       id: request.id,
       token: request.token,
@@ -165,7 +165,7 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
     const created = await Promise.all(
       savedFiles.map((f: any) => prisma.receivedFile.create({ data: f }))
     )
-    req.log.info({ token: req.params.token, count: created.length, uploaderName }, 'Fichiers reçus via dépôt')
+    req.log.info({ token: req.params.token, count: created.length, uploaderName }, 'Files received via upload request')
     return reply.code(201).send(
       created.map((f: any) => ({
         id: f.id,
@@ -254,7 +254,7 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
     const requestDir = path.join(UPLOAD_DIR, 'received', request.id)
     await fs.remove(requestDir).catch(() => {})
     await prisma.uploadRequest.delete({ where: { id: req.params.id } })
-    req.log.info({ id: req.params.id }, 'Demande de dépôt supprimée')
+    req.log.info({ id: req.params.id }, 'Upload request deleted')
     return { success: true }
   })
 }

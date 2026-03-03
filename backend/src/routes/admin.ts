@@ -85,7 +85,7 @@ export async function adminRoutes(app: FastifyInstance) {
       where: { expiresAt: { lt: now } }
     })
 
-    req.log.info({ deletedFiles: deletedFiles.count, deletedRequests: deletedRequests.count }, 'Nettoyage effectué')
+    req.log.info({ deletedFiles: deletedFiles.count, deletedRequests: deletedRequests.count }, 'Cleanup completed')
     return {
       deletedFiles: deletedFiles.count,
       deletedUploadRequests: deletedRequests.count

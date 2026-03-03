@@ -61,7 +61,7 @@ export async function settingsRoutes(app: FastifyInstance) {
         smtpHost, smtpPort, smtpFrom, smtpUser, smtpPass, smtpSecure: smtpSecure ?? true
       }
     })
-    req.log.info({ smtpHost }, 'Configuration SMTP mise à jour')
+    req.log.info({ smtpHost }, 'SMTP configuration updated')
     return { success: true, smtpHost: updated.smtpHost, smtpFrom: updated.smtpFrom }
   })
 
@@ -99,7 +99,7 @@ export async function settingsRoutes(app: FastifyInstance) {
         update: { allowRegistration },
         create: { id: 'singleton', appName: 'Filyo', allowRegistration }
       })
-      req.log.info({ allowRegistration }, 'Paramètre inscription mis à jour')
+      req.log.info({ allowRegistration }, 'Registration setting updated')
       return { allowRegistration: s.allowRegistration }
     }
   )
@@ -116,7 +116,7 @@ export async function settingsRoutes(app: FastifyInstance) {
         update: { appName: appName.trim() },
         create: { id: 'singleton', appName: appName.trim() }
       })
-      req.log.info({ appName }, "Nom de l'application mis à jour")
+      req.log.info({ appName }, 'Application name updated')
       return settings
     }
   )

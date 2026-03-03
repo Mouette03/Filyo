@@ -68,7 +68,7 @@ export async function shareRoutes(app: FastifyInstance) {
       data: { downloads: { increment: 1 } }
     })
 
-    req.log.info({ token: req.params.token, filename: share.file.originalName }, 'Fichier téléchargé')
+    req.log.info({ token: req.params.token, filename: share.file.originalName }, 'File downloaded')
     const stream = fs.createReadStream(share.file.path)
     reply.header('Content-Type', share.file.mimeType)
     reply.header(
@@ -152,7 +152,7 @@ export async function shareRoutes(app: FastifyInstance) {
         </div>`
     })
 
-    req.log.info({ to, count: tokens.length }, 'Email de partage envoyé')
+    req.log.info({ to, count: tokens.length }, 'Share email sent')
     return { success: true }
   })
 }

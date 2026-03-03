@@ -35,18 +35,18 @@ export async function authRoutes(app: FastifyInstance) {
 
     const user = await prisma.user.findUnique({ where: { email: body.data.email } })
     if (!user || !user.active) {
-      req.log.warn({ email: body.data.email }, 'Tentative de connexion échouée')
+      req.log.warn({ email: body.data.email }, 'Login attempt failed')
       return reply.code(401).send({ error: 'Identifiants incorrects' })
     }
 
     const ok = await bcrypt.compare(body.data.password, user.password)
     if (!ok) {
-      req.log.warn({ email: body.data.email }, 'Tentative de connexion échouée')
+      req.log.warn({ email: body.data.email }, 'Login attempt failed')
       return reply.code(401).send({ error: 'Identifiants incorrects' })
     }
 
     await prisma.user.update({ where: { id: user.id }, data: { lastLogin: new Date() } })
-    req.log.info({ userId: user.id, email: user.email }, 'Connexion réussie')
+    req.log.info({ userId: user.id, email: user.email }, 'Login successful')
 
     const token = app.jwt.sign(
       { id: user.id, email: user.email, name: user.name, role: user.role },
@@ -101,7 +101,7 @@ export async function authRoutes(app: FastifyInstance) {
       select: { id: true, email: true, name: true, role: true, createdAt: true }
     })
 
-    req.log.info({ email: user.email, role: user.role }, 'Utilisateur créé')
+    req.log.info({ email: user.email, role: user.role }, 'User created')
     return reply.code(201).send(user)
   })
 
@@ -127,7 +127,7 @@ export async function authRoutes(app: FastifyInstance) {
     await fs.writeFile(filePath, Buffer.concat(chunks))
     const avatarUrl = `/uploads/avatars/${filename}`
     await prisma.user.update({ where: { id: req.user.id }, data: { avatarUrl } })
-    req.log.debug({ userId: req.user.id }, 'Avatar mis à jour')
+    req.log.debug({ userId: req.user.id }, 'Avatar updated')
     return { avatarUrl }
   })
 
@@ -139,7 +139,7 @@ export async function authRoutes(app: FastifyInstance) {
       await fs.remove(file).catch(() => {})
     }
     await prisma.user.update({ where: { id: req.user.id }, data: { avatarUrl: null } })
-    req.log.debug({ userId: req.user.id }, 'Avatar supprimé')
+    req.log.debug({ userId: req.user.id }, 'Avatar deleted')
     return { success: true }
   })
 
@@ -152,7 +152,7 @@ export async function authRoutes(app: FastifyInstance) {
       data: { name: name.trim() },
       select: { id: true, email: true, name: true, role: true, avatarUrl: true }
     })
-    req.log.debug({ userId: req.user.id }, 'Profil mis à jour')
+    req.log.debug({ userId: req.user.id }, 'Profile updated')
     return updated
   })
 
@@ -168,7 +168,7 @@ export async function authRoutes(app: FastifyInstance) {
     if (!ok) return reply.code(400).send({ error: 'Mot de passe actuel incorrect' })
     const hashed = await bcrypt.hash(newPassword, 12)
     await prisma.user.update({ where: { id: req.user.id }, data: { password: hashed } })
-    req.log.info({ userId: req.user.id }, 'Mot de passe modifié')
+    req.log.info({ userId: req.user.id }, 'Password changed')
     return { success: true }
   })
 }

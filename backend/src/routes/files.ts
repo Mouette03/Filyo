@@ -78,7 +78,7 @@ export async function fileRoutes(app: FastifyInstance) {
       )
     )
 
-    req.log.info({ userId, count: files.length }, 'Fichiers uploadés')
+    req.log.info({ userId, count: files.length }, 'Files uploaded')
     return reply.code(201).send(
       files.map((f: any) => ({
         id: f.id,
@@ -98,7 +98,7 @@ export async function fileRoutes(app: FastifyInstance) {
       orderBy: { uploadedAt: 'desc' },
       include: { shares: true }
     })
-    req.log.debug({ userId: req.user.id, count: files.length }, 'Liste des fichiers')
+    req.log.debug({ userId: req.user.id, count: files.length }, 'File list')
     return files.map((f: any) => ({ ...f, size: f.size.toString() }))
   })
 
@@ -122,7 +122,7 @@ export async function fileRoutes(app: FastifyInstance) {
     if (!file) return reply.code(404).send({ error: 'Fichier introuvable ou non autorise' })
     await fs.remove(file.path).catch(() => {})
     await prisma.file.delete({ where: { id: req.params.id } })
-    req.log.info({ fileId: req.params.id, userId: req.user.id }, 'Fichier supprimé')
+    req.log.info({ fileId: req.params.id, userId: req.user.id }, 'File deleted')
     return { success: true }
   })
 

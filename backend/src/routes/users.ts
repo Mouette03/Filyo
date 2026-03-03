@@ -31,7 +31,7 @@ export async function userRoutes(app: FastifyInstance) {
         data: { email, name, password: hashed, role: role === 'ADMIN' ? 'ADMIN' : 'USER' },
         select: { id: true, email: true, name: true, role: true, active: true, createdAt: true }
       })
-      req.log.info({ email, role: user.role }, 'Utilisateur créé par admin')
+      req.log.info({ email, role: user.role }, 'User created by admin')
       return reply.code(201).send(user)
     }
   )

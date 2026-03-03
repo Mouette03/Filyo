@@ -17,13 +17,13 @@ if [ -f "$DB_FILE" ]; then
   RESOLVE_OUT=$(gosu node npx prisma migrate resolve --applied "$FIRST_MIGRATION" 2>&1) || RESOLVE_EXIT=$?
   if [ "${RESOLVE_EXIT:-0}" -ne 0 ]; then
     if echo "$RESOLVE_OUT" | grep -q "P3008"; then
-      echo "Migration initiale déjà enregistrée, aucune action nécessaire."
+      echo "Initial migration already recorded, nothing to do."
     else
       echo "$RESOLVE_OUT"
       exit 1
     fi
   else
-    echo "Base existante détectée — migration initiale marquée comme appliquée."
+    echo "Existing database detected — initial migration marked as applied."
   fi
 fi
 
