@@ -330,7 +330,8 @@ export const fr = {
   'toast.logoDeleted': 'Logo supprimé',
   'toast.smtpSaved': 'Configuration SMTP enregistrée',
   'toast.smtpOk': 'Connexion SMTP réussie ✅',
-  'toast.smtpFailed': 'Test SMTP échoué',
+  'toast.smtpIncomplete': 'Hôte SMTP et adresse expéditeur requis',
+  'toast.smtpFailed': 'Connexion échouée : {{detail}}',
   'toast.fieldsSaved': 'Configuration enregistrée',
   'toast.expiryUpdated': 'Expiration mise à jour',
   'toast.expiryRemoved': 'Expiration supprimée',
@@ -341,6 +342,8 @@ export const fr = {
   'toast.emailRequired': 'Entrez une adresse email',
   'toast.emailInvalid': 'Adresse email invalide',
   'toast.emailSendError': "Erreur lors de l'envoi",
+  'toast.smtpNotConfigured': 'SMTP non configuré — allez dans Réglages > Serveur SMTP',
+  'toast.emailSendFailed': "Envoi échoué : {{detail}}",
   // ── Dash (suppléments) ─────────────────────────────────────
   'dash.tabSent': 'Fichiers envoyés',
   'dash.tabRequests': 'Partages inversés',

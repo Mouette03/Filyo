@@ -85,15 +85,15 @@ export async function shareRoutes(app: FastifyInstance) {
   }>('/send-email', { onRequest: [app.authenticate] }, async (req: any, reply) => {
     const { to, tokens } = req.body
     if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
-      return reply.code(400).send({ error: 'Adresse email invalide' })
+      return reply.code(400).send({ code: 'EMAIL_INVALID' })
     }
     if (!Array.isArray(tokens) || tokens.length === 0) {
-      return reply.code(400).send({ error: 'Aucun lien fourni' })
+      return reply.code(400).send({ code: 'NO_TOKENS' })
     }
 
     const settings = await prisma.appSettings.findUnique({ where: { id: 'singleton' } })
     if (!settings?.smtpHost || !settings?.smtpFrom) {
-      return reply.code(503).send({ error: 'SMTP non configuré. Rendez-vous dans Réglages > Serveur SMTP.' })
+      return reply.code(503).send({ code: 'SMTP_NOT_CONFIGURED' })
     }
 
     const baseUrl = (settings.siteUrl || `http://localhost:${process.env.PORT || 3000}`).replace(/\/$/, '')
@@ -103,7 +103,7 @@ export async function shareRoutes(app: FastifyInstance) {
       where: { token: { in: tokens } },
       include: { file: true }
     })
-    if (shares.length === 0) return reply.code(404).send({ error: 'Liens introuvables' })
+    if (shares.length === 0) return reply.code(404).send({ code: 'SHARES_NOT_FOUND' })
 
     // Corps du mail
     const appName = settings.appName || 'Filyo'
@@ -132,8 +132,9 @@ export async function shareRoutes(app: FastifyInstance) {
       auth: settings.smtpUser ? { user: settings.smtpUser, pass: settings.smtpPass ?? '' } : undefined
     })
 
-    await transporter.sendMail({
-      from: `"${appName}" <${settings.smtpFrom}>`,
+    try {
+      await transporter.sendMail({
+        from: `"${appName}" <${settings.smtpFrom}>`,
       to,
       subject: `[${appName}] ${shares.length === 1
         ? `Partage : ${shares[0].file.originalName}`
@@ -150,7 +151,11 @@ export async function shareRoutes(app: FastifyInstance) {
           </table>
           <p style="font-size:11px;color:#555;margin-top:24px;text-align:center">Envoyé via ${appName}</p>
         </div>`
-    })
+      })
+    } catch (err: any) {
+      req.log.error({ err: err.message }, 'SMTP sendMail failed')
+      return reply.code(502).send({ code: 'EMAIL_SEND_FAILED', detail: err.message })
+    }
 
     req.log.info({ to, count: tokens.length }, 'Share email sent')
     return { success: true }

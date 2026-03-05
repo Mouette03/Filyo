@@ -330,7 +330,8 @@ export const en = {
   'toast.logoDeleted': 'Logo deleted',
   'toast.smtpSaved': 'SMTP configuration saved',
   'toast.smtpOk': 'SMTP connection successful ✅',
-  'toast.smtpFailed': 'SMTP test failed',
+  'toast.smtpIncomplete': 'SMTP host and sender address are required',
+  'toast.smtpFailed': 'Connection failed: {{detail}}',
   'toast.fieldsSaved': 'Configuration saved',
   'toast.expiryUpdated': 'Expiry updated',
   'toast.expiryRemoved': 'Expiry removed',
@@ -341,6 +342,8 @@ export const en = {
   'toast.emailRequired': 'Enter an email address',
   'toast.emailInvalid': 'Invalid email address',
   'toast.emailSendError': 'Error sending email',
+  'toast.smtpNotConfigured': 'SMTP not configured — go to Settings > SMTP Server',
+  'toast.emailSendFailed': 'Send failed: {{detail}}',
   // ── Dash (additions) ───────────────────────────────────
   'dash.tabSent': 'Sent files',
   'dash.tabRequests': 'Reverse shares',

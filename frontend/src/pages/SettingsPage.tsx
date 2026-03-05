@@ -148,10 +148,27 @@ export default function SettingsPage() {
   const handleTestSmtp = async () => {
     setTestingSmtp(true)
     try {
-      const res = await testSmtp()
-      toast.success(res.data.message || t('toast.smtpOk'))
+      const res = await testSmtp({
+        smtpHost,
+        smtpPort: Number(smtpPort) || 587,
+        smtpFrom,
+        smtpUser,
+        smtpPass,
+        smtpSecure,
+      })
+      const code = res.data.code
+      if (code === 'SMTP_OK') {
+        toast.success(t('toast.smtpOk', { host: res.data.host, port: String(res.data.port) }))
+      } else {
+        toast.success(t('toast.smtpOk'))
+      }
     } catch (err: any) {
-      toast.error(err.response?.data?.error || t('toast.smtpFailed'))
+      const code = err.response?.data?.code
+      if (code === 'SMTP_INCOMPLETE') {
+        toast.error(t('toast.smtpIncomplete'))
+      } else {
+        toast.error(t('toast.smtpFailed', { detail: err.response?.data?.detail || '' }))
+      }
     }
     setTestingSmtp(false)
   }

@@ -145,7 +145,8 @@ export const updateSmtpSettings = (data: {
   smtpHost?: string; smtpPort?: number; smtpFrom?: string
   smtpUser?: string; smtpPass?: string; smtpSecure?: boolean
 }) => api.patch('/settings/smtp', data)
-export const testSmtp = () => api.post('/settings/smtp/test')
+export const testSmtp = (data: { smtpHost: string; smtpPort: number; smtpFrom: string; smtpUser?: string; smtpPass?: string; smtpSecure: boolean }) =>
+  api.post('/settings/smtp/test', data)
 
 export default api
 

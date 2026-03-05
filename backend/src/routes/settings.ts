@@ -67,23 +67,27 @@ export async function settingsRoutes(app: FastifyInstance) {
 
   // POST /api/settings/smtp/test — tester la connexion SMTP (admin uniquement)
   app.post('/smtp/test', { onRequest: [app.authenticate, app.adminOnly] }, async (req: any, reply) => {
+    // Priorité aux valeurs envoyées dans le body (formulaire non encore sauvegardé)
+    const body = req.body ?? {}
     const s = await getSettings()
-    if (!s.smtpHost || !s.smtpFrom) {
-      return reply.code(400).send({ error: 'Configuration SMTP incomplète (hôte et expéditeur requis)' })
+    const host = body.smtpHost || s.smtpHost
+    const from = body.smtpFrom || s.smtpFrom
+    const port: number = body.smtpPort ?? s.smtpPort ?? 587
+
+    if (!host || !from) {
+      return reply.code(400).send({ code: 'SMTP_INCOMPLETE' })
     }
     try {
-      // Test de connexion simple via net.createConnection
       const net = await import('net')
-      const port = s.smtpPort ?? 587
       await new Promise<void>((resolve, reject) => {
-        const socket = net.createConnection(port, s.smtpHost!, () => { socket.destroy(); resolve() })
+        const socket = net.createConnection(port, host, () => { socket.destroy(); resolve() })
         socket.setTimeout(5000)
         socket.on('error', reject)
         socket.on('timeout', () => { socket.destroy(); reject(new Error('Timeout')) })
       })
-      return { success: true, message: `Connexion réussie à ${s.smtpHost}:${port}` }
+      return { success: true, code: 'SMTP_OK', host, port }
     } catch (err: any) {
-      return reply.code(502).send({ error: `Connexion échouée : ${err.message}` })
+      return reply.code(502).send({ code: 'SMTP_FAILED', detail: err.message })
     }
   })
 

@@ -80,7 +80,10 @@ export default function HomePage() {
       toast.success(t('toast.linkEmailSent', { email: emailTo }))
       setTimeout(() => setEmailSent(false), 3000)
     } catch (err: any) {
-      toast.error(err.response?.data?.error || t('toast.emailSendError'))
+      const code = err.response?.data?.code
+      if (code === 'SMTP_NOT_CONFIGURED') toast.error(t('toast.smtpNotConfigured'))
+      else if (code === 'EMAIL_SEND_FAILED') toast.error(t('toast.emailSendFailed', { detail: err.response?.data?.detail || '' }))
+      else toast.error(t('toast.emailSendError'))
     }
     setEmailSending(false)
   }
