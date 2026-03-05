@@ -9,6 +9,7 @@ import {
   sendShareByEmail, updateFileExpiry
 } from '../api/client'
 import { formatBytes, formatDate, getFileIcon, downloadBlob, copyToClipboard } from '../lib/utils'
+import { useT } from '../i18n'
 
 interface FileItem {
   id: string; originalName: string; mimeType: string; size: string
@@ -35,6 +36,7 @@ type Tab = 'sent' | 'requests'
 
 export default function DashboardPage() {
   const isAdmin = useAuthStore(s => s.isAdmin())
+  const { t } = useT()
   const [tab, setTab] = useState<Tab>('sent')
   const [files, setFiles] = useState<FileItem[]>([])
   const [requests, setRequests] = useState<UploadRequest[]>([])
@@ -60,7 +62,7 @@ export default function DashboardPage() {
       setFiles(filesRes.data)
       setRequests(reqRes.data)
       if (statsRes) setStats((statsRes as any).data)
-    } catch { toast.error('Erreur de chargement') }
+    } catch { toast.error(t('toast.loadError')) }
     setLoading(false)
   }
 
@@ -70,41 +72,41 @@ export default function DashboardPage() {
     try {
       await deleteFile(id)
       setFiles(prev => prev.filter(f => f.id !== id))
-      toast.success('Fichier supprimé')
-    } catch { toast.error('Erreur lors de la suppression') }
+      toast.success(t('toast.fileDeleted'))
+    } catch { toast.error(t('toast.deleteError')) }
   }
 
   const handleDeleteRequest = async (id: string) => {
     try {
       await deleteUploadRequest(id)
       setRequests(prev => prev.filter(r => r.id !== id))
-      toast.success('Demande supprimée')
-    } catch { toast.error('Erreur lors de la suppression') }
+      toast.success(t('toast.requestDeleted'))
+    } catch { toast.error(t('toast.deleteError')) }
   }
 
   const handleToggleRequest = async (id: string) => {
     try {
       const res = await toggleUploadRequest(id)
       setRequests(prev => prev.map(r => r.id === id ? { ...r, active: res.data.active } : r))
-    } catch { toast.error('Erreur') }
+    } catch { toast.error(t('common.error')) }
   }
 
   const copyShareLink = async (token: string) => {
     try {
       await copyToClipboard(`${window.location.origin}/s/${token}`)
       setCopiedToken(token)
-      toast.success('Lien copié !')
+      toast.success(t('toast.linkCopied'))
       setTimeout(() => setCopiedToken(null), 2000)
-    } catch { toast.error('Impossible de copier le lien') }
+    } catch { toast.error(t('toast.cannotCopy')) }
   }
 
   const copyRequestLink = async (token: string) => {
     try {
       await copyToClipboard(`${window.location.origin}/r/${token}`)
       setCopiedToken(token)
-      toast.success('Lien copié !')
+      toast.success(t('toast.linkCopied'))
       setTimeout(() => setCopiedToken(null), 2000)
-    } catch { toast.error('Impossible de copier le lien') }
+    } catch { toast.error(t('toast.cannotCopy')) }
   }
 
   const toggleExpandRequest = async (id: string) => {
@@ -114,7 +116,7 @@ export default function DashboardPage() {
       try {
         const res = await getReceivedFiles(id)
         setReceivedFiles(prev => ({ ...prev, [id]: res.data }))
-      } catch { toast.error('Impossible de charger les fichiers reçus') }
+      } catch { toast.error(t('toast.cannotLoadReceived')) }
     }
   }
 
@@ -122,20 +124,20 @@ export default function DashboardPage() {
     try {
       const res = await downloadReceivedFile(requestId, fileId)
       downloadBlob(res.data, filename)
-    } catch { toast.error('Erreur de téléchargement') }
+    } catch { toast.error(t('toast.loadError')) }
   }
 
   const handleSendFileEmail = async (token: string) => {
-    if (!emailToFile.trim()) return toast.error('Entrez une adresse email')
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailToFile)) return toast.error('Adresse email invalide')
+    if (!emailToFile.trim()) return toast.error(t('toast.emailRequired'))
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailToFile)) return toast.error(t('toast.emailInvalid'))
     setEmailSendingToken(token)
     try {
       await sendShareByEmail(emailToFile.trim(), [token])
-      toast.success(`Lien envoyé à ${emailToFile}`)
+      toast.success(t('toast.linkEmailSent', { email: emailToFile }))
       setEmailingFileId(null)
       setEmailToFile('')
     } catch (err: any) {
-      toast.error(err.response?.data?.error || "Erreur lors de l'envoi")
+      toast.error(err.response?.data?.error || t('toast.emailSendError'))
     }
     setEmailSendingToken(null)
   }
@@ -146,8 +148,8 @@ export default function DashboardPage() {
       const expiresAt = new Date().toISOString()
       await updateFileExpiry(fileId, expiresAt)
       setFiles(prev => prev.map(f => f.id === fileId ? { ...f, expiresAt } : f))
-      toast.success('Fichier expiré immédiatement')
-    } catch { toast.error('Erreur lors de l\'expiration') }
+      toast.success(t('toast.expiredNow'))
+    } catch { toast.error(t('toast.deleteError')) }
     setExpiringNowId(null)
   }
 
@@ -158,32 +160,32 @@ export default function DashboardPage() {
       await updateFileExpiry(fileId, expiresAt)
       setFiles(prev => prev.map(f => f.id === fileId ? { ...f, expiresAt } : f))
       setExpiryEditId(null)
-      toast.success(expiresAt ? 'Expiration mise à jour' : 'Expiration supprimée')
-    } catch { toast.error('Erreur lors de la mise à jour') }
+      toast.success(expiresAt ? t('toast.expiryUpdated') : t('toast.expiryRemoved'))
+    } catch { toast.error(t('toast.updateError')) }
     setSavingExpiryId(null)
   }
 
   const handleCleanup = async () => {
     try {
       const res = await runCleanup()
-      toast.success(`Nettoyage : ${res.data.deletedFiles} fichier(s) supprimé(s)`)
+      toast.success(t('toast.cleanupDone', { count: String(res.data.deletedFiles) }))
       load()
-    } catch { toast.error('Erreur lors du nettoyage') }
+    } catch { toast.error(t('common.error')) }
   }
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-10">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-bold">Tableau de bord</h1>
+        <h1 className="text-2xl font-bold">{t('dash.title')}</h1>
         <div className="flex gap-2">
           {isAdmin && (
             <button onClick={handleCleanup} className="btn-secondary flex items-center gap-2 text-sm">
-              <Trash2 size={14} /> Nettoyer expirés
+              <Trash2 size={14} /> {t('dash.cleanExpired')}
             </button>
           )}
           <button onClick={load} className="btn-secondary flex items-center gap-2 text-sm">
-            <RefreshCw size={14} /> Actualiser
+            <RefreshCw size={14} /> {t('common.refresh')}
           </button>
         </div>
       </div>
@@ -193,12 +195,12 @@ export default function DashboardPage() {
         <>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
             {[
-              { label: 'Fichiers envoyés', value: stats.filesCount },
-              { label: 'Partages actifs', value: stats.sharesCount },
-              { label: 'Demandes de dépôt', value: stats.uploadRequestsCount },
-              { label: 'Fichiers reçus', value: stats.receivedFilesCount },
-              { label: 'Volume envoyé', value: formatBytes(stats.totalSize) },
-              { label: 'Volume reçu', value: formatBytes(stats.totalReceivedSize) }
+              { label: t('dash.statFilesSent'), value: stats.filesCount },
+              { label: t('dash.statShares'), value: stats.sharesCount },
+              { label: t('dash.statRequests'), value: stats.uploadRequestsCount },
+              { label: t('dash.statReceived'), value: stats.receivedFilesCount },
+              { label: t('dash.statSizeSent'), value: formatBytes(stats.totalSize) },
+              { label: t('dash.statSizeReceived'), value: formatBytes(stats.totalReceivedSize) }
             ].map(s => (
               <div key={s.label} className="card py-4 text-center">
                 <p className="text-2xl font-bold text-brand-400">{s.value}</p>
@@ -221,11 +223,11 @@ export default function DashboardPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1.5 gap-2">
-                      <p className="text-sm font-medium flex-shrink-0">Espace disque</p>
+                      <p className="text-sm font-medium flex-shrink-0">{t('dash.disk')}</p>
                       <p className="text-xs text-white/40 truncate text-right hidden sm:block">
-                        {stats.disk.used} / {stats.disk.total} utilisés
+                        {stats.disk.used} / {stats.disk.total} {t('dash.diskUsed')}
                         &nbsp;·&nbsp;
-                        <span className="text-brand-300">{stats.disk.free} libres</span>
+                        <span className="text-brand-300">{stats.disk.free} {t('dash.diskFree')}</span>
                       </p>
                     </div>
                     <div className="h-2.5 rounded-full bg-white/10 overflow-hidden">
@@ -235,7 +237,7 @@ export default function DashboardPage() {
                     <p className="text-xs text-white/40 mt-1.5 sm:hidden">
                       {stats.disk.used} / {stats.disk.total}
                       &nbsp;·&nbsp;
-                      <span className="text-brand-300">{stats.disk.free} libres</span>
+                      <span className="text-brand-300">{stats.disk.free} {t('dash.diskFree')}</span>
                     </p>
                   </div>
                   <span className={`text-2xl font-bold flex-shrink-0 tabular-nums ${
@@ -254,19 +256,19 @@ export default function DashboardPage() {
         <button onClick={() => setTab('sent')}
           className={`px-5 py-2 rounded-lg text-sm font-medium transition-all
             ${tab === 'sent' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white'}`}>
-          Fichiers envoyés ({files.length})
+          {t('dash.tabSent')} ({files.length})
         </button>
         <button onClick={() => setTab('requests')}
           className={`px-5 py-2 rounded-lg text-sm font-medium transition-all
             ${tab === 'requests' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white'}`}>
-          Partages inversés ({requests.length})
+          {t('dash.tabRequests')} ({requests.length})
         </button>
       </div>
 
       {loading && (
         <div className="text-center py-20">
           <div className="w-10 h-10 border-2 border-brand-500/40 border-t-brand-500 rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-white/40">Chargement…</p>
+          <p className="text-white/40">{t('common.loading')}</p>
         </div>
       )}
 
@@ -274,7 +276,7 @@ export default function DashboardPage() {
       {!loading && tab === 'sent' && (
         <div className="space-y-3">
           {files.length === 0 && (
-            <div className="card text-center py-12 text-white/40">Aucun fichier envoyé pour l'instant.</div>
+            <div className="card text-center py-12 text-white/40">{t('dash.noFiles')}</div>
           )}
           {files.map(f => {
             const share = f.shares[0]
@@ -288,20 +290,20 @@ export default function DashboardPage() {
                       <p className="font-medium truncate">{f.originalName}</p>
                       {f.maxDownloads !== null && f.downloads >= f.maxDownloads && (
                         <span className="flex-shrink-0 flex items-center gap-1 text-xs font-medium text-red-400 bg-red-500/15 px-2 py-0.5 rounded-full">
-                          <AlertTriangle size={10} /> Limite atteinte
+                          <AlertTriangle size={10} /> {t('dash.limitReached')}
                         </span>
                       )}
                     </div>
                     <p className="text-xs text-white/40 mt-0.5">
                       {formatBytes(f.size)} · {formatDate(f.uploadedAt)} ·{' '}
                       {f.maxDownloads !== null
-                        ? <span className={f.downloads >= f.maxDownloads ? 'text-red-400' : ''}>{f.downloads}/{f.maxDownloads} téléchargement(s)</span>
-                        : <>{f.downloads} téléchargement(s)</>}
+                        ? <span className={f.downloads >= f.maxDownloads ? 'text-red-400' : ''}>{f.downloads}/{f.maxDownloads} {t('dash.dl')}</span>
+                        : <>{f.downloads} {t('dash.dl')}</>}
                       {f.expiresAt
                         ? new Date(f.expiresAt) <= new Date()
-                          ? <span className="text-red-400"> · Expiré</span>
-                          : ` · Expire ${formatDate(f.expiresAt)}`
-                        : ' · Sans expiration'}
+                          ? <span className="text-red-400"> · {t('dash.expired')}</span>
+                          : ` · ${t('dash.expires')} ${formatDate(f.expiresAt)}`
+                        : ` · ${t('dash.noExpiry')}`}
                     </p>
                   </div>
                   {/* Boutons desktop */}
@@ -406,7 +408,7 @@ export default function DashboardPage() {
                       value={emailToFile}
                       onChange={e => setEmailToFile(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && handleSendFileEmail(share.token)}
-                      placeholder="destinataire@exemple.fr"
+                      placeholder={t('dash.emailPlaceholder')}
                       className="input text-sm py-1.5 flex-1"
                       autoFocus
                     />
@@ -417,7 +419,7 @@ export default function DashboardPage() {
                       {emailSendingToken === share.token
                         ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                         : <Send size={12} />}
-                      Envoyer
+                      {t('common.send')}
                     </button>
                     <button onClick={() => setEmailingFileId(null)} className="btn-secondary text-xs px-2.5 py-1.5">✕</button>
                   </div>
@@ -441,13 +443,13 @@ export default function DashboardPage() {
                       {savingExpiryId === f.id
                         ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                         : <Check size={12} />}
-                      Enregistrer
+                      {t('common.save')}
                     </button>
                     <button
                       onClick={() => handleSaveExpiry(f.id, true)}
                       disabled={savingExpiryId === f.id}
                       className="btn-secondary text-xs px-2.5 py-1.5 disabled:opacity-40">
-                      Sans expiration
+                      {t('dash.noExpiry')}
                     </button>
                     <button onClick={() => setExpiryEditId(null)} className="btn-secondary text-xs px-2.5 py-1.5">✕</button>
                   </div>
@@ -462,7 +464,7 @@ export default function DashboardPage() {
       {!loading && tab === 'requests' && (
         <div className="space-y-3">
           {requests.length === 0 && (
-            <div className="card text-center py-12 text-white/40">Aucune demande de dépôt créée.</div>
+            <div className="card text-center py-12 text-white/40">{t('dash.noRequests')}</div>
           )}
           {requests.map(r => (
             <div key={r.id} className="card space-y-0 overflow-hidden">
@@ -476,32 +478,32 @@ export default function DashboardPage() {
                   <div className="flex items-center gap-2">
                     <p className="font-medium truncate text-sm">{r.title}</p>
                     <span className={`flex-shrink-0 ${r.active ? 'badge-green' : 'badge-red'}`}>
-                      {r.active ? 'Actif' : 'Désactivé'}
+                      {r.active ? t('common.active') : t('common.inactive')}
                     </span>
                   </div>
                   <p className="text-xs text-white/40 mt-0.5 leading-relaxed">
-                    {r.filesCount} fichier(s) · {formatDate(r.createdAt)}
-                    {r.expiresAt && <><br className="sm:hidden" /><span>{` · Expire ${formatDate(r.expiresAt)}`}</span></>}
+                    {t('users.filesCount', { count: String(r.filesCount) })} · {formatDate(r.createdAt)}
+                    {r.expiresAt && <><br className="sm:hidden" /><span>{` · ${t('dash.expires')} ${formatDate(r.expiresAt)}`}</span></>}
                   </p>
                 </div>
                 {/* Boutons desktop */}
                 <div className="hidden sm:flex items-center gap-1.5 flex-shrink-0">
                   <button onClick={() => toggleExpandRequest(r.id)}
                     className="btn-secondary flex items-center gap-1.5 text-xs px-2.5 h-8">
-                    <Eye size={12} /> Fichiers
+                    <Eye size={12} /> {t('dash.filesBtn')}
                   </button>
                   <button onClick={() => copyRequestLink(r.token)}
                     className={`flex items-center gap-1.5 px-2.5 h-8 rounded-lg text-xs font-medium transition-all
                       ${copiedToken === r.token ? 'bg-emerald-500/20 text-emerald-400' : 'btn-secondary'}`}>
                     {copiedToken === r.token ? <Check size={12} /> : <Copy size={12} />}
-                    Lien
+                    {t('dash.link')}
                   </button>
                   <button onClick={() => handleToggleRequest(r.id)}
                     className="btn-icon"
-                    title={r.active ? 'Désactiver' : 'Activer'}>
+                    title={r.active ? t('dash.disable') : t('dash.enable')}>
                     {r.active ? <ToggleRight size={15} className="text-brand-400" /> : <ToggleLeft size={15} />}
                   </button>
-                  <button onClick={() => handleDeleteRequest(r.id)} className="btn-icon-danger" title="Supprimer">
+                  <button onClick={() => handleDeleteRequest(r.id)} className="btn-icon-danger" title={t('common.delete')}>
                     <Trash2 size={13} />
                   </button>
                 </div>
@@ -511,20 +513,20 @@ export default function DashboardPage() {
               <div className="flex sm:hidden items-center gap-1.5 mt-3 pt-3 border-t border-white/5">
                 <button onClick={() => toggleExpandRequest(r.id)}
                   className="btn-secondary flex items-center gap-1.5 text-xs px-2.5 h-8 flex-1 justify-center">
-                  <Eye size={12} /> Fichiers
+                  <Eye size={12} /> {t('dash.filesBtn')}
                 </button>
                 <button onClick={() => copyRequestLink(r.token)}
                   className={`flex items-center gap-1.5 px-2.5 h-8 rounded-lg text-xs font-medium transition-all flex-1 justify-center
                     ${copiedToken === r.token ? 'bg-emerald-500/20 text-emerald-400' : 'btn-secondary'}`}>
                   {copiedToken === r.token ? <Check size={12} /> : <Copy size={12} />}
-                  Lien
+                  {t('dash.link')}
                 </button>
                 <button onClick={() => handleToggleRequest(r.id)}
                   className="btn-icon flex-shrink-0"
-                  title={r.active ? 'Désactiver' : 'Activer'}>
+                  title={r.active ? t('dash.disable') : t('dash.enable')}>
                   {r.active ? <ToggleRight size={15} className="text-brand-400" /> : <ToggleLeft size={15} />}
                 </button>
-                <button onClick={() => handleDeleteRequest(r.id)} className="btn-icon-danger flex-shrink-0" title="Supprimer">
+                <button onClick={() => handleDeleteRequest(r.id)} className="btn-icon-danger flex-shrink-0" title={t('common.delete')}>
                   <Trash2 size={13} />
                 </button>
               </div>
@@ -533,10 +535,10 @@ export default function DashboardPage() {
               {expandedRequest === r.id && (
                 <div className="mt-4 pt-4 border-t border-white/10 space-y-2">
                   {!receivedFiles[r.id] && (
-                    <p className="text-white/40 text-sm text-center py-2">Chargement…</p>
+                    <p className="text-white/40 text-sm text-center py-2">{t('common.loading')}</p>
                   )}
                   {receivedFiles[r.id]?.length === 0 && (
-                    <p className="text-white/40 text-sm text-center py-2">Aucun fichier reçu pour l'instant.</p>
+                    <p className="text-white/40 text-sm text-center py-2">{t('dash.noReceived')}</p>
                   )}
                   {(() => {
                     // Grouper les fichiers par envoi (même déposant + message = même dépôt)
@@ -588,7 +590,7 @@ export default function DashboardPage() {
                             </div>
                             <button onClick={() => handleDownloadReceived(r.id, f.id, f.originalName)}
                               className="btn-secondary flex items-center gap-1.5 text-xs px-2.5 py-1.5 flex-shrink-0">
-                              <Download size={12} /> Télécharger
+                              <Download size={12} /> {t('common.download')}
                             </button>
                           </div>
                         ))}

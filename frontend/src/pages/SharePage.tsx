@@ -4,6 +4,7 @@ import { Download, Lock, AlertTriangle, ArrowDownUp, Clock, Shield } from 'lucid
 import toast from 'react-hot-toast'
 import { getShareInfo, downloadShare } from '../api/client'
 import { formatBytes, formatDate, getFileIcon, downloadBlob } from '../lib/utils'
+import { useT } from '../i18n'
 
 interface ShareInfo {
   token: string
@@ -20,6 +21,7 @@ type Status = 'loading' | 'ready' | 'error' | 'expired' | 'downloading' | 'done'
 
 export default function SharePage() {
   const { token } = useParams<{ token: string }>()
+  const { t } = useT()
   const [info, setInfo] = useState<ShareInfo | null>(null)
   const [status, setStatus] = useState<Status>('loading')
   const [error, setError] = useState('')
@@ -35,7 +37,7 @@ export default function SharePage() {
         if (r.data.hasPassword) setShowPassword(true)
       })
       .catch(err => {
-        const msg = err.response?.data?.error || 'Lien invalide'
+        const msg = err.response?.data?.error || t('share.invalid')
         setError(msg)
         setStatus(err.response?.status === 410 ? 'expired' : 'error')
       })
@@ -48,13 +50,13 @@ export default function SharePage() {
       const res = await downloadShare(token, password || undefined)
       downloadBlob(res.data, info.filename)
       setStatus('done')
-      toast.success('Téléchargement démarré !')
+      toast.success(t('toast.downloadStarted'))
     } catch (err: any) {
       if (err.response?.status === 401) {
-        toast.error('Mot de passe incorrect')
+        toast.error(t('toast.passwordWrong'))
         setStatus('ready')
       } else {
-        toast.error('Erreur lors du téléchargement')
+        toast.error(t('common.error'))
         setStatus('ready')
       }
     }
@@ -80,7 +82,7 @@ export default function SharePage() {
         {status === 'loading' && (
           <div className="card text-center py-12">
             <div className="w-10 h-10 border-2 border-brand-500/40 border-t-brand-500 rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-white/50">Chargement…</p>
+            <p className="text-white/50">{t('common.loading')}</p>
           </div>
         )}
 
@@ -90,7 +92,7 @@ export default function SharePage() {
             <div className="w-14 h-14 bg-red-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <AlertTriangle size={28} className="text-red-400" />
             </div>
-            <h2 className="text-xl font-bold mb-2">{status === 'expired' ? 'Lien expiré' : 'Lien invalide'}</h2>
+            <h2 className="text-xl font-bold mb-2">{status === 'expired' ? t('share.expired') : t('share.invalid')}</h2>
             <p className="text-white/50 text-sm">{error}</p>
           </div>
         )}
@@ -114,7 +116,7 @@ export default function SharePage() {
               {info.expiresAt && (
                 <div className="bg-white/5 rounded-xl px-3 py-2.5">
                   <p className="text-xs text-white/40 flex items-center gap-1 mb-0.5">
-                    <Clock size={10} /> Expire le
+                    <Clock size={10} /> {t('share.expires')}
                   </p>
                   <p className="text-sm font-medium">{formatDate(info.expiresAt)}</p>
                 </div>
@@ -122,7 +124,7 @@ export default function SharePage() {
               {info.maxDownloads && (
                 <div className="bg-white/5 rounded-xl px-3 py-2.5">
                   <p className="text-xs text-white/40 flex items-center gap-1 mb-0.5">
-                    <Download size={10} /> Téléchargements
+                    <Download size={10} /> {t('share.downloads')}
                   </p>
                   <p className="text-sm font-medium">{info.downloads} / {info.maxDownloads}</p>
                 </div>
@@ -130,7 +132,7 @@ export default function SharePage() {
               {info.hasPassword && (
                 <div className="col-span-2 bg-orange-500/10 border border-orange-500/20 rounded-xl px-3 py-2.5 flex items-center gap-2">
                   <Lock size={14} className="text-orange-400" />
-                  <p className="text-sm text-orange-300">Ce fichier est protégé par mot de passe</p>
+                  <p className="text-sm text-orange-300">{t('share.passwordProtected')}</p>
                 </div>
               )}
             </div>
@@ -139,14 +141,14 @@ export default function SharePage() {
             {showPassword && (
               <div>
                 <label className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
-                  <Shield size={11} /> Mot de passe
+                  <Shield size={11} /> {t('share.passwordLabel')}
                 </label>
                 <input
                   type="password"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleDownload()}
-                  placeholder="Entrez le mot de passe"
+                  placeholder={t('share.passwordPlaceholder')}
                   className="input"
                   autoFocus
                 />
@@ -163,25 +165,25 @@ export default function SharePage() {
                 {status === 'downloading' ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Téléchargement…
+                    {t('share.downloading')}
                   </>
                 ) : (
                   <>
                     <Download size={16} />
-                    Télécharger
+                    {t('share.downloadBtn')}
                   </>
                 )}
               </button>
             ) : (
               <div className="bg-emerald-500/20 border border-emerald-500/30 rounded-xl px-4 py-3 text-center text-emerald-400 font-medium">
-                ✓ Téléchargement démarré
+                {t('share.downloadStarted')}
               </div>
             )}
           </div>
         )}
 
         <p className="text-center text-white/20 text-xs mt-6">
-          Partagé via Filyo — Hébergé localement &amp; privé
+          {t('share.footer', { app: 'Filyo' })}
         </p>
       </div>
     </div>

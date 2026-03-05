@@ -5,6 +5,7 @@ import { Upload, ArrowDownUp, AlertTriangle, Clock, Check, Lock, User, Mail, Mes
 import toast from 'react-hot-toast'
 import { getUploadRequestInfo, submitToUploadRequest, getSettings } from '../api/client'
 import { formatBytes, formatDate, getFileIcon } from '../lib/utils'
+import { useT } from '../i18n'
 
 type FieldReq = 'hidden' | 'optional' | 'required'
 
@@ -34,6 +35,7 @@ export default function RequestUploadPage() {
   const [nameReq, setNameReq] = useState<FieldReq>('optional')
   const [emailReq, setEmailReq] = useState<FieldReq>('optional')
   const [msgReq, setMsgReq] = useState<FieldReq>('optional')
+  const { t } = useT()
 
   useEffect(() => {
     // Charger config champs déposant
@@ -49,7 +51,7 @@ export default function RequestUploadPage() {
     getUploadRequestInfo(token)
       .then(r => { setInfo(r.data); setStatus('ready') })
       .catch(err => {
-        const msg = err.response?.data?.error || 'Lien invalide'
+        const msg = err.response?.data?.error || t('request.invalid')
         setError(msg)
         setStatus(err.response?.status === 410 ? 'expired' : 'error')
       })
@@ -69,13 +71,13 @@ export default function RequestUploadPage() {
     if (!files.length || !token) return
     // Validation champs obligatoires
     if (nameReq === 'required' && !uploaderName.trim()) {
-      return toast.error('Le nom est obligatoire')
+      return toast.error(t('toast.nameRequired'))
     }
     if (emailReq === 'required' && !uploaderEmail.trim()) {
-      return toast.error('L\'adresse email est obligatoire')
+      return toast.error(t('toast.emailFieldRequired'))
     }
     if (msgReq === 'required' && !message.trim()) {
-      return toast.error('Le message est obligatoire')
+      return toast.error(t('toast.messageRequired'))
     }
     setStatus('uploading')
     setProgress(0)
@@ -92,9 +94,9 @@ export default function RequestUploadPage() {
     try {
       await submitToUploadRequest(token, formData, setProgress)
       setStatus('done')
-      toast.success('Fichiers déposés avec succès !')
+      toast.success(t('toast.filesDeposited'))
     } catch (err: any) {
-      const msg = err.response?.data?.error || 'Erreur lors de l\'envoi'
+      const msg = err.response?.data?.error || t('toast.sendError')
       toast.error(msg)
       setStatus('ready')
     }
@@ -119,7 +121,7 @@ export default function RequestUploadPage() {
         {status === 'loading' && (
           <div className="card text-center py-12">
             <div className="w-10 h-10 border-2 border-brand-500/40 border-t-brand-500 rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-white/50">Chargement…</p>
+            <p className="text-white/50">{t('common.loading')}</p>
           </div>
         )}
 
@@ -128,7 +130,7 @@ export default function RequestUploadPage() {
             <div className="w-14 h-14 bg-red-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <AlertTriangle size={28} className="text-red-400" />
             </div>
-            <h2 className="text-xl font-bold mb-2">{status === 'expired' ? 'Lien expiré' : 'Lien invalide'}</h2>
+            <h2 className="text-xl font-bold mb-2">{status === 'expired' ? t('request.expired') : t('request.invalid')}</h2>
             <p className="text-white/50 text-sm">{error}</p>
           </div>
         )}
@@ -138,8 +140,8 @@ export default function RequestUploadPage() {
             <div className="w-14 h-14 bg-emerald-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <Check size={28} className="text-emerald-400" />
             </div>
-            <h2 className="text-xl font-bold mb-2">Fichiers déposés !</h2>
-            <p className="text-white/50 text-sm">Le destinataire a bien reçu vos fichiers.</p>
+            <h2 className="text-xl font-bold mb-2">{t('request.doneTitle')}</h2>
+            <p className="text-white/50 text-sm">{t('request.doneMsg')}</p>
           </div>
         )}
 
@@ -153,7 +155,7 @@ export default function RequestUploadPage() {
                 </div>
                 <div>
                   <h1 className="font-bold text-lg leading-tight">{info.title}</h1>
-                  <p className="text-xs text-white/40">Demande de dépôt de fichiers</p>
+                  <p className="text-xs text-white/40">{t('request.depositRequest')}</p>
                 </div>
               </div>
               {info.message && (
@@ -167,7 +169,7 @@ export default function RequestUploadPage() {
                 )}
                 {info.maxFiles && (
                   <span className="badge-blue flex items-center gap-1">
-                    Max {info.maxFiles} fichier(s)
+                    {t('request.maxFiles', { count: String(info.maxFiles) })}
                   </span>
                 )}
                 {info.maxSizeBytes && (
@@ -186,9 +188,9 @@ export default function RequestUploadPage() {
                   const allRequired = [nameReq, emailReq, msgReq].filter(r => r !== 'hidden').every(r => r === 'required')
                   return (
                     <h3 className="text-sm font-semibold text-white/60 uppercase tracking-wider">
-                      Vos informations
+                      {t('request.uploaderInfo')}
                       {!allRequired && hasOptional && hasRequired && (
-                        <span className="ml-2 text-white/30 normal-case tracking-normal font-normal text-xs">(* obligatoire)</span>
+                        <span className="ml-2 text-white/30 normal-case tracking-normal font-normal text-xs">{t('request.requiredNote')}</span>
                       )}
                     </h3>
                   )
@@ -200,11 +202,11 @@ export default function RequestUploadPage() {
                     {nameReq !== 'hidden' && (
                       <div>
                         <label className="text-xs text-white/50 mb-1.5 flex items-center gap-1">
-                          <User size={11} /> Nom
+                          <User size={11} /> {t('request.nameLabel')}
                           {nameReq === 'required' && <span className="text-red-400 ml-0.5">*</span>}
                         </label>
                         <input type="text" value={uploaderName} onChange={e => setUploaderName(e.target.value)}
-                          placeholder={nameReq === 'required' ? 'Votre nom (obligatoire)' : 'Votre nom'}
+                          placeholder={nameReq === 'required' ? t('request.namePlaceholderReq') : t('request.namePlaceholderOpt')}
                           className="input text-sm py-2.5" required={nameReq === 'required'} />
                       </div>
                     )}
@@ -215,7 +217,7 @@ export default function RequestUploadPage() {
                           {emailReq === 'required' && <span className="text-red-400 ml-0.5">*</span>}
                         </label>
                         <input type="email" value={uploaderEmail} onChange={e => setUploaderEmail(e.target.value)}
-                          placeholder={emailReq === 'required' ? 'votre@email.fr (obligatoire)' : 'votre@email.fr'}
+                          placeholder={emailReq === 'required' ? t('request.emailPlaceholderReq') : t('request.emailPlaceholderOpt')}
                           className="input text-sm py-2.5" required={emailReq === 'required'} />
                       </div>
                     )}
@@ -224,22 +226,22 @@ export default function RequestUploadPage() {
                 {msgReq !== 'hidden' && (
                   <div>
                     <label className="text-xs text-white/50 mb-1.5 flex items-center gap-1">
-                      <MessageSquare size={11} /> Message
+                      <MessageSquare size={11} /> {t('request.messageLabel')}
                       {msgReq === 'required' && <span className="text-red-400 ml-0.5">*</span>}
-                      {msgReq === 'optional' && <span className="text-white/25 ml-1">(optionnel)</span>}
+                      {msgReq === 'optional' && <span className="text-white/25 ml-1">{t('request.messageOptional')}</span>}
                     </label>
                     <textarea value={message} onChange={e => setMessage(e.target.value)}
-                      placeholder={msgReq === 'required' ? 'Un mot pour accompagner votre envoi… (obligatoire)' : 'Un mot pour accompagner votre envoi…'}
+                      placeholder={msgReq === 'required' ? t('request.messagePlaceholderReq') : t('request.messagePlaceholderOpt')}
                       rows={2} className="input text-sm py-2.5 resize-none" />
                   </div>
                 )}
                 {info.hasPassword && (
                   <div>
                     <label className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
-                      <Lock size={11} /> Mot de passe requis
+                      <Lock size={11} /> {t('request.passwordLabel')}
                     </label>
                     <input type="password" value={password} onChange={e => setPassword(e.target.value)}
-                      placeholder="Entrez le mot de passe" className="input text-sm py-2.5" />
+                      placeholder={t('request.passwordPlaceholder')} className="input text-sm py-2.5" />
                   </div>
                 )}
               </div>
@@ -248,10 +250,10 @@ export default function RequestUploadPage() {
             {nameReq === 'hidden' && emailReq === 'hidden' && msgReq === 'hidden' && info.hasPassword && (
               <div className="card">
                 <label className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
-                  <Lock size={11} /> Mot de passe requis
+                  <Lock size={11} /> {t('request.passwordLabel')}
                 </label>
                 <input type="password" value={password} onChange={e => setPassword(e.target.value)}
-                  placeholder="Entrez le mot de passe" className="input text-sm py-2.5" />
+                  placeholder={t('request.passwordPlaceholder')} className="input text-sm py-2.5" />
               </div>
             )}
 
@@ -266,9 +268,9 @@ export default function RequestUploadPage() {
               <input {...getInputProps()} />
               <Upload size={24} className={`mx-auto mb-3 ${isDragActive ? 'text-brand-400' : 'text-white/40'}`} />
               <p className="text-white/70 font-medium">
-                {isDragActive ? 'Relâchez ici !' : 'Déposez vos fichiers ici'}
+                {isDragActive ? t('request.dropActive') : t('request.dropHint')}
               </p>
-              <p className="text-white/30 text-sm mt-1">ou cliquez pour parcourir</p>
+              <p className="text-white/30 text-sm mt-1">{t('request.dropBrowse')}</p>
             </div>
 
             {/* File list */}
@@ -304,12 +306,12 @@ export default function RequestUploadPage() {
               {status === 'uploading' ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Envoi en cours… {progress}%
+                  {t('request.uploading', { pct: String(progress) })}
                 </>
               ) : (
                 <>
                   <Upload size={16} />
-                  Déposer {files.length > 0 ? `${files.length} fichier(s)` : 'les fichiers'}
+                  {t('request.submitBtn', { count: String(files.length) })}
                 </>
               )}
             </button>
@@ -317,7 +319,7 @@ export default function RequestUploadPage() {
         )}
 
         <p className="text-center text-white/20 text-xs">
-          Partagé via Filyo — Hébergé localement &amp; privé
+          {t('share.footer', { app: 'Filyo' })}
         </p>
       </div>
     </div>

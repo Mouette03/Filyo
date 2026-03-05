@@ -3,6 +3,7 @@ import { Copy, Check, Plus, ArrowDownUp, Clock, FileUp, Lock, Hash } from 'lucid
 import toast from 'react-hot-toast'
 import { createUploadRequest } from '../api/client'
 import { copyToClipboard } from '../lib/utils'
+import { useT } from '../i18n'
 
 interface CreatedRequest {
   id: string
@@ -21,10 +22,11 @@ export default function CreateRequestPage() {
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<CreatedRequest | null>(null)
   const [copied, setCopied] = useState(false)
+  const { t } = useT()
 
   const handleCreate = async () => {
     if (!title.trim()) {
-      toast.error('Veuillez donner un titre à votre demande')
+      toast.error(t('create.titleRequired'))
       return
     }
     setLoading(true)
@@ -38,9 +40,9 @@ export default function CreateRequestPage() {
         maxSizeMb: maxSizeMb || undefined
       })
       setResult(res.data)
-      toast.success('Lien de dépôt créé !')
+      toast.success(t('toast.depositLinkCreated'))
     } catch {
-      toast.error('Erreur lors de la création')
+      toast.error(t('common.error'))
     } finally {
       setLoading(false)
     }
@@ -52,10 +54,10 @@ export default function CreateRequestPage() {
     try {
       await copyToClipboard(link)
       setCopied(true)
-      toast.success('Lien copié !')
+      toast.success(t('toast.linkCopied'))
       setTimeout(() => setCopied(false), 2000)
     } catch {
-      toast.error('Impossible de copier le lien')
+      toast.error(t('toast.cannotCopy'))
     }
   }
 
@@ -65,9 +67,9 @@ export default function CreateRequestPage() {
         <div className="w-16 h-16 bg-brand-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
           <ArrowDownUp size={28} className="text-brand-400" />
         </div>
-        <h1 className="text-3xl font-bold mb-2">Partage inversé</h1>
+        <h1 className="text-3xl font-bold mb-2">{t('create.title')}</h1>
         <p className="text-white/50">
-          Créez un lien à partager avec quelqu'un pour qu'il vous dépose des fichiers.
+          {t('create.subtitle')}
         </p>
       </div>
 
@@ -76,13 +78,13 @@ export default function CreateRequestPage() {
           {/* Title */}
           <div>
             <label className="text-xs text-white/50 mb-1.5 block font-medium uppercase tracking-wider">
-              Titre de la demande *
+              {t('create.titleLabel')}
             </label>
             <input
               type="text"
               value={title}
               onChange={e => setTitle(e.target.value)}
-              placeholder="Ex: Photos de vacances, Documents RH…"
+              placeholder={t('create.titlePlaceholder')}
               className="input"
               autoFocus
             />
@@ -91,12 +93,12 @@ export default function CreateRequestPage() {
           {/* Message */}
           <div>
             <label className="text-xs text-white/50 mb-1.5 block font-medium uppercase tracking-wider">
-              Message pour le déposant (optionnel)
+              {t('create.messageLabel')}
             </label>
             <textarea
               value={message}
               onChange={e => setMessage(e.target.value)}
-              placeholder="Expliquez ce que vous souhaitez recevoir…"
+              placeholder={t('create.messagePlaceholder')}
               rows={3}
               className="input resize-none"
             />
@@ -106,46 +108,46 @@ export default function CreateRequestPage() {
             {/* Expiry */}
             <div>
               <label className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
-                <Clock size={11} /> Expiration du lien
+                <Clock size={11} /> {t('create.expiryLabel')}
               </label>
               <select value={expiresIn} onChange={e => setExpiresIn(e.target.value)}
                 className="input bg-surface-700">
-                <option value="3600">1 heure</option>
-                <option value="86400">24 heures</option>
-                <option value="604800">7 jours</option>
-                <option value="2592000">30 jours</option>
-                <option value="">Jamais</option>
+                <option value="3600">{t('time.1h')}</option>
+                <option value="86400">{t('time.24h')}</option>
+                <option value="604800">{t('time.7d')}</option>
+                <option value="2592000">{t('time.30d')}</option>
+                <option value="">{t('common.never')}</option>
               </select>
             </div>
 
             {/* Max files */}
             <div>
               <label className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
-                <Hash size={11} /> Nb max de fichiers
+                <Hash size={11} /> {t('create.maxFilesLabel')}
               </label>
               <input type="number" min="1" value={maxFiles}
                 onChange={e => setMaxFiles(e.target.value)}
-                placeholder="Illimité" className="input" />
+                placeholder={t('create.maxFilesPlaceholder')} className="input" />
             </div>
 
             {/* Max size */}
             <div>
               <label className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
-                <FileUp size={11} /> Taille max / fichier (MB)
+                <FileUp size={11} /> {t('create.maxSizeLabel')}
               </label>
               <input type="number" min="1" value={maxSizeMb}
                 onChange={e => setMaxSizeMb(e.target.value)}
-                placeholder="Illimitée" className="input" />
+                placeholder={t('create.maxSizePlaceholder')} className="input" />
             </div>
 
             {/* Password */}
             <div>
               <label className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
-                <Lock size={11} /> Mot de passe (optionnel)
+                <Lock size={11} /> {t('create.passwordLabel')}
               </label>
               <input type="password" value={password}
                 onChange={e => setPassword(e.target.value)}
-                placeholder="Aucun" className="input" />
+                placeholder={t('create.passwordPlaceholder')} className="input" />
             </div>
           </div>
 
@@ -157,12 +159,12 @@ export default function CreateRequestPage() {
             {loading ? (
               <>
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Création…
+                {t('create.creating')}
               </>
             ) : (
               <>
                 <Plus size={16} />
-                Créer le lien de dépôt
+                {t('create.createBtn')}
               </>
             )}
           </button>
@@ -174,27 +176,27 @@ export default function CreateRequestPage() {
             <div className="w-14 h-14 bg-emerald-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <Check size={28} className="text-emerald-400" />
             </div>
-            <h2 className="text-xl font-bold mb-1">Lien créé !</h2>
-            <p className="text-white/50 text-sm">Partagez ce lien pour recevoir des fichiers.</p>
+            <h2 className="text-xl font-bold mb-1">{t('create.successTitle')}</h2>
+            <p className="text-white/50 text-sm">{t('create.successMsg')}</p>
           </div>
 
           {/* Link */}
           <div className="card">
-            <p className="text-xs text-white/50 mb-2 font-medium uppercase tracking-wider">Votre lien de dépôt</p>
+            <p className="text-xs text-white/50 mb-2 font-medium uppercase tracking-wider">{t('create.linkLabel')}</p>
             <div className="flex items-center gap-3 bg-white/5 rounded-xl px-4 py-3">
               <p className="flex-1 text-sm text-brand-300 truncate font-mono">{link}</p>
               <button onClick={copyLink}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all
                   ${copied ? 'bg-emerald-500/20 text-emerald-400' : 'btn-secondary'}`}>
                 {copied ? <Check size={14} /> : <Copy size={14} />}
-                {copied ? 'Copié !' : 'Copier'}
+                {copied ? t('common.copied') : t('common.copy')}
               </button>
             </div>
           </div>
 
           <button onClick={() => { setResult(null); setTitle(''); setMessage('') }}
             className="btn-secondary w-full flex items-center justify-center gap-2">
-            <Plus size={16} /> Créer un autre lien
+            <Plus size={16} /> {t('create.anotherLink')}
           </button>
         </div>
       )}

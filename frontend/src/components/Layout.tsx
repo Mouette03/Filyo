@@ -5,6 +5,8 @@ import { useAuthStore } from '../stores/useAuthStore'
 import { useAppSettingsStore } from '../stores/useAppSettingsStore'
 import { getSettings } from '../api/client'
 import toast from 'react-hot-toast'
+import { useT } from '../i18n'
+import LanguageSwitcher from './LanguageSwitcher'
 
 export default function Layout() {
   const { user, isAdmin, logout } = useAuthStore()
@@ -12,6 +14,7 @@ export default function Layout() {
   const navigate = useNavigate()
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+  const { t } = useT()
 
   useEffect(() => {
     getSettings().then(r => setSettings(r.data)).catch(() => {})
@@ -27,7 +30,7 @@ export default function Layout() {
 
   const handleLogout = () => {
     logout()
-    toast.success('Déconnecté')
+    toast.success(t('toast.loggedOut'))
     navigate('/login')
   }
 
@@ -59,15 +62,18 @@ export default function Layout() {
             </NavLink>
             <NavLink to="/" end className={navClass}>
               <Upload size={15} />
-              <span className="hidden sm:inline">Envoyer</span>
+              <span className="hidden sm:inline">{t('nav.send')}</span>
             </NavLink>
             <NavLink to="/request/new" className={navClass}>
               <Plus size={15} />
-              <span className="hidden sm:inline">Partage inversé</span>
+              <span className="hidden sm:inline">{t('nav.reverseShare')}</span>
             </NavLink>
           </nav>
 
-          {/* User menu */}
+          {/* Sélecteur de langue */}
+          <LanguageSwitcher variant="compact" />
+
+          {/* User menu */}}
           <div className="relative" ref={menuRef}>
             <button
               onClick={() => setUserMenuOpen(!userMenuOpen)}
@@ -104,22 +110,22 @@ export default function Layout() {
                   <p className="text-sm font-semibold">{user?.name}</p>
                   <p className="text-xs text-white/40 mt-0.5">{user?.email}</p>
                   <span className={`mt-1.5 inline-block badge ${user?.role === 'ADMIN' ? 'badge-blue' : 'badge-green'}`}>
-                    {user?.role === 'ADMIN' ? 'Administrateur' : 'Utilisateur'}
+                    {user?.role === 'ADMIN' ? t('role.admin') : t('role.user')}
                   </span>
                 </div>
                 <NavLink to="/profile" onClick={() => setUserMenuOpen(false)}
                   className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors">
-                  <User size={14} /> Mon profil
+                  <User size={14} /> {t('nav.myProfile')}
                 </NavLink>
                 {isAdmin() && (
                   <>
                     <NavLink to="/users" onClick={() => setUserMenuOpen(false)}
                       className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors">
-                      <Users size={14} /> Utilisateurs
+                      <Users size={14} /> {t('nav.users')}
                     </NavLink>
                     <NavLink to="/settings" onClick={() => setUserMenuOpen(false)}
                       className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors">
-                      <Settings size={14} /> Réglages
+                      <Settings size={14} /> {t('nav.settings')}
                     </NavLink>
                   </>
                 )}
@@ -127,7 +133,7 @@ export default function Layout() {
                   onClick={handleLogout}
                   className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
                 >
-                  <LogOut size={14} /> Se déconnecter
+                  <LogOut size={14} /> {t('nav.logout')}
                 </button>
               </div>
             )}
@@ -140,7 +146,7 @@ export default function Layout() {
       </main>
 
       <footer className="border-t border-white/5 py-4 px-6 text-white/25 text-xs relative flex items-center justify-center">
-        <span>{settings.appName} — Transfert de fichiers local &amp; privé</span>
+        <span>{settings.appName} — {t('nav.footer')}</span>
         <a
           href="https://github.com/Mouette03/Filyo"
           target="_blank"

@@ -4,16 +4,18 @@ import toast from 'react-hot-toast'
 import { getSettings, updateAppName, uploadLogo, deleteLogo, getSmtpSettings, updateSmtpSettings, testSmtp, updateSiteUrl, updateUploaderFields, updateAllowRegistration } from '../api/client'
 import { useAppSettingsStore } from '../stores/useAppSettingsStore'
 import { usePreferencesStore, ACCENT_PRESETS, BG_PRESETS, type ThemeMode, type AccentKey, type BgColorKey } from '../stores/usePreferencesStore'
+import { useT } from '../i18n'
 
 export default function SettingsPage() {
   const { settings, setSettings } = useAppSettingsStore()
   const { theme, accentColor, bgColorKey, setTheme, setAccentColor, setBgColor } = usePreferencesStore()
+  const { t } = useT()
   const isDark = theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)
 
   const THEME_OPTIONS: { value: ThemeMode; label: string; icon: typeof Moon }[] = [
-    { value: 'dark',  label: 'Sombre',    icon: Moon },
-    { value: 'light', label: 'Clair',     icon: Sun },
-    { value: 'auto',  label: 'Automatique', icon: Monitor },
+    { value: 'dark',  label: t('settings.themeDark'),  icon: Moon },
+    { value: 'light', label: t('settings.themeLight'), icon: Sun },
+    { value: 'auto',  label: t('settings.themeAuto'),  icon: Monitor },
   ]
 
   const [appName, setAppName] = useState(settings.appName || 'Filyo')
@@ -68,13 +70,13 @@ export default function SettingsPage() {
   }, [])
 
   const handleSaveName = async () => {
-    if (!appName.trim()) return toast.error('Le nom ne peut pas être vide')
+    if (!appName.trim()) return toast.error(t('toast.nameEmpty'))
     setSaving(true)
     try {
       const res = await updateAppName(appName.trim())
       setSettings({ appName: res.data.appName, logoUrl: logoUrl || null })
-      toast.success('Nom mis à jour')
-    } catch { toast.error('Erreur lors de la sauvegarde') }
+      toast.success(t('toast.appNameSaved'))
+    } catch { toast.error(t('toast.saveError')) }
     setSaving(false)
   }
 
@@ -82,16 +84,16 @@ export default function SettingsPage() {
     setSavingUrl(true)
     try {
       await updateSiteUrl(siteUrl.trim())
-      toast.success('Adresse du site enregistrée')
-    } catch { toast.error('Erreur lors de la sauvegarde') }
+      toast.success(t('toast.siteUrlSaved'))
+    } catch { toast.error(t('toast.saveError')) }
     setSavingUrl(false)
   }
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    if (!file.type.startsWith('image/')) return toast.error('Fichier image requis')
-    if (file.size > 2 * 1024 * 1024) return toast.error('Taille max : 2 Mo')
+    if (!file.type.startsWith('image/')) return toast.error(t('toast.imageRequired'))
+    if (file.size > 2 * 1024 * 1024) return toast.error(t('toast.imageTooLarge2'))
 
     setUploading(true)
     try {
@@ -101,8 +103,8 @@ export default function SettingsPage() {
       const newLogoUrl = res.data.logoUrl
       setLogoUrl(newLogoUrl)
       setSettings({ appName, logoUrl: newLogoUrl })
-      toast.success('Logo mis à jour')
-    } catch { toast.error('Erreur lors du téléversement') }
+      toast.success(t('toast.logoUpdated'))
+    } catch { toast.error(t('toast.uploadError')) }
     setUploading(false)
     if (fileInput.current) fileInput.current.value = ''
   }
@@ -113,8 +115,8 @@ export default function SettingsPage() {
       await deleteLogo()
       setLogoUrl('')
       setSettings({ appName, logoUrl: null })
-      toast.success('Logo supprimé')
-    } catch { toast.error('Erreur lors de la suppression') }
+      toast.success(t('toast.logoDeleted'))
+    } catch { toast.error(t('toast.deleteError')) }
     setDeleting(false)
   }
 
@@ -129,8 +131,8 @@ export default function SettingsPage() {
         smtpPass: smtpPass || undefined,
         smtpSecure
       })
-      toast.success('Configuration SMTP enregistrée')
-    } catch { toast.error('Erreur lors de la sauvegarde SMTP') }
+      toast.success(t('toast.smtpSaved'))
+    } catch { toast.error(t('toast.saveError')) }
     setSavingSmtp(false)
   }
 
@@ -138,8 +140,8 @@ export default function SettingsPage() {
     setSavingFields(true)
     try {
       await updateUploaderFields({ uploaderNameReq, uploaderEmailReq, uploaderMsgReq })
-      toast.success('Configuration enregistrée')
-    } catch { toast.error('Erreur lors de la sauvegarde') }
+      toast.success(t('toast.fieldsSaved'))
+    } catch { toast.error(t('toast.saveError')) }
     setSavingFields(false)
   }
 
@@ -147,9 +149,9 @@ export default function SettingsPage() {
     setTestingSmtp(true)
     try {
       const res = await testSmtp()
-      toast.success(res.data.message || 'Connexion SMTP réussie ✅')
+      toast.success(res.data.message || t('toast.smtpOk'))
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Test SMTP échoué')
+      toast.error(err.response?.data?.error || t('toast.smtpFailed'))
     }
     setTestingSmtp(false)
   }
@@ -162,8 +164,8 @@ export default function SettingsPage() {
           <Settings size={20} className="text-brand-400" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold">Réglages</h1>
-          <p className="text-white/40 text-sm">Personnalisation de l'application</p>
+          <h1 className="text-2xl font-bold">{t('settings.title')}</h1>
+          <p className="text-white/40 text-sm">{t('settings.subtitle')}</p>
         </div>
       </div>
 
@@ -171,14 +173,14 @@ export default function SettingsPage() {
       <div className="card mb-6">
         <div className="flex items-center gap-2 mb-4">
           <Type size={16} className="text-brand-400" />
-          <h3 className="font-semibold">Nom de l'application</h3>
+          <h3 className="font-semibold">{t('settings.appNameSection')}</h3>
         </div>
         <div className="flex gap-3">
           <input
             value={appName}
             onChange={e => setAppName(e.target.value)}
             className="input flex-1"
-            placeholder="Nom affiché dans la barre de navigation"
+            placeholder={t('settings.appNamePlaceholder')}
             maxLength={64}
           />
           <button onClick={handleSaveName} disabled={saving}
@@ -186,19 +188,17 @@ export default function SettingsPage() {
             {saving
               ? <RefreshCw size={14} className="animate-spin" />
               : <Check size={14} />}
-            Enregistrer
+            {t('common.save')}
           </button>
         </div>
-        <p className="text-xs text-white/30 mt-2">
-          Affiché dans la barre de navigation et sur la page de connexion.
-        </p>
+        <p className="text-xs text-white/30 mt-2">{t('settings.appNameHint')}</p>
       </div>
 
       {/* Section : Logo */}
       <div className="card mb-6">
         <div className="flex items-center gap-2 mb-4">
           <Image size={16} className="text-brand-400" />
-          <h3 className="font-semibold">Logo</h3>
+          <h3 className="font-semibold">{t('settings.logoSection')}</h3>
         </div>
 
         {logoUrl ? (
@@ -209,12 +209,12 @@ export default function SettingsPage() {
             <div className="space-y-2">
               <button onClick={() => fileInput.current?.click()}
                 className="btn-secondary flex items-center gap-2 text-sm py-2.5 px-4 w-full justify-center">
-                <Upload size={14} /> Remplacer
+                <Upload size={14} /> {t('settings.replace')}
               </button>
               <button onClick={handleDeleteLogo} disabled={deleting}
                 className="btn-danger flex items-center gap-2 text-sm py-2.5 px-4 w-full justify-center">
                 {deleting ? <RefreshCw size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                Supprimer
+                {t('common.delete')}
               </button>
             </div>
           </div>
@@ -229,9 +229,9 @@ export default function SettingsPage() {
                 : <Upload size={22} className="text-brand-400" />}
             </div>
             <p className="font-medium text-white/70 mb-1">
-              {uploading ? 'Téléversement…' : 'Cliquez pour choisir un logo'}
+              {uploading ? t('settings.uploading') : t('settings.clickLogo')}
             </p>
-            <p className="text-xs text-white/30">PNG, JPG ou SVG · max 2 Mo</p>
+            <p className="text-xs text-white/30">{t('settings.logoHint')}</p>
           </div>
         )}
 
@@ -242,22 +242,20 @@ export default function SettingsPage() {
           onChange={handleLogoUpload}
           className="hidden"
         />
-        <p className="text-xs text-white/30 mt-3">
-          Format recommandé : carré, fond transparent (PNG ou SVG). Taille max : 2 Mo.
-        </p>
+        <p className="text-xs text-white/30 mt-3">{t('settings.logoRecommended')}</p>
       </div>
 
       {/* Section : Apparence */}
       <div className="card mb-6">
         <div className="flex items-center gap-2 mb-5">
           <Palette size={16} className="text-brand-400" />
-          <h3 className="font-semibold">Apparence</h3>
-          <span className="text-xs text-white/30 ml-auto">S'applique à tous les utilisateurs</span>
+          <h3 className="font-semibold">{t('settings.appearanceSection')}</h3>
+          <span className="text-xs text-white/30 ml-auto">{t('settings.appliesToAll')}</span>
         </div>
 
         {/* Thème */}
         <div className="mb-6">
-          <label className="text-xs text-white/50 mb-3 block uppercase tracking-wider">Thème</label>
+          <label className="text-xs text-white/50 mb-3 block uppercase tracking-wider">{t('settings.themeLabel')}</label>
           <div className="grid grid-cols-3 gap-2">
             {THEME_OPTIONS.map(opt => {
               const Icon = opt.icon
@@ -279,13 +277,13 @@ export default function SettingsPage() {
             })}
           </div>
           <p className="text-xs text-white/30 mt-2">
-            {theme === 'auto' ? "Suit automatiquement le réglage du système d'exploitation." : ''}
+            {theme === 'auto' ? t('settings.themeAutoHint') : ''}
           </p>
         </div>
 
         {/* Couleur d'accent */}
         <div>
-          <label className="text-xs text-white/50 mb-3 block uppercase tracking-wider">Couleur principale</label>
+          <label className="text-xs text-white/50 mb-3 block uppercase tracking-wider">{t('settings.accentLabel')}</label>
           <div className="flex flex-wrap gap-3">
             {(Object.entries(ACCENT_PRESETS) as [AccentKey, typeof ACCENT_PRESETS[AccentKey]][]).map(([key, preset]) => {
               const active = accentColor === key
@@ -309,13 +307,13 @@ export default function SettingsPage() {
             })}
           </div>
           <p className="text-xs text-white/30 mt-3">
-            Couleur actuelle : <span className="font-medium" style={{ color: ACCENT_PRESETS[accentColor].hex }}>{ACCENT_PRESETS[accentColor].name}</span>
+            {t('settings.accentCurrent', { name: ACCENT_PRESETS[accentColor].name })}
           </p>
         </div>
 
         {/* Couleur de fond */}
         <div className="mt-6">
-          <label className="text-xs text-white/50 mb-3 block uppercase tracking-wider">Couleur d'arrière-plan</label>
+          <label className="text-xs text-white/50 mb-3 block uppercase tracking-wider">{t('settings.bgLabel')}</label>
           <div className="flex flex-wrap gap-3 mb-3">
             <button
               onClick={() => setBgColor(null)}
@@ -349,26 +347,26 @@ export default function SettingsPage() {
               )
             })}
           </div>
-          <p className="text-xs text-white/30">Teinte de fond de l'interface. Se réinitialise au changement de thème.</p>
+          <p className="text-xs text-white/30">{t('settings.bgHint')}</p>
         </div>
       </div>
       {/* Section : Adresse du site */}
       <div className="card mb-6">
         <div className="flex items-center gap-2 mb-4">
           <Globe size={16} className="text-brand-400" />
-          <h3 className="font-semibold">Adresse du site</h3>
+          <h3 className="font-semibold">{t('settings.siteUrlSection')}</h3>
         </div>
         <div className="flex gap-3">
           <input
             value={siteUrl}
             onChange={e => setSiteUrl(e.target.value)}
             className="input flex-1"
-            placeholder="https://filyo.mondomaine.fr"
+            placeholder={t('settings.siteUrlPlaceholder')}
           />
           <button onClick={handleSaveUrl} disabled={savingUrl}
             className="btn-primary flex items-center gap-2 px-5 whitespace-nowrap">
             {savingUrl ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
-            Enregistrer
+            {t('common.save')}
           </button>
         </div>
         {siteUrl && (
@@ -376,20 +374,18 @@ export default function SettingsPage() {
             Exemple : <span className="text-brand-400 font-mono">{siteUrl}/s/xK9mPqR3</span>
           </p>
         )}
-        <p className="text-xs text-white/30 mt-1">
-          Utilisée pour générer les liens de partage envoyés par email.
-        </p>
+        <p className="text-xs text-white/30 mt-1">{t('settings.siteUrlHint')}</p>
       </div>
       {/* Section : Authentification */}
       <div className="card mb-6">
         <div className="flex items-center gap-2 mb-5">
           <Users size={16} className="text-brand-400" />
-          <h3 className="font-semibold">Authentification</h3>
+          <h3 className="font-semibold">{t('settings.authSection')}</h3>
         </div>
         <div className="flex items-center justify-between py-3 px-4 bg-white/3 rounded-xl">
           <div>
-            <p className="text-sm font-medium">Inscription libre</p>
-            <p className="text-xs text-white/40 mt-0.5">Affiche un bouton &laquo;&nbsp;Créer un compte&nbsp;&raquo; sur la page de connexion</p>
+            <p className="text-sm font-medium">{t('settings.freeReg')}</p>
+            <p className="text-xs text-white/40 mt-0.5">{t('settings.freeRegHint')}</p>
           </div>
           <div className="flex items-center gap-2">
             {savingRegistration && <div className="w-4 h-4 border-2 border-brand-500/30 border-t-brand-500 rounded-full animate-spin" />}
@@ -400,8 +396,8 @@ export default function SettingsPage() {
                 try {
                   await updateAllowRegistration(next)
                   setAllowRegistration(next)
-                  toast.success(next ? 'Inscription libre activée' : 'Inscription libre désactivée')
-                } catch { toast.error('Erreur lors de la sauvegarde') }
+                  toast.success(next ? t('settings.freeRegEnabled') : t('settings.freeRegDisabled'))
+                } catch { toast.error(t('toast.saveError')) }
                 setSavingRegistration(false)
               }}
               className={`w-11 h-6 rounded-full cursor-pointer transition-colors relative flex-shrink-0 ${allowRegistration ? 'bg-brand-500' : 'bg-white/20'}`}
@@ -416,22 +412,22 @@ export default function SettingsPage() {
       <div className="card mb-6">
         <div className="flex items-center gap-2 mb-5">
           <Users size={16} className="text-brand-400" />
-          <h3 className="font-semibold">Formulaire du déposant</h3>
-          <span className="text-xs text-white/30 ml-auto">Contrôle les champs affichés lors d'un partage inversé</span>
+          <h3 className="font-semibold">{t('settings.uploaderFieldsSection')}</h3>
+          <span className="text-xs text-white/30 ml-auto">{t('settings.uploaderFormHint')}</span>
         </div>
 
         {([
-          { label: 'Nom', key: 'uploaderNameReq', value: uploaderNameReq, set: setUploaderNameReq },
-          { label: 'Adresse email', key: 'uploaderEmailReq', value: uploaderEmailReq, set: setUploaderEmailReq },
-          { label: 'Message', key: 'uploaderMsgReq', value: uploaderMsgReq, set: setUploaderMsgReq },
+          { label: t('settings.nameField'), key: 'uploaderNameReq', value: uploaderNameReq, set: setUploaderNameReq },
+          { label: t('settings.emailField'), key: 'uploaderEmailReq', value: uploaderEmailReq, set: setUploaderEmailReq },
+          { label: t('settings.messageField'), key: 'uploaderMsgReq', value: uploaderMsgReq, set: setUploaderMsgReq },
         ] as { label: string; key: string; value: string; set: (v: any) => void }[]).map(field => (
           <div key={field.key} className="flex items-center justify-between py-3 px-4 bg-white/3 rounded-xl mb-3">
             <div>
               <p className="text-sm font-medium">{field.label}</p>
               <p className="text-xs text-white/40 mt-0.5">
-                {field.value === 'hidden' && 'Non affiché dans le formulaire'}
-                {field.value === 'optional' && 'Affiché, remplissage facultatif'}
-                {field.value === 'required' && 'Affiché, remplissage obligatoire'}
+                {field.value === 'hidden' && t('settings.fieldDescHidden')}
+                {field.value === 'optional' && t('settings.fieldDescOptional')}
+                {field.value === 'required' && t('settings.fieldDescRequired')}
               </p>
             </div>
             <select
@@ -439,9 +435,9 @@ export default function SettingsPage() {
               onChange={e => field.set(e.target.value)}
               className="input text-sm py-1.5 w-40"
             >
-              <option value="hidden">Masqué</option>
-              <option value="optional">Facultatif</option>
-              <option value="required">Obligatoire</option>
+              <option value="hidden">{t('settings.hidden')}</option>
+              <option value="optional">{t('settings.optional')}</option>
+              <option value="required">{t('settings.required')}</option>
             </select>
           </div>
         ))}
@@ -451,7 +447,7 @@ export default function SettingsPage() {
           disabled={savingFields}
           className="btn-primary flex items-center gap-2 py-2.5 px-5 mt-2">
           {savingFields ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
-          Enregistrer
+          {t('common.save')}
         </button>
       </div>
 
@@ -459,13 +455,13 @@ export default function SettingsPage() {
       <div className="card">
         <div className="flex items-center gap-2 mb-5">
           <Mail size={16} className="text-brand-400" />
-          <h3 className="font-semibold">Serveur SMTP</h3>
-          <span className="text-xs text-white/30 ml-auto">Utilisé pour l'envoi des liens de partage par email</span>
+          <h3 className="font-semibold">{t('settings.smtpSection')}</h3>
+          <span className="text-xs text-white/30 ml-auto">{t('settings.smtpHint')}</span>
         </div>
 
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div className="col-span-2 sm:col-span-1">
-            <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">Hôte SMTP</label>
+            <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('settings.smtpHost')}</label>
             <input
               value={smtpHost}
               onChange={e => setSmtpHost(e.target.value)}
@@ -474,7 +470,7 @@ export default function SettingsPage() {
             />
           </div>
           <div className="col-span-2 sm:col-span-1">
-            <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">Port</label>
+            <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('settings.smtpPort')}</label>
             <input
               value={smtpPort}
               onChange={e => setSmtpPort(e.target.value)}
@@ -484,7 +480,7 @@ export default function SettingsPage() {
             />
           </div>
           <div className="col-span-2">
-            <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">Adresse expéditeur</label>
+            <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('settings.smtpFrom')}</label>
             <input
               value={smtpFrom}
               onChange={e => setSmtpFrom(e.target.value)}
@@ -494,7 +490,7 @@ export default function SettingsPage() {
             />
           </div>
           <div>
-            <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">Identifiant (login)</label>
+            <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('settings.smtpUser')}</label>
             <input
               value={smtpUser}
               onChange={e => setSmtpUser(e.target.value)}
@@ -504,7 +500,7 @@ export default function SettingsPage() {
             />
           </div>
           <div>
-            <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">Mot de passe</label>
+            <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('settings.smtpPassword')}</label>
             <div className="relative">
               <input
                 value={smtpPass}
@@ -528,8 +524,8 @@ export default function SettingsPage() {
         {/* Option TLS */}
         <div className="flex items-center justify-between py-3 px-4 bg-white/3 rounded-xl mb-5">
           <div>
-            <p className="text-sm font-medium">Connexion sécurisée (TLS)</p>
-            <p className="text-xs text-white/40 mt-0.5">Recommandé pour SMTP sur port 465 ou STARTTLS sur 587</p>
+            <p className="text-sm font-medium">{t('settings.smtpSecure')}</p>
+            <p className="text-xs text-white/40 mt-0.5">{t('settings.smtpSecureHint')}</p>
           </div>
           <div
             onClick={() => setSmtpSecure(!smtpSecure)}
@@ -547,7 +543,7 @@ export default function SettingsPage() {
             className="btn-primary flex items-center gap-2 py-2.5 px-5"
           >
             {savingSmtp ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
-            Enregistrer
+            {t('common.save')}
           </button>
           <button
             onClick={handleTestSmtp}
@@ -555,12 +551,10 @@ export default function SettingsPage() {
             className="btn-secondary flex items-center gap-2 py-2.5 px-5 disabled:opacity-40"
           >
             {testingSmtp ? <RefreshCw size={14} className="animate-spin" /> : <Wifi size={14} />}
-            Tester la connexion
+            {t('settings.smtpTest')}
           </button>
         </div>
-        <p className="text-xs text-white/30 mt-3">
-          Le test vérifie uniquement l'accessibilité réseau du serveur SMTP. La fonctionnalité d'envoi d'emails sera disponible dans une prochaine version.
-        </p>
+        <p className="text-xs text-white/30 mt-3">{t('settings.smtpTestHint')}</p>
       </div>
 
     </div>

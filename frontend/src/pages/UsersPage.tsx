@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 import { listUsers, createUser, updateUser, deleteUser, getAllFilesAdmin, getAllUploadRequestsAdmin, deleteFile, deleteUploadRequest } from '../api/client'
 import { formatDate, formatBytes, getFileIcon } from '../lib/utils'
 import { useAuthStore } from '../stores/useAuthStore'
+import { useT } from '../i18n'
 
 interface UserItem {
   id: string; name: string; email: string; role: string
@@ -26,6 +27,7 @@ type Tab = 'users' | 'files' | 'deposits'
 
 export default function UsersPage() {
   const { user: me } = useAuthStore()
+  const { t } = useT()
   const [tab, setTab] = useState<Tab>('users')
 
   // --- Onglet Utilisateurs ---
@@ -57,7 +59,7 @@ export default function UsersPage() {
     try {
       const res = await listUsers()
       setUsers(res.data)
-    } catch { toast.error('Erreur de chargement') }
+    } catch { toast.error(t('toast.loadError')) }
     setLoading(false)
   }
 
@@ -68,7 +70,7 @@ export default function UsersPage() {
       const res = await getAllFilesAdmin()
       setAllFiles(res.data)
       setFilesLoaded(true)
-    } catch { toast.error('Erreur de chargement des fichiers') }
+    } catch { toast.error(t('toast.loadError')) }  // files
     setFilesLoading(false)
   }
 
@@ -79,7 +81,7 @@ export default function UsersPage() {
       const res = await getAllUploadRequestsAdmin()
       setAllDeposits(res.data)
       setDepositsLoaded(true)
-    } catch { toast.error('Erreur de chargement des dépôts') }
+    } catch { toast.error(t('toast.loadError')) }  // deposits
     setDepositsLoading(false)
   }
 
@@ -88,18 +90,18 @@ export default function UsersPage() {
   useEffect(() => { if (tab === 'deposits') loadDeposits() }, [tab])
 
   const handleCreate = async () => {
-    if (!newName || !newEmail || !newPassword || !newConfirmPassword) return toast.error('Tous les champs sont requis')
-    if (newPassword.length < 8) return toast.error('Le mot de passe doit faire au moins 8 caractères')
-    if (newPassword !== newConfirmPassword) return toast.error('Les mots de passe ne correspondent pas')
+    if (!newName || !newEmail || !newPassword || !newConfirmPassword) return toast.error(t('toast.allFieldsRequired'))
+    if (newPassword.length < 8) return toast.error(t('toast.passwordMin8'))
+    if (newPassword !== newConfirmPassword) return toast.error(t('toast.passwordMismatch'))
     setCreating(true)
     try {
       const res = await createUser({ name: newName, email: newEmail, password: newPassword, role: newRole })
       setUsers(prev => [...prev, res.data])
       setShowCreate(false)
       setNewName(''); setNewEmail(''); setNewPassword(''); setNewConfirmPassword(''); setNewRole('USER')
-      toast.success('Utilisateur créé')
+      toast.success(t('toast.userCreated'))
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Erreur lors de la creation')
+      toast.error(err.response?.data?.error || t('common.error'))
     }
     setCreating(false)
   }
@@ -113,18 +115,18 @@ export default function UsersPage() {
       const res = await updateUser(id, { name: editName, role: editRole, active: editActive })
       setUsers(prev => prev.map(u => u.id === id ? { ...u, ...res.data } : u))
       setEditId(null)
-      toast.success('Modifié')
-    } catch { toast.error('Erreur') }
+      toast.success(t('toast.edited'))
+    } catch { toast.error(t('common.error')) }
   }
 
   const handleDelete = async (id: string) => {
-    if (id === me?.id) return toast.error('Impossible de supprimer votre propre compte')
+    if (id === me?.id) return toast.error(t('toast.cannotDeleteSelf'))
     try {
       await deleteUser(id)
       setUsers(prev => prev.filter(u => u.id !== id))
-      toast.success('Utilisateur supprime')
+      toast.success(t('toast.userDeleted'))
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Erreur')
+      toast.error(err.response?.data?.error || t('common.error'))
     }
   }
 
@@ -132,22 +134,22 @@ export default function UsersPage() {
     try {
       await deleteFile(id)
       setAllFiles(prev => prev.filter(f => f.id !== id))
-      toast.success('Fichier supprime')
-    } catch { toast.error('Erreur') }
+      toast.success(t('toast.fileDeleted'))
+    } catch { toast.error(t('common.error')) }
   }
 
   const handleDeleteDeposit = async (id: string) => {
     try {
       await deleteUploadRequest(id)
       setAllDeposits(prev => prev.filter(d => d.id !== id))
-      toast.success('Demande supprimee')
-    } catch { toast.error('Erreur') }
+      toast.success(t('toast.requestDeleted'))
+    } catch { toast.error(t('common.error')) }
   }
 
   const tabs: { id: Tab; label: string; icon: any; count?: number }[] = [
-    { id: 'users', label: 'Utilisateurs', icon: Users, count: users.length },
-    { id: 'files', label: 'Fichiers partagés', icon: Files, count: filesLoaded ? allFiles.length : undefined },
-    { id: 'deposits', label: 'Demandes de dépôt', icon: FolderInput, count: depositsLoaded ? allDeposits.length : undefined }
+    { id: 'users', label: t('users.tabUsers'), icon: Users, count: users.length },
+    { id: 'files', label: t('users.tabFiles'), icon: Files, count: filesLoaded ? allFiles.length : undefined },
+    { id: 'deposits', label: t('users.tabDeposits'), icon: FolderInput, count: depositsLoaded ? allDeposits.length : undefined }
   ]
 
   return (
@@ -157,8 +159,8 @@ export default function UsersPage() {
           <ShieldCheck size={20} className="text-brand-400" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold">Administration</h1>
-          <p className="text-white/40 text-sm">Gestion des utilisateurs et des fichiers</p>
+          <h1 className="text-2xl font-bold">{t('users.title')}</h1>
+          <p className="text-white/40 text-sm">{t('users.subtitle')}</p>
         </div>
       </div>
 
@@ -214,44 +216,44 @@ export default function UsersPage() {
         <>
           <div className="flex justify-end mb-5">
             <button onClick={() => setShowCreate(!showCreate)} className="btn-primary flex items-center gap-2 py-2.5">
-              <Plus size={15} /> Nouvel utilisateur
+              <Plus size={15} /> {t('users.newUser')}
             </button>
           </div>
 
           {showCreate && (
             <div className="card mb-6 space-y-4">
-              <h3 className="font-semibold text-white/80">Créer un utilisateur</h3>
+              <h3 className="font-semibold text-white/80">{t('users.createUser')}</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
-                  <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">Nom</label>
-                  <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Prénom Nom" className="input" />
+                  <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('users.nameLabel')}</label>
+                  <input value={newName} onChange={e => setNewName(e.target.value)} placeholder={t('users.namePlaceholder')} className="input" />
                 </div>
                 <div>
-                  <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">Email</label>
-                  <input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="email@exemple.fr" className="input" />
+                  <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('users.emailLabel')}</label>
+                  <input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder={t('users.emailPlaceholder')} className="input" />
                 </div>
                 <div>
-                  <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">Mot de passe</label>
-                  <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Min. 8 caractères" className="input" />
+                  <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('users.passwordLabel')}</label>
+                  <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder={t('users.passwordPlaceholder')} className="input" />
                 </div>
                 <div>
-                  <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">Confirmer le mot de passe</label>
-                  <input type="password" value={newConfirmPassword} onChange={e => setNewConfirmPassword(e.target.value)} placeholder="Répétez le mot de passe" className="input" />
+                  <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('users.confirmPasswordLabel')}</label>
+                  <input type="password" value={newConfirmPassword} onChange={e => setNewConfirmPassword(e.target.value)} placeholder={t('users.confirmPasswordPlaceholder')} className="input" />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">Role</label>
+                  <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('users.roleLabel')}</label>
                   <select value={newRole} onChange={e => setNewRole(e.target.value)} className="input bg-surface-700">
-                    <option value="USER">Utilisateur standard</option>
-                    <option value="ADMIN">Administrateur</option>
+                    <option value="USER">{t('users.roleUser')}</option>
+                    <option value="ADMIN">{t('users.roleAdmin')}</option>
                   </select>
                 </div>
               </div>
               <div className="flex gap-3 pt-1">
                 <button onClick={handleCreate} disabled={creating} className="btn-primary flex items-center gap-2 py-2.5 px-5">
                   {creating ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Check size={15} />}
-                  Créer
+                  {t('common.create')}
                 </button>
-                <button onClick={() => setShowCreate(false)} className="btn-secondary py-2.5 px-5">Annuler</button>
+                <button onClick={() => setShowCreate(false)} className="btn-secondary py-2.5 px-5">{t('common.cancel')}</button>
               </div>
             </div>
           )}
@@ -268,14 +270,14 @@ export default function UsersPage() {
                     <div className="space-y-3">
                       <div className="grid grid-cols-3 gap-3">
                         <div className="col-span-1">
-                          <label className="text-xs text-white/50 mb-1.5 block">Nom</label>
+                          <label className="text-xs text-white/50 mb-1.5 block">{t('users.nameLabel')}</label>
                           <input value={editName} onChange={e => setEditName(e.target.value)} className="input text-sm py-2" />
                         </div>
                         <div>
-                          <label className="text-xs text-white/50 mb-1.5 block">Role</label>
+                          <label className="text-xs text-white/50 mb-1.5 block">{t('users.roleLabel')}</label>
                           <select value={editRole} onChange={e => setEditRole(e.target.value)} className="input bg-surface-700 text-sm py-2">
-                            <option value="USER">Utilisateur</option>
-                            <option value="ADMIN">Administrateur</option>
+                            <option value="USER">{t('role.user')}</option>
+                            <option value="ADMIN">{t('role.admin')}</option>
                           </select>
                         </div>
                         <div className="flex items-end gap-3">
@@ -284,16 +286,16 @@ export default function UsersPage() {
                               className={`w-10 h-5 rounded-full transition-colors relative ${editActive ? 'bg-brand-500' : 'bg-white/20'}`}>
                               <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${editActive ? 'translate-x-5' : 'translate-x-0.5'}`} />
                             </div>
-                            <span className="text-sm text-white/60">{editActive ? 'Actif' : 'Desactive'}</span>
+                            <span className="text-sm text-white/60">{editActive ? t('common.active') : t('common.inactive')}</span>
                           </label>
                         </div>
                       </div>
                       <div className="flex gap-2">
                         <button onClick={() => saveEdit(u.id)} className="btn-primary flex items-center gap-1.5 py-2 px-4 text-sm">
-                          <Check size={13} /> Enregistrer
+                          <Check size={13} /> {t('common.save')}
                         </button>
                         <button onClick={() => setEditId(null)} className="btn-secondary flex items-center gap-1.5 py-2 px-4 text-sm">
-                          <X size={13} /> Annuler
+                          <X size={13} /> {t('common.cancel')}
                         </button>
                       </div>
                     </div>
@@ -307,22 +309,22 @@ export default function UsersPage() {
                           <span className="font-semibold">{u.name}</span>
                           <span className={`badge ${u.role === 'ADMIN' ? 'badge-blue' : 'badge-green'} flex items-center gap-1`}>
                             {u.role === 'ADMIN' ? <ShieldCheck size={10} /> : <User size={10} />}
-                            {u.role === 'ADMIN' ? 'Admin' : 'Utilisateur'}
+                            {u.role === 'ADMIN' ? 'Admin' : t('role.user')}
                           </span>
-                          {!u.active && <span className="badge badge-red">Desactive</span>}
-                          {u.id === me?.id && <span className="badge badge-orange">Vous</span>}
+                          {!u.active && <span className="badge badge-red">{t('common.inactive')}</span>}
+                          {u.id === me?.id && <span className="badge badge-orange">{t('common.you')}</span>}
                         </div>
                         <p className="text-xs text-white/40 mt-0.5">
                           {u.email}
                         </p>
                         <p className="text-xs text-white/30 mt-0.5">
-                          Créé {formatDate(u.createdAt)}
-                          {u.lastLogin ? ` · Dernière connexion ${formatDate(u.lastLogin)}` : ' · Jamais connecté'}
+                          {t('users.createdAt', { date: formatDate(u.createdAt) })}
+                          {u.lastLogin ? ` · ${t('users.lastLogin', { date: formatDate(u.lastLogin) })}` : ` · ${t('users.neverConnected')}`}
                         </p>
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         <button onClick={() => startEdit(u)} className="btn-secondary flex items-center gap-1.5 text-xs px-3 py-2">
-                          <Pencil size={12} /> Modifier
+                          <Pencil size={12} /> {t('common.edit')}
                         </button>
                         {u.id !== me?.id && (
                           <button onClick={() => handleDelete(u.id)} className="btn-danger flex items-center gap-1 text-xs px-2.5 py-2">
@@ -345,23 +347,23 @@ export default function UsersPage() {
           {filesLoading ? (
             <div className="text-center py-16">
               <div className="w-10 h-10 border-2 border-brand-500/40 border-t-brand-500 rounded-full animate-spin mx-auto mb-3" />
-              <p className="text-white/40 text-sm">Chargement des fichiers...</p>
+              <p className="text-white/40 text-sm">{t('common.loading')}</p>
             </div>
           ) : allFiles.length === 0 ? (
             <div className="text-center py-16 text-white/30">
               <Files size={40} className="mx-auto mb-3 opacity-30" />
-              <p>Aucun fichier envoyé</p>
+              <p>{t('users.noFiles')}</p>
             </div>
           ) : (
             <div className="overflow-x-auto rounded-xl border border-white/5">
               <table className="w-full text-sm min-w-[600px]">
                 <thead>
                   <tr className="border-b border-white/5 text-white/40 text-xs uppercase tracking-wider">
-                    <th className="text-left px-4 py-3">Propriétaire</th>
-                    <th className="text-left px-4 py-3">Fichier</th>
-                    <th className="text-left px-4 py-3">Taille</th>
-                    <th className="text-left px-4 py-3">Date</th>
-                    <th className="text-left px-4 py-3">Téléchargements</th>
+                    <th className="text-left px-4 py-3">{t('users.colOwner')}</th>
+                    <th className="text-left px-4 py-3">{t('users.colFile')}</th>
+                    <th className="text-left px-4 py-3">{t('users.colSize')}</th>
+                    <th className="text-left px-4 py-3">{t('users.colDate')}</th>
+                    <th className="text-left px-4 py-3">{t('users.colDownloads')}</th>
                     <th className="px-4 py-3" />
                   </tr>
                 </thead>
@@ -380,7 +382,7 @@ export default function UsersPage() {
                             </div>
                           </div>
                         ) : (
-                          <span className="text-white/30 italic text-xs">Inconnu</span>
+                          <span className="text-white/30 italic text-xs">{t('common.unknown')}</span>
                         )}
                       </td>
                       <td className="px-4 py-3">
@@ -412,23 +414,23 @@ export default function UsersPage() {
           {depositsLoading ? (
             <div className="text-center py-16">
               <div className="w-10 h-10 border-2 border-brand-500/40 border-t-brand-500 rounded-full animate-spin mx-auto mb-3" />
-              <p className="text-white/40 text-sm">Chargement...</p>
+              <p className="text-white/40 text-sm">{t('common.loading')}</p>
             </div>
           ) : allDeposits.length === 0 ? (
             <div className="text-center py-16 text-white/30">
               <FolderInput size={40} className="mx-auto mb-3 opacity-30" />
-              <p>Aucune demande de dépôt</p>
+              <p>{t('users.noDeposits')}</p>
             </div>
           ) : (
             <div className="overflow-x-auto rounded-xl border border-white/5">
               <table className="w-full text-sm min-w-[560px]">
                 <thead>
                   <tr className="border-b border-white/5 text-white/40 text-xs uppercase tracking-wider">
-                    <th className="text-left px-4 py-3">Propriétaire</th>
-                    <th className="text-left px-4 py-3">Titre</th>
-                    <th className="text-left px-4 py-3">Statut</th>
-                    <th className="text-left px-4 py-3">Fichiers reçus</th>
-                    <th className="text-left px-4 py-3">Créé le</th>
+                    <th className="text-left px-4 py-3">{t('users.colOwner')}</th>
+                    <th className="text-left px-4 py-3">{t('users.colTitle')}</th>
+                    <th className="text-left px-4 py-3">{t('users.colStatus')}</th>
+                    <th className="text-left px-4 py-3">{t('users.colReceived')}</th>
+                    <th className="text-left px-4 py-3">{t('users.colCreated')}</th>
                     <th className="px-4 py-3" />
                   </tr>
                 </thead>
@@ -447,16 +449,16 @@ export default function UsersPage() {
                             </div>
                           </div>
                         ) : (
-                          <span className="text-white/30 italic text-xs">Inconnu</span>
+                          <span className="text-white/30 italic text-xs">{t('common.unknown')}</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-white/80 text-xs font-medium">{d.title}</td>
                       <td className="px-4 py-3">
                         <span className={`badge ${d.active ? 'badge-green' : 'badge-red'}`}>
-                          {d.active ? 'Actif' : 'Desactive'}
+                          {d.active ? t('common.active') : t('common.inactive')}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-white/50 text-xs">{d.filesCount} fichier(s)</td>
+                      <td className="px-4 py-3 text-white/50 text-xs">{t('users.filesCount', { count: String(d.filesCount) })}</td>
                       <td className="px-4 py-3 text-white/50 text-xs">{formatDate(d.createdAt)}</td>
                       <td className="px-4 py-3">
                         <button onClick={() => handleDeleteDeposit(d.id)} className="btn-danger flex items-center gap-1 text-xs px-2.5 py-1.5">

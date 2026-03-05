@@ -5,6 +5,8 @@ import toast from 'react-hot-toast'
 import { login, getSettings, checkSetup, registerUser } from '../api/client'
 import { useAuthStore } from '../stores/useAuthStore'
 import { useAppSettingsStore } from '../stores/useAppSettingsStore'
+import { useT } from '../i18n'
+import LanguageSwitcher from '../components/LanguageSwitcher'
 
 type Mode = 'login' | 'register'
 
@@ -20,6 +22,7 @@ export default function LoginPage() {
   const { setAuth, isAuthenticated } = useAuthStore()
   const { setSettings, settings } = useAppSettingsStore()
   const navigate = useNavigate()
+  const { t } = useT()
 
   useEffect(() => {
     if (isAuthenticated) navigate('/')
@@ -38,10 +41,10 @@ export default function LoginPage() {
     try {
       const res = await login(email, password)
       setAuth(res.data.token, res.data.user)
-      toast.success(`Bienvenue, ${res.data.user.name} !`)
+      toast.success(t('toast.welcome', { name: res.data.user.name }))
       navigate('/')
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Identifiants incorrects')
+      toast.error(err.response?.data?.error || t('toast.incorrectCredentials'))
     } finally {
       setLoading(false)
     }
@@ -50,17 +53,17 @@ export default function LoginPage() {
   const handleSetup = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!email || !password || !name || !confirmPwd) return
-    if (password.length < 8) return toast.error('Le mot de passe doit contenir au moins 8 caractères')
-    if (password !== confirmPwd) return toast.error('Les mots de passe ne correspondent pas')
+    if (password.length < 8) return toast.error(t('toast.passwordTooShort'))
+    if (password !== confirmPwd) return toast.error(t('toast.passwordMismatch'))
     setLoading(true)
     try {
       await registerUser({ email, name, password })
       const res = await login(email, password)
       setAuth(res.data.token, res.data.user)
-      toast.success(`Compte administrateur créé. Bienvenue, ${res.data.user.name} !`)
+      toast.success(t('toast.adminCreated', { name: res.data.user.name }))
       navigate('/')
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Erreur lors de la création du compte')
+      toast.error(err.response?.data?.error || t('toast.accountError'))
     } finally {
       setLoading(false)
     }
@@ -69,17 +72,17 @@ export default function LoginPage() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!email || !password || !name || !confirmPwd) return
-    if (password.length < 8) return toast.error('Le mot de passe doit contenir au moins 8 caractères')
-    if (password !== confirmPwd) return toast.error('Les mots de passe ne correspondent pas')
+    if (password.length < 8) return toast.error(t('toast.passwordTooShort'))
+    if (password !== confirmPwd) return toast.error(t('toast.passwordMismatch'))
     setLoading(true)
     try {
       await registerUser({ email, name, password })
       const res = await login(email, password)
       setAuth(res.data.token, res.data.user)
-      toast.success(`Bienvenue, ${res.data.user.name} !`)
+      toast.success(t('toast.welcome', { name: res.data.user.name }))
       navigate('/')
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Erreur lors de la création du compte')
+      toast.error(err.response?.data?.error || t('toast.accountError'))
     } finally {
       setLoading(false)
     }
@@ -107,10 +110,10 @@ export default function LoginPage() {
       </h1>
       <p className="text-white/50 text-sm mt-1">
         {setupNeeded
-          ? 'Créez votre compte administrateur'
+          ? t('login.subtitleSetup')
           : mode === 'register'
-            ? 'Créez votre compte'
-            : 'Connectez-vous pour continuer'}
+            ? t('login.subtitleRegister')
+            : t('login.subtitleLogin')}
       </p>
     </div>
   )
@@ -120,6 +123,11 @@ export default function LoginPage() {
       style={{
         background: 'radial-gradient(ellipse 80% 80% at 50% -20%, rgba(92, 107, 250, 0.12), transparent), #0d0e1a'
       }}>
+      {/* Sélecteur de langue en haut à droite */}
+      <div className="absolute top-4 right-4">
+        <LanguageSwitcher variant="compact" />
+      </div>
+
       <div className="w-full max-w-sm">
         {logoBlock}
 
@@ -127,24 +135,24 @@ export default function LoginPage() {
           /* ── Premier lancement : création compte admin ── */
           <form onSubmit={handleSetup} className="card space-y-4">
             <div className="text-xs text-brand-400 bg-brand-500/10 border border-brand-500/20 rounded-lg px-3 py-2">
-              Aucun utilisateur n'existe encore. Créez le compte administrateur.
+              {t('login.setupNotice')}
             </div>
             <div>
-              <label className="text-xs text-white/50 mb-1.5 block font-medium uppercase tracking-wider">Nom complet</label>
+              <label className="text-xs text-white/50 mb-1.5 block font-medium uppercase tracking-wider">{t('login.fullName')}</label>
               <input type="text" value={name} onChange={e => setName(e.target.value)}
-                placeholder="Jean Dupont" className="input" autoFocus required />
+                placeholder={t('login.fullNamePlaceholder')} className="input" autoFocus required />
             </div>
             <div>
-              <label className="text-xs text-white/50 mb-1.5 block font-medium uppercase tracking-wider">Adresse email</label>
+              <label className="text-xs text-white/50 mb-1.5 block font-medium uppercase tracking-wider">{t('login.email')}</label>
               <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-                placeholder="vous@exemple.fr" className="input" required />
+                placeholder={t('login.emailPlaceholder')} className="input" required />
             </div>
             <div>
-              <label className="text-xs text-white/50 mb-1.5 block font-medium uppercase tracking-wider">Mot de passe</label>
+              <label className="text-xs text-white/50 mb-1.5 block font-medium uppercase tracking-wider">{t('login.password')}</label>
               <div className="relative">
                 <input type={showPwd ? 'text' : 'password'} value={password}
                   onChange={e => setPassword(e.target.value)}
-                  placeholder="8 caractères minimum" className="input pr-11" required minLength={8} />
+                  placeholder={t('login.passwordPlaceholder')} className="input pr-11" required minLength={8} />
                 <button type="button" onClick={() => setShowPwd(!showPwd)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors">
                   {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -152,17 +160,17 @@ export default function LoginPage() {
               </div>
             </div>
             <div>
-              <label className="text-xs text-white/50 mb-1.5 block font-medium uppercase tracking-wider">Confirmer le mot de passe</label>
+              <label className="text-xs text-white/50 mb-1.5 block font-medium uppercase tracking-wider">{t('login.confirmPassword')}</label>
               <input type={showPwd ? 'text' : 'password'} value={confirmPwd}
                 onChange={e => setConfirmPwd(e.target.value)}
-                placeholder="Répétez le mot de passe" className="input" required />
+                placeholder={t('login.confirmPasswordPlaceholder')} className="input" required />
             </div>
             <button type="submit" disabled={loading}
               className="btn-primary w-full flex items-center justify-center gap-2 mt-2">
               {loading
                 ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 : <UserPlus size={16} />}
-              Créer le compte administrateur
+              {t('login.createAdminBtn')}
             </button>
           </form>
 
@@ -170,12 +178,12 @@ export default function LoginPage() {
           /* ── Connexion ── */
           <form onSubmit={handleLogin} className="card space-y-4">
             <div>
-              <label className="text-xs text-white/50 mb-1.5 block font-medium uppercase tracking-wider">Adresse email</label>
+              <label className="text-xs text-white/50 mb-1.5 block font-medium uppercase tracking-wider">{t('login.email')}</label>
               <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-                placeholder="vous@exemple.fr" className="input" autoFocus required />
+                placeholder={t('login.emailPlaceholder')} className="input" autoFocus required />
             </div>
             <div>
-              <label className="text-xs text-white/50 mb-1.5 block font-medium uppercase tracking-wider">Mot de passe</label>
+              <label className="text-xs text-white/50 mb-1.5 block font-medium uppercase tracking-wider">{t('login.password')}</label>
               <div className="relative">
                 <input type={showPwd ? 'text' : 'password'} value={password}
                   onChange={e => setPassword(e.target.value)}
@@ -191,13 +199,13 @@ export default function LoginPage() {
               {loading
                 ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 : <LogIn size={16} />}
-              Se connecter
+              {t('login.loginBtn')}
             </button>
             {settings.allowRegistration && (
               <button type="button"
                 onClick={() => { resetForm(); setMode('register') }}
                 className="btn-secondary w-full flex items-center justify-center gap-2 text-sm">
-                <UserPlus size={15} /> Créer un compte
+                <UserPlus size={15} /> {t('login.registerLinkBtn')}
               </button>
             )}
           </form>
@@ -206,21 +214,21 @@ export default function LoginPage() {
           /* ── Inscription libre ── */
           <form onSubmit={handleRegister} className="card space-y-4">
             <div>
-              <label className="text-xs text-white/50 mb-1.5 block font-medium uppercase tracking-wider">Nom complet</label>
+              <label className="text-xs text-white/50 mb-1.5 block font-medium uppercase tracking-wider">{t('login.fullName')}</label>
               <input type="text" value={name} onChange={e => setName(e.target.value)}
-                placeholder="Jean Dupont" className="input" autoFocus required />
+                placeholder={t('login.fullNamePlaceholder')} className="input" autoFocus required />
             </div>
             <div>
-              <label className="text-xs text-white/50 mb-1.5 block font-medium uppercase tracking-wider">Adresse email</label>
+              <label className="text-xs text-white/50 mb-1.5 block font-medium uppercase tracking-wider">{t('login.email')}</label>
               <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-                placeholder="vous@exemple.fr" className="input" required />
+                placeholder={t('login.emailPlaceholder')} className="input" required />
             </div>
             <div>
-              <label className="text-xs text-white/50 mb-1.5 block font-medium uppercase tracking-wider">Mot de passe</label>
+              <label className="text-xs text-white/50 mb-1.5 block font-medium uppercase tracking-wider">{t('login.password')}</label>
               <div className="relative">
                 <input type={showPwd ? 'text' : 'password'} value={password}
                   onChange={e => setPassword(e.target.value)}
-                  placeholder="8 caractères minimum" className="input pr-11" required minLength={8} />
+                  placeholder={t('login.passwordPlaceholder')} className="input pr-11" required minLength={8} />
                 <button type="button" onClick={() => setShowPwd(!showPwd)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors">
                   {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -228,28 +236,28 @@ export default function LoginPage() {
               </div>
             </div>
             <div>
-              <label className="text-xs text-white/50 mb-1.5 block font-medium uppercase tracking-wider">Confirmer le mot de passe</label>
+              <label className="text-xs text-white/50 mb-1.5 block font-medium uppercase tracking-wider">{t('login.confirmPassword')}</label>
               <input type={showPwd ? 'text' : 'password'} value={confirmPwd}
                 onChange={e => setConfirmPwd(e.target.value)}
-                placeholder="Répétez le mot de passe" className="input" required />
+                placeholder={t('login.confirmPasswordPlaceholder')} className="input" required />
             </div>
             <button type="submit" disabled={loading}
               className="btn-primary w-full flex items-center justify-center gap-2 mt-2">
               {loading
                 ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 : <UserPlus size={16} />}
-              Créer mon compte
+              {t('login.createAccountBtn')}
             </button>
             <button type="button"
               onClick={() => { resetForm(); setMode('login') }}
               className="btn-secondary w-full flex items-center justify-center gap-2 text-sm">
-              <LogIn size={15} /> Déjà un compte ? Se connecter
+              <LogIn size={15} /> {t('login.alreadyAccount')}
             </button>
           </form>
         )}
 
         <p className="text-center text-white/40 text-xs mt-6">
-          {settings.appName} — Hébergé localement &amp; privé
+          {settings.appName} — {t('login.footer')}
         </p>
       </div>
     </div>

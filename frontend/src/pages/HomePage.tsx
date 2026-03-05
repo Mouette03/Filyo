@@ -4,6 +4,7 @@ import { Upload, X, Copy, Check, Lock, Clock, Download, Plus, Trash2, Share2, Ma
 import toast from 'react-hot-toast'
 import { uploadFiles, sendShareByEmail } from '../api/client'
 import { formatBytes, getFileIcon, copyToClipboard } from '../lib/utils'
+import { useT } from '../i18n'
 
 interface UploadedResult {
   id: string
@@ -15,6 +16,7 @@ interface UploadedResult {
 }
 
 export default function HomePage() {
+  const { t } = useT()
   const [files, setFiles] = useState<File[]>([])
   const [password, setPassword] = useState('')
   const [expiresIn, setExpiresIn] = useState('86400') // 24h par défaut
@@ -62,23 +64,23 @@ export default function HomePage() {
       setShowShareModal(true)
       toast.success(`${res.data.length} fichier(s) envoyé(s) !`)
     } catch {
-      toast.error("Échec de l'envoi, veuillez réessayer.")
+      toast.error(t('toast.uploadFailed'))
     } finally {
       setUploading(false)
     }
   }
 
   const handleSendEmail = async () => {
-    if (!emailTo.trim()) return toast.error('Entrez une adresse email')
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTo)) return toast.error('Adresse email invalide')
+    if (!emailTo.trim()) return toast.error(t('toast.emailRequired'))
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTo)) return toast.error(t('toast.emailInvalid'))
     setEmailSending(true)
     try {
       await sendShareByEmail(emailTo.trim(), results.map(r => r.shareToken))
       setEmailSent(true)
-      toast.success(`Lien${results.length > 1 ? 's' : ''} envoyé${results.length > 1 ? 's' : ''} à ${emailTo}`)
+      toast.success(t('toast.linkEmailSent', { email: emailTo }))
       setTimeout(() => setEmailSent(false), 3000)
     } catch (err: any) {
-      toast.error(err.response?.data?.error || "Erreur lors de l'envoi")
+      toast.error(err.response?.data?.error || t('toast.emailSendError'))
     }
     setEmailSending(false)
   }
@@ -90,9 +92,9 @@ export default function HomePage() {
     try {
       await copyToClipboard(url)
       setCopiedToken(token)
-      toast.success('Lien copié !')
+      toast.success(t('toast.linkCopied'))
       setTimeout(() => setCopiedToken(null), 2000)
-    } catch { toast.error('Impossible de copier le lien') }
+    } catch { toast.error(t('toast.cannotCopy')) }
   }
 
   return (
@@ -108,9 +110,9 @@ export default function HomePage() {
                 <Share2 size={20} className="text-emerald-400" />
               </div>
               <div className="flex-1">
-                <h2 className="text-lg font-bold">Fichiers envoyés !</h2>
+                <h2 className="text-lg font-bold">{t('home.modal.title')}</h2>
                 <p className="text-xs text-white/40">
-                  {results.length === 1 ? '1 lien de partage disponible' : `${results.length} liens de partage disponibles`}
+                  {results.length === 1 ? t('home.modal.linkSingle') : t('home.modal.linksMultiple', { count: String(results.length) })}
                 </p>
               </div>
               <button onClick={closeModal}
@@ -138,7 +140,7 @@ export default function HomePage() {
                           : 'btn-secondary' }`}
                     >
                       {copiedToken === r.shareToken ? <Check size={12} /> : <Copy size={12} />}
-                      {copiedToken === r.shareToken ? 'Copié' : 'Copier'}
+                      {copiedToken === r.shareToken ? t('common.copied') : t('common.copy')}
                     </button>
                   </div>
                 )
@@ -148,7 +150,7 @@ export default function HomePage() {
             {/* Envoi par email */}
             <div className="pt-4 border-t border-white/10 mb-4">
               <label className="text-xs text-white/50 mb-2 flex items-center gap-1.5 uppercase tracking-wider">
-                <Mail size={11} /> Envoyer par email
+                <Mail size={11} /> {t('home.modal.emailLabel')}
               </label>
               <div className="flex gap-2">
                 <input
@@ -156,7 +158,7 @@ export default function HomePage() {
                   value={emailTo}
                   onChange={e => { setEmailTo(e.target.value); setEmailSent(false) }}
                   onKeyDown={e => e.key === 'Enter' && handleSendEmail()}
-                  placeholder="destinataire@exemple.fr"
+                  placeholder={t('home.modal.emailPlaceholder')}
                   className="input text-sm py-2 flex-1"
                 />
                 <button
@@ -170,10 +172,10 @@ export default function HomePage() {
                   {emailSending
                     ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     : emailSent ? <Check size={14} /> : <Send size={14} />}
-                  {emailSent ? 'Envoyé' : 'Envoyer'}
+                  {emailSent ? t('common.sent') : t('common.send')}
                 </button>
               </div>
-              <p className="text-xs text-white/40 mt-1.5">Le ou les liens de partage seront envoyés à cette adresse.</p>
+              <p className="text-xs text-white/40 mt-1.5">{t('home.modal.emailHint')}</p>
             </div>
 
             {/* Actions */}
@@ -181,12 +183,12 @@ export default function HomePage() {
               <button
                 onClick={closeModal}
                 className="btn-secondary flex items-center justify-center gap-2 flex-1 py-2.5">
-                <Plus size={15} /> Nouvel envoi
+                <Plus size={15} /> {t('home.modal.newUpload')}
               </button>
               <button
                 onClick={closeModal}
                 className="btn-primary flex items-center justify-center gap-2 flex-1 py-2.5">
-                <Check size={15} /> Terminé
+                <Check size={15} /> {t('home.modal.done')}
               </button>
             </div>
           </div>
@@ -195,11 +197,11 @@ export default function HomePage() {
       {/* Header */}
       <div className="text-center mb-10">
         <h1 className="text-4xl font-bold mb-3">
-          Partagez vos fichiers
-          <span className="block text-brand-400">simplement.</span>
+          {t('home.title')}
+          <span className="block text-brand-400">{t('home.titleHighlight')}</span>
         </h1>
         <p className="text-white/50 text-lg">
-          Déposez, configurez et partagez en quelques secondes. Hébergé chez vous.
+          {t('home.subtitle')}
         </p>
       </div>
 
@@ -221,13 +223,13 @@ export default function HomePage() {
               <Upload size={28} className={isDragActive ? 'text-brand-400' : 'text-white/40'} />
             </div>
             {isDragActive ? (
-              <p className="text-brand-400 font-semibold text-lg">Relâchez pour ajouter !</p>
+              <p className="text-brand-400 font-semibold text-lg">{t('home.dropActive')}</p>
             ) : (
               <>
                 <p className="text-white/70 font-medium text-lg">
-                  Glissez-déposez vos fichiers ici
+                  {t('home.dropHint')}
                 </p>
-                <p className="text-white/30 text-sm">ou cliquez pour parcourir</p>
+                <p className="text-white/30 text-sm">{t('home.dropBrowse')}</p>
               </>
             )}
           </div>
@@ -240,7 +242,7 @@ export default function HomePage() {
           <div className="flex items-center justify-between mb-1">
             <span className="text-sm text-white/60">{files.length} fichier(s) — {formatBytes(totalSize)}</span>
             <button onClick={() => setFiles([])} className="text-white/30 hover:text-red-400 transition-colors text-xs flex items-center gap-1">
-              <Trash2 size={12} /> Tout supprimer
+              <Trash2 size={12} /> {t('home.removeAll')}
             </button>
           </div>
           {files.map((file, i) => (
@@ -263,7 +265,7 @@ export default function HomePage() {
           <div className="pt-3 border-t border-white/10 grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
-                <Lock size={11} /> Mot de passe (optionnel)
+                <Lock size={11} /> {t('home.passwordLabel')}
               </label>
               <input
                 type="password"
@@ -275,23 +277,23 @@ export default function HomePage() {
             </div>
             <div>
               <label className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
-                <Clock size={11} /> Expiration
+                <Clock size={11} /> {t('home.expiryLabel')}
               </label>
               <select
                 value={expiresIn}
                 onChange={e => setExpiresIn(e.target.value)}
                 className="input text-sm py-2 bg-surface-700"
               >
-                <option value="3600">1 heure</option>
-                <option value="86400">24 heures</option>
-                <option value="604800">7 jours</option>
-                <option value="2592000">30 jours</option>
-                <option value="">Jamais</option>
+                <option value="3600">{t('time.1h')}</option>
+                <option value="86400">{t('time.24h')}</option>
+                <option value="604800">{t('time.7d')}</option>
+                <option value="2592000">{t('time.30d')}</option>
+                <option value="">{t('common.never')}</option>
               </select>
             </div>
             <div className="col-span-2">
               <label className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
-                <Download size={11} /> Téléchargements max (optionnel)
+                <Download size={11} /> {t('home.maxDlLabel')}
               </label>
               <input
                 type="number"
@@ -325,12 +327,12 @@ export default function HomePage() {
             {uploading ? (
               <>
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Envoi en cours…
+                {t('home.uploading')}
               </>
             ) : (
               <>
                 <Upload size={16} />
-                Envoyer {files.length > 1 ? `${files.length} fichiers` : 'le fichier'}
+                {files.length > 1 ? t('home.uploadBtnMultiple', { count: String(files.length) }) : t('home.uploadBtnSingle')}
               </>
             )}
           </button>
@@ -344,8 +346,8 @@ export default function HomePage() {
             <div className="w-14 h-14 bg-emerald-500/20 rounded-2xl flex items-center justify-center mx-auto mb-3">
               <Check size={28} className="text-emerald-400" />
             </div>
-            <h2 className="text-xl font-bold mb-1">Fichiers envoyés !</h2>
-            <p className="text-white/50 text-sm">Partagez ces liens avec vos destinataires.</p>
+            <h2 className="text-xl font-bold mb-1">{t('home.resultTitle')}</h2>
+            <p className="text-white/50 text-sm">{t('home.resultSubtitle')}</p>
           </div>
 
           {results.map(r => (
@@ -364,7 +366,7 @@ export default function HomePage() {
                   }`}
               >
                 {copiedToken === r.shareToken ? <Check size={14} /> : <Copy size={14} />}
-                {copiedToken === r.shareToken ? 'Copié !' : 'Copier'}
+                {copiedToken === r.shareToken ? t('common.copied') : t('common.copy')}
               </button>
             </div>
           ))}
