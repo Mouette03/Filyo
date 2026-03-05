@@ -73,7 +73,7 @@ export default function Layout() {
           {/* Sélecteur de langue */}
           <LanguageSwitcher variant="compact" />
 
-          {/* User menu */}}
+          {/* User menu */}
           <div className="relative" ref={menuRef}>
             <button
               onClick={() => setUserMenuOpen(!userMenuOpen)}
