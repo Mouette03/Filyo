@@ -125,7 +125,7 @@ export default function LoginPage() {
       }}>
       {/* Sélecteur de langue en haut à droite */}
       <div className="absolute top-4 right-4">
-        <LanguageSwitcher variant="compact" />
+        <LanguageSwitcher />
       </div>
 
       <div className="w-full max-w-sm">

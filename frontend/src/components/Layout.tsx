@@ -41,7 +41,7 @@ export default function Layout() {
   return (
     <div className="min-h-screen flex flex-col">
       <header className="sticky top-0 z-50 glass border-b border-white/5">
-        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between relative">
           {/* Logo + Nom */}
           <NavLink to="/" className="flex items-center gap-2.5 group">
             {settings.logoUrl ? (
@@ -54,8 +54,8 @@ export default function Layout() {
             <span className="font-bold text-lg tracking-tight">{settings.appName}</span>
           </NavLink>
 
-          {/* Nav links - actions utilisateur seulement */}
-          <nav className="flex items-center gap-1">
+          {/* Nav links — centré en absolu */}
+          <nav className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1">
             <NavLink to="/dashboard" className={navClass}>
               <LayoutDashboard size={15} />
               <span className="hidden sm:inline">Dashboard</span>
@@ -70,11 +70,10 @@ export default function Layout() {
             </NavLink>
           </nav>
 
-          {/* Sélecteur de langue */}
-          <LanguageSwitcher variant="compact" />
-
-          {/* User menu */}
-          <div className="relative" ref={menuRef}>
+          {/* Droite : sélecteur de langue + menu utilisateur */}
+          <div className="flex items-center gap-1">
+            <LanguageSwitcher />
+            <div className="relative" ref={menuRef}>
             <button
               onClick={() => setUserMenuOpen(!userMenuOpen)}
               className="flex items-center gap-2 glass-hover rounded-xl px-3 py-2"
@@ -137,6 +136,7 @@ export default function Layout() {
                 </button>
               </div>
             )}
+            </div>
           </div>
         </div>
       </header>
