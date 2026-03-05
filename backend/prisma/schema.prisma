@@ -18,6 +18,7 @@ model User {
   avatarUrl      String?
   createdAt      DateTime        @default(now())
   lastLogin      DateTime?
+  cleanupAfterDays Int?          // préférence perso : null=jamais, 0=à expiration, N=N jours après
   files          File[]
   uploadRequests UploadRequest[]
 }
@@ -37,24 +38,25 @@ model AppSettings {
   uploaderEmailReq  String   @default("optional")
   uploaderMsgReq    String   @default("optional")
   allowRegistration Boolean  @default(false)
+  cleanupAfterDays  Int?     // max autorisé : null=désactivé, 0=dès expiration, N=N jours max après expiration
   updatedAt         DateTime @updatedAt
 }
 
 model File {
-  id           String   @id @default(cuid())
-  filename     String
-  originalName String
-  mimeType     String
-  size         BigInt
-  path         String
-  uploadedAt   DateTime @default(now())
-  expiresAt    DateTime?
-  downloads    Int      @default(0)
-  maxDownloads Int?
-  password     String?
-  shares       Share[]
-  userId       String?
-  user         User?    @relation(fields: [userId], references: [id])
+  id               String   @id @default(cuid())
+  filename         String
+  originalName     String
+  mimeType         String
+  size             BigInt
+  path             String
+  uploadedAt       DateTime @default(now())
+  expiresAt        DateTime?
+  downloads        Int      @default(0)
+  maxDownloads     Int?
+  password         String?
+  shares           Share[]
+  userId           String?
+  user             User?    @relation(fields: [userId], references: [id])
 }
 
 model Share {
@@ -76,15 +78,15 @@ model UploadRequest {
   token         String         @unique
   title         String
   message       String?
-  password      String?
-  createdAt     DateTime       @default(now())
-  expiresAt     DateTime?
-  maxFiles      Int?
-  maxSizeBytes  BigInt?
-  active        Boolean        @default(true)
-  receivedFiles ReceivedFile[]
-  userId        String?
-  user          User?          @relation(fields: [userId], references: [id])
+  password         String?
+  createdAt        DateTime       @default(now())
+  expiresAt        DateTime?
+  maxFiles         Int?
+  maxSizeBytes     BigInt?
+  active           Boolean        @default(true)
+  receivedFiles    ReceivedFile[]
+  userId           String?
+  user             User?          @relation(fields: [userId], references: [id])
 }
 
 model ReceivedFile {

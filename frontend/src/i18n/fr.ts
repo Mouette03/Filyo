@@ -42,7 +42,7 @@ export const fr = {
   'time.7d': '7 jours',
   'time.30d': '30 jours',
 
-  // ── Page connexion ──────────────────────────────────────────
+────────────────────────────────────────
   'login.subtitleLogin': 'Connectez-vous pour continuer',
   'login.subtitleRegister': 'Créez votre compte',
   'login.subtitleSetup': 'Créez votre compte administrateur',
@@ -242,7 +242,7 @@ export const fr = {
   'settings.smtpSecure': 'Connexion sécurisée (TLS)',
   'settings.smtpTest': 'Tester',
   'settings.smtpSave': 'Enregistrer',
-  'settings.smtpSecureHint': 'Recommandé pour SMTP sur port 465 ou STARTTLS sur 587',
+  'settings.smtpSecureHint': 'Port 465 : SSL/TLS direct (activé automatiquement). Port 587 : STARTTLS (activé automatiquement). Ce toggle est ignoré pour l’envoi.',
   'settings.smtpTestHint': "Le test vérifie uniquement l'accessibilité réseau du serveur SMTP. La fonctionnalité d'envoi d'emails sera disponible dans une prochaine version.",
 
   // ── Page de téléchargement (lien public) ────────────────────
@@ -366,6 +366,25 @@ export const fr = {
   'settings.fieldDescRequired': 'Affiché, remplissage obligatoire',
   'settings.freeRegEnabled': 'Inscription libre activée',
   'settings.freeRegDisabled': 'Inscription libre désactivée',
+  'settings.cleanupSection': 'Nettoyage automatique',
+  'settings.cleanupHint': 'Délai maximum que les utilisateurs peuvent choisir pour leurs partages. Désactivé si réglé sur « Jamais ».',
+  'settings.cleanupLabel': 'Délai maximum autorisé',
+  'settings.cleanupSaved': 'Réglage enregistré',
+  'settings.cleanupNever': 'Jamais (désactivé)',
+  'settings.cleanupAtExpiry': 'À l’expiration',
+  'settings.cleanup1d': '1 jour après',
+  'settings.cleanup3d': '3 jours après',
+  'settings.cleanup7d': '7 jours après',
+  'settings.cleanup30d': '30 jours après',
+
+  // ── Profil — préférence nettoyage ────────────────────────────────
+  'profile.cleanupSection': 'Nettoyage automatique',
+  'profile.cleanupHint': 'Par défaut, vos fichiers expirés sont supprimés selon le délai du serveur. Vous pouvez choisir un délai plus court.',
+  'profile.cleanupDefault': 'Défaut du serveur ({{days}} j)',
+  'profile.cleanupSaved': 'Préférence enregistrée',
+  'profile.cleanupNever': 'Ne pas supprimer automatiquement',
+  'profile.cleanupDisabled': 'Le nettoyage automatique est désactivé par l’administrateur',
+  'profile.cleanupServerDefault': 'Délai par défaut du serveur : {{days}} j après expiration',
 
   'toast.loadError': 'Erreur de chargement',
   'toast.uploadError': 'Erreur lors du téléversement',

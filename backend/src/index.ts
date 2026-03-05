@@ -13,6 +13,7 @@ import { adminRoutes } from './routes/admin'
 import { authRoutes } from './routes/auth'
 import { userRoutes } from './routes/users'
 import { settingsRoutes } from './routes/settings'
+import { runScheduledCleanup } from './lib/cleanup'
 
 const app = Fastify({
   logger: {
@@ -102,6 +103,20 @@ async function bootstrap() {
 
   await app.listen({ port, host })
   app.log.info(`🚀 Filyo backend running on http://${host}:${port}`)
+
+  // ── Job de nettoyage automatique (toutes les heures) ──────────────────────────────────
+  async function cleanupJob() {
+    try {
+      const result = await runScheduledCleanup()
+      if (result.deletedFiles > 0 || result.deletedRequests > 0) {
+        app.log.info(result, '🧹 Auto-cleanup completed')
+      }
+    } catch (err) {
+      app.log.error(err, 'Auto-cleanup failed')
+    }
+  }
+  // Premier passage 1 min après le démarrage, puis toutes les heures
+  setTimeout(() => { cleanupJob(); setInterval(cleanupJob, 60 * 60 * 1000) }, 60 * 1000)
 }
 
 bootstrap().catch(console.error)

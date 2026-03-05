@@ -118,8 +118,8 @@ export const downloadReceivedFile = (requestId: string, fileId: string) =>
   })
 
 // ---- Envoi email ----
-export const sendShareByEmail = (to: string, tokens: string[]) =>
-  api.post('/shares/send-email', { to, tokens })
+export const sendShareByEmail = (to: string, tokens: string[], lang: string = 'fr') =>
+  api.post('/shares/send-email', { to, tokens, lang })
 
 // ---- Expiration fichier ----
 export const updateFileExpiry = (id: string, expiresAt: string | null) =>
@@ -134,6 +134,12 @@ export const updateUploaderFields = (data: {
 
 export const updateAllowRegistration = (allowRegistration: boolean) =>
   api.patch('/settings/registration', { allowRegistration })
+
+export const updateCleanupSetting = (cleanupAfterDays: number | null) =>
+  api.patch('/settings/cleanup', { cleanupAfterDays })
+
+export const updateCleanupPreference = (cleanupAfterDays: number | null) =>
+  api.patch('/auth/cleanup-preference', { cleanupAfterDays })
 
 // ---- Admin ----
 export const getStats = () => api.get('/admin/stats')

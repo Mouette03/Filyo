@@ -16,7 +16,7 @@ interface UploadedResult {
 }
 
 export default function HomePage() {
-  const { t } = useT()
+  const { t, lang } = useT()
   const [files, setFiles] = useState<File[]>([])
   const [password, setPassword] = useState('')
   const [expiresIn, setExpiresIn] = useState('86400') // 24h par défaut
@@ -75,7 +75,7 @@ export default function HomePage() {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTo)) return toast.error(t('toast.emailInvalid'))
     setEmailSending(true)
     try {
-      await sendShareByEmail(emailTo.trim(), results.map(r => r.shareToken))
+      await sendShareByEmail(emailTo.trim(), results.map(r => r.shareToken), lang)
       setEmailSent(true)
       toast.success(t('toast.linkEmailSent', { email: emailTo }))
       setTimeout(() => setEmailSent(false), 3000)
@@ -309,7 +309,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Barre de progression */}
+          {/* Barre de progression */}}
           {uploading && (
             <div className="pt-2">
               <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">

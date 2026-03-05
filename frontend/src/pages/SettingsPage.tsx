@@ -1,7 +1,7 @@
 ﻿import { useEffect, useState, useRef } from 'react'
-import { Settings, Upload, Trash2, Check, Type, Image, RefreshCw, Mail, Eye, EyeOff, Wifi, Globe, Users, Palette, Moon, Sun, Monitor } from 'lucide-react'
+import { Settings, Upload, Trash2, Check, Type, Image, RefreshCw, Mail, Eye, EyeOff, Wifi, Globe, Users, Palette, Moon, Sun, Monitor, Clock } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { getSettings, updateAppName, uploadLogo, deleteLogo, getSmtpSettings, updateSmtpSettings, testSmtp, updateSiteUrl, updateUploaderFields, updateAllowRegistration } from '../api/client'
+import { getSettings, updateAppName, uploadLogo, deleteLogo, getSmtpSettings, updateSmtpSettings, testSmtp, updateSiteUrl, updateUploaderFields, updateAllowRegistration, updateCleanupSetting } from '../api/client'
 import { useAppSettingsStore } from '../stores/useAppSettingsStore'
 import { usePreferencesStore, ACCENT_PRESETS, BG_PRESETS, type ThemeMode, type AccentKey, type BgColorKey } from '../stores/usePreferencesStore'
 import { useT } from '../i18n'
@@ -49,6 +49,10 @@ export default function SettingsPage() {
   const [allowRegistration, setAllowRegistration] = useState(false)
   const [savingRegistration, setSavingRegistration] = useState(false)
 
+  // Nettoyage automatique
+  const [cleanupAfterDays, setCleanupAfterDays] = useState<number | null>(null)
+  const [savingCleanup, setSavingCleanup] = useState(false)
+
   useEffect(() => {
     getSettings().then(res => {
       setAppName(res.data.appName || 'Filyo')
@@ -58,6 +62,7 @@ export default function SettingsPage() {
       setUploaderEmailReq(res.data.uploaderEmailReq || 'optional')
       setUploaderMsgReq(res.data.uploaderMsgReq || 'optional')
       setAllowRegistration(res.data.allowRegistration ?? false)
+      setCleanupAfterDays(res.data.cleanupAfterDays ?? null)
     }).catch(() => {})
     getSmtpSettings().then(res => {
       setSmtpHost(res.data.smtpHost || '')
@@ -421,6 +426,42 @@ export default function SettingsPage() {
             >
               <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${allowRegistration ? 'translate-x-6' : 'translate-x-1'}`} />
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Section : Nettoyage automatique */}
+      <div className="card mb-6">
+        <div className="flex items-center gap-2 mb-5">
+          <Clock size={16} className="text-brand-400" />
+          <h3 className="font-semibold">{t('settings.cleanupSection')}</h3>
+          <span className="text-xs text-white/30 ml-auto">{t('settings.cleanupHint')}</span>
+        </div>
+        <div className="flex items-center justify-between py-3 px-4 bg-white/3 rounded-xl">
+          <p className="text-sm font-medium">{t('settings.cleanupLabel')}</p>
+          <div className="flex items-center gap-2">
+            {savingCleanup && <div className="w-4 h-4 border-2 border-brand-500/30 border-t-brand-500 rounded-full animate-spin" />}
+            <select
+              value={cleanupAfterDays === null ? 'never' : String(cleanupAfterDays)}
+              onChange={async e => {
+                const val = e.target.value === 'never' ? null : Number(e.target.value)
+                setSavingCleanup(true)
+                try {
+                  await updateCleanupSetting(val)
+                  setCleanupAfterDays(val)
+                  toast.success(t('settings.cleanupSaved'))
+                } catch { toast.error(t('toast.saveError')) }
+                setSavingCleanup(false)
+              }}
+              className="input py-1.5 text-sm w-44"
+            >
+              <option value="never">{t('settings.cleanupNever')}</option>
+              <option value="0">{t('settings.cleanupAtExpiry')}</option>
+              <option value="1">{t('settings.cleanup1d')}</option>
+              <option value="3">{t('settings.cleanup3d')}</option>
+              <option value="7">{t('settings.cleanup7d')}</option>
+              <option value="30">{t('settings.cleanup30d')}</option>
+            </select>
           </div>
         </div>
       </div>

@@ -42,7 +42,7 @@ export const en = {
   'time.7d': '7 days',
   'time.30d': '30 days',
 
-  // ── Login page ───────────────────────────────────────────────
+─────────────────────────────────────────────
   'login.subtitleLogin': 'Sign in to continue',
   'login.subtitleRegister': 'Create your account',
   'login.subtitleSetup': 'Create your administrator account',
@@ -242,7 +242,7 @@ export const en = {
   'settings.smtpSecure': 'Secure connection (TLS)',
   'settings.smtpTest': 'Test',
   'settings.smtpSave': 'Save',
-  'settings.smtpSecureHint': 'Recommended for SMTP on port 465 or STARTTLS on port 587',
+  'settings.smtpSecureHint': 'Port 465: direct SSL/TLS (auto-enabled). Port 587: STARTTLS (auto-enabled). This toggle is ignored for sending.',
   'settings.smtpTestHint': 'The test only verifies network accessibility of the SMTP server. Email sending functionality will be available in a future version.',
 
   // ── Share page (public download) ─────────────────────────────
@@ -366,6 +366,25 @@ export const en = {
   'settings.fieldDescRequired': 'Shown, required',
   'settings.freeRegEnabled': 'Open registration enabled',
   'settings.freeRegDisabled': 'Open registration disabled',
+  'settings.cleanupSection': 'Auto-cleanup',
+  'settings.cleanupHint': 'Maximum delay users can choose for their shares. Disabled if set to "Never".',
+  'settings.cleanupLabel': 'Maximum allowed delay',
+  'settings.cleanupSaved': 'Setting saved',
+  'settings.cleanupNever': 'Never (disabled)',
+  'settings.cleanupAtExpiry': 'At exact expiry',
+  'settings.cleanup1d': '1 day after',
+  'settings.cleanup3d': '3 days after',
+  'settings.cleanup7d': '7 days after',
+  'settings.cleanup30d': '30 days after',
+
+  // ── Profile — cleanup preference ─────────────────────────────────
+  'profile.cleanupSection': 'Auto-cleanup',
+  'profile.cleanupHint': 'By default, your expired files are deleted according to the server’s delay. You can choose a shorter delay.',
+  'profile.cleanupDefault': 'Server default ({{days}} d)',
+  'profile.cleanupSaved': 'Preference saved',
+  'profile.cleanupNever': 'Do not delete automatically',
+  'profile.cleanupDisabled': 'Auto-cleanup is disabled by the administrator',
+  'profile.cleanupServerDefault': 'Server default delay: {{days}} d after expiration',
 
   'toast.loadError': 'Loading error',
   'toast.uploadError': 'Upload error',

@@ -3,6 +3,7 @@ import { prisma } from '../lib/prisma'
 import fs from 'fs-extra'
 import path from 'path'
 import { execSync } from 'child_process'
+import { runForceCleanup } from '../lib/cleanup'
 
 const UPLOAD_DIR = process.env.UPLOAD_DIR || '/data/uploads'
 
@@ -55,41 +56,11 @@ export async function adminRoutes(app: FastifyInstance) {
     }
   })
 
-  // POST /api/admin/cleanup - Supprimer les fichiers expirés
+  // POST /api/admin/cleanup - Supprimer les fichiers expirés (forcé, ignore délais de grâce)
   app.post('/cleanup', authHook, async (req: any) => {
-    const now = new Date()
-
-    const expiredFiles = await prisma.file.findMany({
-      where: { expiresAt: { lt: now } }
-    })
-
-    for (const file of expiredFiles) {
-      await fs.remove(file.path).catch(() => {})
-    }
-    const deletedFiles = await prisma.file.deleteMany({
-      where: { expiresAt: { lt: now } }
-    })
-
-    const expiredRequests = await prisma.uploadRequest.findMany({
-      where: { expiresAt: { lt: now } },
-      include: { receivedFiles: true }
-    })
-    for (const expiredReq of expiredRequests) {
-      for (const f of expiredReq.receivedFiles) {
-        await fs.remove(f.path).catch(() => {})
-      }
-      // Supprimer le dossier du partage inversé
-      await fs.remove(path.join(UPLOAD_DIR, 'received', expiredReq.id)).catch(() => {})
-    }
-    const deletedRequests = await prisma.uploadRequest.deleteMany({
-      where: { expiresAt: { lt: now } }
-    })
-
-    req.log.info({ deletedFiles: deletedFiles.count, deletedRequests: deletedRequests.count }, 'Cleanup completed')
-    return {
-      deletedFiles: deletedFiles.count,
-      deletedUploadRequests: deletedRequests.count
-    }
+    const result = await runForceCleanup()
+    req.log.info(result, 'Manual cleanup completed')
+    return result
   })
 
   // GET /api/admin/files - Tous les fichiers de tous les utilisateurs

@@ -7,6 +7,7 @@ interface AuthUser {
   name: string
   role: 'ADMIN' | 'USER'
   avatarUrl?: string | null
+  cleanupAfterDays?: number | null
 }
 
 interface AuthStore {
@@ -18,6 +19,7 @@ interface AuthStore {
   isAdmin: () => boolean
   updateAvatar: (avatarUrl: string | null) => void
   updateName: (name: string) => void
+  updateCleanupPref: (cleanupAfterDays: number | null) => void
 }
 
 export const useAuthStore = create<AuthStore>()(
@@ -36,6 +38,10 @@ export const useAuthStore = create<AuthStore>()(
       updateName: (name) => {
         const u = get().user
         if (u) set({ user: { ...u, name } })
+      },
+      updateCleanupPref: (cleanupAfterDays) => {
+        const u = get().user
+        if (u) set({ user: { ...u, cleanupAfterDays } })
       }
     }),
     { name: 'filyo-auth' }

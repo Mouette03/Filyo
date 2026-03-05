@@ -28,6 +28,7 @@ export async function settingsRoutes(app: FastifyInstance) {
       uploaderEmailReq: s.uploaderEmailReq ?? 'optional',
       uploaderMsgReq: s.uploaderMsgReq ?? 'optional',
       allowRegistration: s.allowRegistration ?? false,
+      cleanupAfterDays: s.cleanupAfterDays ?? null,
       updatedAt: s.updatedAt
     }
   })
@@ -105,6 +106,25 @@ export async function settingsRoutes(app: FastifyInstance) {
       })
       req.log.info({ allowRegistration }, 'Registration setting updated')
       return { allowRegistration: s.allowRegistration }
+    }
+  )
+
+  // PATCH /api/settings/cleanup — délai de nettoyage automatique
+  app.patch<{ Body: { cleanupAfterDays: number | null } }>(
+    '/cleanup',
+    { onRequest: [app.authenticate, app.adminOnly] },
+    async (req, reply) => {
+      const { cleanupAfterDays } = req.body
+      if (cleanupAfterDays !== null && (typeof cleanupAfterDays !== 'number' || cleanupAfterDays < 0)) {
+        return reply.code(400).send({ error: 'Valeur invalide' })
+      }
+      const s = await prisma.appSettings.upsert({
+        where: { id: 'singleton' },
+        update: { cleanupAfterDays },
+        create: { id: 'singleton', appName: 'Filyo', cleanupAfterDays }
+      })
+      req.log.info({ cleanupAfterDays }, 'Cleanup setting updated')
+      return { cleanupAfterDays: s.cleanupAfterDays }
     }
   )
 

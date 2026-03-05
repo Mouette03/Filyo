@@ -36,7 +36,7 @@ type Tab = 'sent' | 'requests'
 
 export default function DashboardPage() {
   const isAdmin = useAuthStore(s => s.isAdmin())
-  const { t } = useT()
+  const { t, lang } = useT()
   const [tab, setTab] = useState<Tab>('sent')
   const [files, setFiles] = useState<FileItem[]>([])
   const [requests, setRequests] = useState<UploadRequest[]>([])
@@ -132,7 +132,7 @@ export default function DashboardPage() {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailToFile)) return toast.error(t('toast.emailInvalid'))
     setEmailSendingToken(token)
     try {
-      await sendShareByEmail(emailToFile.trim(), [token])
+      await sendShareByEmail(emailToFile.trim(), [token], lang)
       toast.success(t('toast.linkEmailSent', { email: emailToFile }))
       setEmailingFileId(null)
       setEmailToFile('')

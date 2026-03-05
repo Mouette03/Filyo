@@ -1,12 +1,12 @@
-import { useState, useRef } from 'react'
-import { User, Camera, Trash2, Lock, RefreshCw, Check, Pencil } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { User, Camera, Trash2, Lock, RefreshCw, Check, Pencil, Eraser } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { uploadAvatar, deleteAvatar, changePassword, updateProfile } from '../api/client'
+import { uploadAvatar, deleteAvatar, changePassword, updateProfile, updateCleanupPreference, getSettings } from '../api/client'
 import { useAuthStore } from '../stores/useAuthStore'
 import { useT } from '../i18n'
 
 export default function ProfilePage() {
-  const { user, updateAvatar, updateName } = useAuthStore()
+  const { user, updateAvatar, updateName, updateCleanupPref } = useAuthStore()
   const { t } = useT()
 
   // --- Avatar ---
@@ -24,6 +24,15 @@ export default function ProfilePage() {
   const [newPwd, setNewPwd] = useState('')
   const [confirmPwd, setConfirmPwd] = useState('')
   const [savingPwd, setSavingPwd] = useState(false)
+
+  // --- Nettoyage automatique ---
+  const [cleanupAfterDays, setCleanupAfterDays] = useState<number | null>(user?.cleanupAfterDays ?? null)
+  const [savingCleanup, setSavingCleanup] = useState(false)
+  const [adminMax, setAdminMax] = useState<number | null>(null)
+
+  useEffect(() => {
+    getSettings().then((res: any) => setAdminMax(res.data.cleanupAfterDays ?? null)).catch(() => {})
+  }, [])
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -83,6 +92,22 @@ export default function ProfilePage() {
       toast.error(err.response?.data?.error || t('toast.updateError'))
     }
     setSavingPwd(false)
+  }
+
+  const handleSaveCleanup = async (value: number | null) => {
+    setSavingCleanup(true)
+    try {
+      await updateCleanupPreference(value)
+      setCleanupAfterDays(value)
+      updateCleanupPref(value)
+      toast.success(t('profile.cleanupSaved'))
+    } catch (err: any) {
+      const code = err.response?.data?.code
+      if (code === 'CLEANUP_DISABLED') toast.error(t('profile.cleanupDisabled'))
+      else if (code === 'CLEANUP_EXCEEDS_MAX') toast.error(err.response.data.error)
+      else toast.error(t('toast.saveError'))
+    }
+    setSavingCleanup(false)
   }
 
   return (
@@ -252,6 +277,47 @@ export default function ProfilePage() {
             {t('profile.updatePassword')}
           </button>
         </div>
+      </div>
+
+      {/* Section Nettoyage automatique */}
+      <div className="card mt-5">
+        <div className="flex items-center gap-2 mb-4">
+          <Eraser size={16} className="text-brand-400" />
+          <h3 className="font-semibold">{t('profile.cleanupSection')}</h3>
+        </div>
+        {adminMax == null ? (
+          <p className="text-sm text-white/40 italic">{t('profile.cleanupDisabled')}</p>
+        ) : (
+          <div className="space-y-3">
+            {/* Info : délai par défaut du serveur */}
+            <div className="flex items-center gap-2 rounded-lg bg-brand-500/10 border border-brand-500/20 px-3 py-2">
+              <Eraser size={13} className="text-brand-400 flex-shrink-0" />
+              <p className="text-xs text-brand-300">
+                {t('profile.cleanupServerDefault', { days: String(adminMax) })}
+              </p>
+            </div>
+            <p className="text-xs text-white/50">{t('profile.cleanupHint')}</p>
+            <div className="flex items-center gap-3">
+              <select
+                value={cleanupAfterDays == null ? '' : String(cleanupAfterDays)}
+                onChange={e => {
+                  const v = e.target.value
+                  handleSaveCleanup(v === '' ? null : Number(v))
+                }}
+                disabled={savingCleanup}
+                className="input bg-surface-700 flex-1"
+              >
+                <option value="">{t('profile.cleanupDefault', { days: String(adminMax) })}</option>
+                {adminMax >= 0 && <option value="0">{t('settings.cleanupAtExpiry')}</option>}
+                {adminMax >= 1 && <option value="1">{t('settings.cleanup1d')}</option>}
+                {adminMax >= 3 && <option value="3">{t('settings.cleanup3d')}</option>}
+                {adminMax >= 7 && <option value="7">{t('settings.cleanup7d')}</option>}
+                {adminMax >= 30 && <option value="30">{t('settings.cleanup30d')}</option>}
+              </select>
+              {savingCleanup && <RefreshCw size={16} className="text-brand-400 animate-spin flex-shrink-0" />}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

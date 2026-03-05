@@ -60,7 +60,7 @@ export async function authRoutes(app: FastifyInstance) {
   app.get('/me', { onRequest: [app.authenticate] }, async (req: any) => {
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
-      select: { id: true, email: true, name: true, role: true, avatarUrl: true, createdAt: true, lastLogin: true }
+      select: { id: true, email: true, name: true, role: true, avatarUrl: true, createdAt: true, lastLogin: true, cleanupAfterDays: true }
     })
     if (!user) throw { statusCode: 401, message: 'Utilisateur introuvable' }
     return user
@@ -170,5 +170,29 @@ export async function authRoutes(app: FastifyInstance) {
     await prisma.user.update({ where: { id: req.user.id }, data: { password: hashed } })
     req.log.info({ userId: req.user.id }, 'Password changed')
     return { success: true }
+  })
+
+  // PATCH /api/auth/cleanup-preference — préférence de nettoyage automatique
+  app.patch('/cleanup-preference', { onRequest: [app.authenticate] }, async (req: any, reply) => {
+    const { cleanupAfterDays } = req.body as { cleanupAfterDays: number | null }
+
+    // Valider contre le maximum admin
+    if (cleanupAfterDays != null) {
+      const settings = await prisma.appSettings.findUnique({ where: { id: 'singleton' } })
+      const adminMax = settings?.cleanupAfterDays ?? null
+      if (adminMax == null) {
+        return reply.code(403).send({ code: 'CLEANUP_DISABLED', error: 'Le nettoyage automatique est désactivé par l\'administrateur' })
+      }
+      if (cleanupAfterDays < 0 || cleanupAfterDays > adminMax) {
+        return reply.code(400).send({ code: 'CLEANUP_EXCEEDS_MAX', error: `La valeur doit être entre 0 et ${adminMax} jours` })
+      }
+    }
+
+    await prisma.user.update({
+      where: { id: req.user.id },
+      data: { cleanupAfterDays }
+    })
+    req.log.debug({ userId: req.user.id, cleanupAfterDays }, 'Cleanup preference updated')
+    return { cleanupAfterDays }
   })
 }

@@ -81,9 +81,10 @@ export async function shareRoutes(app: FastifyInstance) {
 
   // POST /api/shares/send-email — envoyer un ou plusieurs liens par email (authentifié)
   app.post<{
-    Body: { to: string; tokens: string[] }
+    Body: { to: string; tokens: string[]; lang?: string }
   }>('/send-email', { onRequest: [app.authenticate] }, async (req: any, reply) => {
-    const { to, tokens } = req.body
+    const { to, tokens, lang = 'fr' } = req.body
+    const isEn = lang === 'en'
     if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
       return reply.code(400).send({ code: 'EMAIL_INVALID' })
     }
@@ -110,8 +111,10 @@ export async function shareRoutes(app: FastifyInstance) {
     const filesHtml = shares.map(s => {
       const url = `${baseUrl}/s/${s.token}`
       const expiry = s.expiresAt
-        ? `Expire le ${new Date(s.expiresAt).toLocaleDateString('fr-FR')}`
-        : 'Sans expiration'
+        ? (isEn
+            ? `Expires ${new Date(s.expiresAt).toLocaleDateString('en-GB')}`
+            : `Expire le ${new Date(s.expiresAt).toLocaleDateString('fr-FR')}`)
+        : (isEn ? 'No expiry' : 'Sans expiration')
       return `
         <tr>
           <td style="padding:10px 12px;border-bottom:1px solid #2a2d4a">
@@ -125,32 +128,49 @@ export async function shareRoutes(app: FastifyInstance) {
       `- ${s.file.originalName}\n  ${baseUrl}/s/${s.token}`
     ).join('\n')
 
+    const subjectSingle = isEn
+      ? `Share: ${shares[0].file.originalName}`
+      : `Partage\u00a0: ${shares[0].file.originalName}`
+    const subjectMulti = isEn
+      ? `${shares.length} files shared with you`
+      : `${shares.length} fichiers partag\u00e9s avec vous`
+    const introSingle = isEn ? 'A file has been shared with you.' : 'Un fichier a \u00e9t\u00e9 partag\u00e9 avec vous.'
+    const introMulti = isEn
+      ? `${shares.length} files have been shared with you.`
+      : `${shares.length} fichiers ont \u00e9t\u00e9 partag\u00e9s avec vous.`
+    const greetingText = isEn
+      ? `Hello,\n\nHere ${shares.length === 1 ? 'is your share link' : 'are your share links'}:\n\n${filesText}\n\nSent via ${appName}.`
+      : `Bonjour,\n\nVoici ${shares.length === 1 ? 'votre lien de partage' : 'vos liens de partage'}\u00a0:\n\n${filesText}\n\nEnvoy\u00e9 via ${appName}.`
+    const footerText = isEn ? `Sent via ${appName}` : `Envoy\u00e9 via ${appName}`
+
+    const smtpPort = settings.smtpPort ?? 587
+    // Port 465 = SSL/TLS direct ; port 587/25 = STARTTLS (secure doit être false)
+    const smtpSecure = smtpPort === 465 ? true : false
     const transporter = nodemailer.createTransport({
       host: settings.smtpHost,
-      port: settings.smtpPort ?? 587,
-      secure: settings.smtpSecure ?? false,
+      port: smtpPort,
+      secure: smtpSecure,
+      requireTLS: smtpPort === 587, // force STARTTLS sur 587
       auth: settings.smtpUser ? { user: settings.smtpUser, pass: settings.smtpPass ?? '' } : undefined
     })
 
     try {
       await transporter.sendMail({
         from: `"${appName}" <${settings.smtpFrom}>`,
-      to,
-      subject: `[${appName}] ${shares.length === 1
-        ? `Partage : ${shares[0].file.originalName}`
-        : `${shares.length} fichiers partagés avec vous`}`,
-      text: `Bonjour,\n\nVoici ${shares.length === 1 ? 'votre lien de partage' : 'vos liens de partage'} :\n\n${filesText}\n\nEnvoyé via ${appName}.`,
-      html: `
-        <div style="font-family:system-ui,sans-serif;max-width:520px;margin:0 auto;background:#0d0e1a;color:#e8eaf6;padding:32px 24px;border-radius:16px">
-          <h2 style="margin:0 0 6px;color:#7a8dff;font-size:20px">${appName}</h2>
-          <p style="color:#aaa;font-size:13px;margin:0 0 24px">
-            ${shares.length === 1 ? 'Un fichier a été partagé avec vous.' : `${shares.length} fichiers ont été partagés avec vous.`}
-          </p>
-          <table style="width:100%;border-collapse:collapse;background:#13152a;border-radius:12px;overflow:hidden">
-            ${filesHtml}
-          </table>
-          <p style="font-size:11px;color:#555;margin-top:24px;text-align:center">Envoyé via ${appName}</p>
-        </div>`
+        to,
+        subject: `[${appName}] ${shares.length === 1 ? subjectSingle : subjectMulti}`,
+        text: greetingText,
+        html: `
+          <div style="font-family:system-ui,sans-serif;max-width:520px;margin:0 auto;background:#0d0e1a;color:#e8eaf6;padding:32px 24px;border-radius:16px">
+            <h2 style="margin:0 0 6px;color:#7a8dff;font-size:20px">${appName}</h2>
+            <p style="color:#aaa;font-size:13px;margin:0 0 24px">
+              ${shares.length === 1 ? introSingle : introMulti}
+            </p>
+            <table style="width:100%;border-collapse:collapse;background:#13152a;border-radius:12px;overflow:hidden">
+              ${filesHtml}
+            </table>
+            <p style="font-size:11px;color:#555;margin-top:24px;text-align:center">${footerText}</p>
+          </div>`
       })
     } catch (err: any) {
       req.log.error({ err: err.message }, 'SMTP sendMail failed')
