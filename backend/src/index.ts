@@ -33,14 +33,14 @@ app.decorate('authenticate', async function (req: FastifyRequest, reply: Fastify
   try {
     await req.jwtVerify()
   } catch {
-    return reply.code(401).send({ error: 'Token invalide ou manquant' })
+    return reply.code(401).send({ code: 'INVALID_TOKEN' })
   }
 })
 
 app.decorate('adminOnly', async function (req: FastifyRequest, reply: FastifyReply) {
   const user = (req as any).user
   if (!user || user.role !== 'ADMIN') {
-    return reply.code(403).send({ error: 'Accès réservé aux administrateurs' })
+    return reply.code(403).send({ code: 'ADMIN_ONLY' })
   }
 })
 

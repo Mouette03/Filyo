@@ -382,7 +382,6 @@ export const fr = {
   'profile.cleanupHint': 'Par défaut, vos fichiers expirés sont supprimés selon le délai du serveur. Vous pouvez choisir un délai plus court.',
   'profile.cleanupDefault': 'Défaut du serveur ({{days}} j)',
   'profile.cleanupSaved': 'Préférence enregistrée',
-  'profile.cleanupNever': 'Ne pas supprimer automatiquement',
   'profile.cleanupDisabled': 'Le nettoyage automatique est désactivé par l’administrateur',
   'profile.cleanupServerDefault': 'Délai par défaut du serveur : {{days}} j après expiration',
 
