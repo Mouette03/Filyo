@@ -42,7 +42,6 @@ export const en = {
   'time.7d': '7 days',
   'time.30d': '30 days',
 
-─────────────────────────────────────────────
   'login.subtitleLogin': 'Sign in to continue',
   'login.subtitleRegister': 'Create your account',
   'login.subtitleSetup': 'Create your administrator account',
@@ -338,6 +337,7 @@ export const en = {
   'toast.expiredNow': 'File expired immediately',
   'toast.cleanupDone': 'Cleanup: {{count}} file(s) deleted',
   'toast.cannotLoadReceived': 'Cannot load received files',
+  'toast.uploadSuccess': '{{count}} file(s) uploaded successfully!',
   'toast.uploadFailed': 'Upload failed, please try again.',
   'toast.emailRequired': 'Enter an email address',
   'toast.emailInvalid': 'Invalid email address',

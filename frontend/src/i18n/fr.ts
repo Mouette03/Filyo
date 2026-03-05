@@ -42,7 +42,6 @@ export const fr = {
   'time.7d': '7 jours',
   'time.30d': '30 jours',
 
-────────────────────────────────────────
   'login.subtitleLogin': 'Connectez-vous pour continuer',
   'login.subtitleRegister': 'Créez votre compte',
   'login.subtitleSetup': 'Créez votre compte administrateur',
@@ -338,6 +337,7 @@ export const fr = {
   'toast.expiredNow': 'Fichier expiré immédiatement',
   'toast.cleanupDone': 'Nettoyage : {{count}} fichier(s) supprimé(s)',
   'toast.cannotLoadReceived': 'Impossible de charger les fichiers reçus',
+  'toast.uploadSuccess': '{{count}} fichier(s) envoyé(s) avec succès !',
   'toast.uploadFailed': "Échec de l'envoi, veuillez réessayer.",
   'toast.emailRequired': 'Entrez une adresse email',
   'toast.emailInvalid': 'Adresse email invalide',
@@ -371,7 +371,7 @@ export const fr = {
   'settings.cleanupLabel': 'Délai maximum autorisé',
   'settings.cleanupSaved': 'Réglage enregistré',
   'settings.cleanupNever': 'Jamais (désactivé)',
-  'settings.cleanupAtExpiry': 'À l’expiration',
+  'settings.cleanupAtExpiry': "À l'expiration",
   'settings.cleanup1d': '1 jour après',
   'settings.cleanup3d': '3 jours après',
   'settings.cleanup7d': '7 jours après',
@@ -382,7 +382,7 @@ export const fr = {
   'profile.cleanupHint': 'Par défaut, vos fichiers expirés sont supprimés selon le délai du serveur. Vous pouvez choisir un délai plus court.',
   'profile.cleanupDefault': 'Défaut du serveur ({{days}} j)',
   'profile.cleanupSaved': 'Préférence enregistrée',
-  'profile.cleanupDisabled': 'Le nettoyage automatique est désactivé par l’administrateur',
+  'profile.cleanupDisabled': "Le nettoyage automatique est désactivé par l'administrateur",
   'profile.cleanupServerDefault': 'Délai par défaut du serveur : {{days}} j après expiration',
 
   'toast.loadError': 'Erreur de chargement',

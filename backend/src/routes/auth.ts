@@ -17,8 +17,7 @@ const loginSchema = z.object({
 const registerSchema = z.object({
   email: z.string().email(),
   name: z.string().min(1),
-  password: z.string().min(8),
-  role: z.enum(['USER', 'ADMIN']).optional().default('USER')
+  password: z.string().min(8)
 })
 
 export async function authRoutes(app: FastifyInstance) {
@@ -62,7 +61,7 @@ export async function authRoutes(app: FastifyInstance) {
       where: { id: req.user.id },
       select: { id: true, email: true, name: true, role: true, avatarUrl: true, createdAt: true, lastLogin: true, cleanupAfterDays: true }
     })
-    if (!user) throw { statusCode: 401, message: 'Utilisateur introuvable' }
+    if (!user) throw { statusCode: 401, code: 'NOT_FOUND' }
     return user
   })
 

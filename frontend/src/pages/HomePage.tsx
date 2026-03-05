@@ -62,7 +62,7 @@ export default function HomePage() {
       setResults(res.data)
       setFiles([])
       setShowShareModal(true)
-      toast.success(`${res.data.length} fichier(s) envoyé(s) !`)
+      toast.success(t('toast.uploadSuccess', { count: String(res.data.length) }))
     } catch {
       toast.error(t('toast.uploadFailed'))
     } finally {
@@ -309,7 +309,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Barre de progression */}}
+          {/* Barre de progression */}
           {uploading && (
             <div className="pt-2">
               <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">

@@ -1,5 +1,5 @@
 export function formatBytes(bytes: number | string | bigint): string {
-  const n = typeof bytes === 'bigint' ? Number(bytes) : Number(bytes)
+  const n = Number(bytes)
   if (n === 0) return '0 B'
   const k = 1024
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
@@ -9,7 +9,7 @@ export function formatBytes(bytes: number | string | bigint): string {
 
 export function formatDate(date: string | Date | null | undefined): string {
   if (!date) return '—'
-  return new Intl.DateTimeFormat('fr-FR', {
+  return new Intl.DateTimeFormat(navigator.language, {
     day: '2-digit', month: 'short', year: 'numeric',
     hour: '2-digit', minute: '2-digit'
   }).format(new Date(date))
