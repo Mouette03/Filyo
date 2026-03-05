@@ -89,7 +89,9 @@ export default function ProfilePage() {
       setCurrentPwd(''); setNewPwd(''); setConfirmPwd('')
       toast.success(t('toast.passwordUpdated'))
     } catch (err: any) {
-      toast.error(err.response?.data?.error || t('toast.updateError'))
+      const code = err.response?.data?.code
+      if (code === 'WRONG_PASSWORD') toast.error(t('error.wrongPassword'))
+      else toast.error(t('toast.updateError'))
     }
     setSavingPwd(false)
   }
@@ -104,7 +106,7 @@ export default function ProfilePage() {
     } catch (err: any) {
       const code = err.response?.data?.code
       if (code === 'CLEANUP_DISABLED') toast.error(t('profile.cleanupDisabled'))
-      else if (code === 'CLEANUP_EXCEEDS_MAX') toast.error(err.response.data.error)
+      else if (code === 'CLEANUP_EXCEEDS_MAX') toast.error(t('error.cleanupExceedsMax', { max: String(err.response?.data?.max ?? '') }))
       else toast.error(t('toast.saveError'))
     }
     setSavingCleanup(false)

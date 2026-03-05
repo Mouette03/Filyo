@@ -44,7 +44,9 @@ export default function LoginPage() {
       toast.success(t('toast.welcome', { name: res.data.user.name }))
       navigate('/')
     } catch (err: any) {
-      toast.error(err.response?.data?.error || t('toast.incorrectCredentials'))
+      const code = err.response?.data?.code
+      if (code === 'INVALID_CREDENTIALS') toast.error(t('error.invalidCredentials'))
+      else toast.error(t('toast.incorrectCredentials'))
     } finally {
       setLoading(false)
     }
@@ -63,7 +65,9 @@ export default function LoginPage() {
       toast.success(t('toast.adminCreated', { name: res.data.user.name }))
       navigate('/')
     } catch (err: any) {
-      toast.error(err.response?.data?.error || t('toast.accountError'))
+      const code = err.response?.data?.code
+      if (code === 'EMAIL_TAKEN') toast.error(t('error.emailTaken'))
+      else toast.error(t('toast.accountError'))
     } finally {
       setLoading(false)
     }
@@ -82,7 +86,10 @@ export default function LoginPage() {
       toast.success(t('toast.welcome', { name: res.data.user.name }))
       navigate('/')
     } catch (err: any) {
-      toast.error(err.response?.data?.error || t('toast.accountError'))
+      const code = err.response?.data?.code
+      if (code === 'EMAIL_TAKEN') toast.error(t('error.emailTaken'))
+      else if (code === 'REGISTRATION_DISABLED') toast.error(t('error.registrationDisabled'))
+      else toast.error(t('toast.accountError'))
     } finally {
       setLoading(false)
     }

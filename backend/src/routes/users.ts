@@ -21,10 +21,10 @@ export async function userRoutes(app: FastifyInstance) {
     async (req, reply) => {
       const { email, name, password, role } = req.body
       if (!email || !name || !password) {
-        return reply.code(400).send({ error: 'email, name et password sont requis' })
+        return reply.code(400).send({ code: 'MISSING_FIELDS' })
       }
       const existing = await prisma.user.findUnique({ where: { email } })
-      if (existing) return reply.code(409).send({ error: 'Cet email est déjà utilisé' })
+      if (existing) return reply.code(409).send({ code: 'EMAIL_TAKEN' })
 
       const hashed = await bcrypt.hash(password, 12)
       const user = await prisma.user.create({
@@ -58,7 +58,7 @@ export async function userRoutes(app: FastifyInstance) {
         req.log.info({ id: req.params.id }, 'Utilisateur modifié par admin')
         return user
       } catch {
-        return reply.code(404).send({ error: 'Utilisateur introuvable' })
+        return reply.code(404).send({ code: 'USER_NOT_FOUND' })
       }
     }
   )
@@ -67,14 +67,14 @@ export async function userRoutes(app: FastifyInstance) {
   app.delete<{ Params: { id: string } }>('/:id', adminOnly, async (req, reply) => {
     const caller = (req as any).user
     if (caller.id === req.params.id) {
-      return reply.code(400).send({ error: 'Impossible de supprimer votre propre compte' })
+      return reply.code(400).send({ code: 'CANNOT_DELETE_SELF' })
     }
     try {
       await prisma.user.delete({ where: { id: req.params.id } })
       req.log.info({ id: req.params.id }, 'Utilisateur supprimé par admin')
       return { success: true }
     } catch {
-      return reply.code(404).send({ error: 'Utilisateur introuvable' })
+      return reply.code(404).send({ code: 'USER_NOT_FOUND' })
     }
   })
 }

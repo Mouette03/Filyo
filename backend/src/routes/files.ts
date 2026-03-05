@@ -108,7 +108,7 @@ export async function fileRoutes(app: FastifyInstance) {
       where: { id: req.params.id, userId: req.user.id },
       include: { shares: true }
     })
-    if (!file) return reply.code(404).send({ error: 'Fichier introuvable' })
+    if (!file) return reply.code(404).send({ code: 'FILE_NOT_FOUND' })
     return { ...file, size: file.size.toString() }
   })
 
@@ -119,7 +119,7 @@ export async function fileRoutes(app: FastifyInstance) {
         ? { id: req.params.id }
         : { id: req.params.id, userId: req.user.id }
     const file = await prisma.file.findFirst({ where })
-    if (!file) return reply.code(404).send({ error: 'Fichier introuvable ou non autorise' })
+    if (!file) return reply.code(404).send({ code: 'FILE_NOT_FOUND' })
     await fs.remove(file.path).catch(() => {})
     await prisma.file.delete({ where: { id: req.params.id } })
     req.log.info({ fileId: req.params.id, userId: req.user.id }, 'File deleted')
@@ -134,7 +134,7 @@ export async function fileRoutes(app: FastifyInstance) {
       const file = await prisma.file.findFirst({
         where: { id: req.params.id, userId: req.user.id }
       })
-      if (!file) return reply.code(404).send({ error: 'Fichier introuvable' })
+      if (!file) return reply.code(404).send({ code: 'FILE_NOT_FOUND' })
       const expiresAt = req.body.expiresAt ? new Date(req.body.expiresAt) : null
       await prisma.file.update({ where: { id: req.params.id }, data: { expiresAt } })
       await prisma.share.updateMany({ where: { fileId: req.params.id }, data: { expiresAt } })

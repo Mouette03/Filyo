@@ -72,10 +72,10 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
       where: { token: req.params.token }
     })
     if (!request || !request.active) {
-      return reply.code(404).send({ error: 'Lien invalide ou désactivé' })
+      return reply.code(404).send({ code: 'REQUEST_NOT_FOUND' })
     }
     if (request.expiresAt && request.expiresAt < new Date()) {
-      return reply.code(410).send({ error: 'Ce lien de dépôt a expiré' })
+      return reply.code(410).send({ code: 'REQUEST_EXPIRED' })
     }
 
     return {
@@ -96,13 +96,13 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
       include: { _count: { select: { receivedFiles: true } } }
     })
     if (!request || !request.active) {
-      return reply.code(404).send({ error: 'Lien invalide ou désactivé' })
+      return reply.code(404).send({ code: 'REQUEST_NOT_FOUND' })
     }
     if (request.expiresAt && request.expiresAt < new Date()) {
-      return reply.code(410).send({ error: 'Lien expiré' })
+      return reply.code(410).send({ code: 'REQUEST_EXPIRED' })
     }
     if (request.maxFiles && request._count.receivedFiles >= request.maxFiles) {
-      return reply.code(429).send({ error: 'Limite de fichiers atteinte' })
+      return reply.code(429).send({ code: 'REQUEST_LIMIT_REACHED' })
     }
 
     const parts = req.parts()
@@ -135,7 +135,7 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
 
         if (request.maxSizeBytes && BigInt(size) > request.maxSizeBytes) {
           await fs.remove(filePath)
-          return reply.code(413).send({ error: 'Fichier trop volumineux' })
+          return reply.code(413).send({ code: 'FILE_TOO_LARGE' })
         }
 
         savedFiles.push({
@@ -158,7 +158,7 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
       if (!ok) {
         // Supprimer les fichiers temporaires déjà écrits
         await Promise.all(savedFiles.map((f: any) => fs.remove(f.path).catch(() => {})))
-        return reply.code(401).send({ error: 'Mot de passe incorrect' })
+        return reply.code(401).send({ code: 'WRONG_PASSWORD' })
       }
     }
 
@@ -182,7 +182,7 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
         ? { id: req.params.id }
         : { id: req.params.id, userId: req.user.id }
     const request = await prisma.uploadRequest.findFirst({ where })
-    if (!request) return reply.code(403).send({ error: 'Non autorise' })
+    if (!request) return reply.code(403).send({ code: 'FORBIDDEN' })
 
     const files = await prisma.receivedFile.findMany({
       where: { uploadRequestId: req.params.id },
@@ -201,15 +201,15 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
           ? { id: req.params.id }
           : { id: req.params.id, userId: req.user.id }
       const request = await prisma.uploadRequest.findFirst({ where })
-      if (!request) return reply.code(403).send({ error: 'Non autorise' })
+      if (!request) return reply.code(403).send({ code: 'FORBIDDEN' })
 
       const file = await prisma.receivedFile.findFirst({
         where: { id: req.params.fileId, uploadRequestId: req.params.id }
       })
-      if (!file) return reply.code(404).send({ error: 'Fichier introuvable' })
+      if (!file) return reply.code(404).send({ code: 'FILE_NOT_FOUND' })
 
       const fileExists = await fs.pathExists(file.path)
-      if (!fileExists) return reply.code(404).send({ error: 'Fichier manquant sur le serveur' })
+      if (!fileExists) return reply.code(404).send({ code: 'FILE_MISSING' })
 
       const stream = fs.createReadStream(file.path)
       reply.header('Content-Type', file.mimeType)
@@ -229,7 +229,7 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
         ? { id: req.params.id }
         : { id: req.params.id, userId: req.user.id }
     const request = await prisma.uploadRequest.findFirst({ where })
-    if (!request) return reply.code(403).send({ error: 'Non autorise' })
+    if (!request) return reply.code(403).send({ code: 'FORBIDDEN' })
     const updated = await prisma.uploadRequest.update({
       where: { id: req.params.id },
       data: { active: !request.active }
@@ -244,7 +244,7 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
         ? { id: req.params.id }
         : { id: req.params.id, userId: req.user.id }
     const request = await prisma.uploadRequest.findFirst({ where })
-    if (!request) return reply.code(403).send({ error: 'Non autorise' })
+    if (!request) return reply.code(403).send({ code: 'FORBIDDEN' })
 
     const files = await prisma.receivedFile.findMany({ where: { uploadRequestId: request.id } })
     for (const f of files) {

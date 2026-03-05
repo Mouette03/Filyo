@@ -11,13 +11,13 @@ export async function shareRoutes(app: FastifyInstance) {
       where: { token: req.params.token },
       include: { file: true }
     })
-    if (!share) return reply.code(404).send({ error: 'Lien invalide' })
+    if (!share) return reply.code(404).send({ code: 'SHARE_NOT_FOUND' })
 
     if (share.expiresAt && share.expiresAt < new Date()) {
-      return reply.code(410).send({ error: 'Ce lien a expiré' })
+      return reply.code(410).send({ code: 'SHARE_EXPIRED' })
     }
     if (share.maxDownloads && share.downloads >= share.maxDownloads) {
-      return reply.code(410).send({ error: 'Limite de téléchargements atteinte' })
+      return reply.code(410).send({ code: 'SHARE_LIMIT_REACHED' })
     }
 
     return {
@@ -42,22 +42,22 @@ export async function shareRoutes(app: FastifyInstance) {
       where: { token: req.params.token },
       include: { file: true }
     })
-    if (!share) return reply.code(404).send({ error: 'Lien invalide' })
+    if (!share) return reply.code(404).send({ code: 'SHARE_NOT_FOUND' })
 
     if (share.expiresAt && share.expiresAt < new Date()) {
-      return reply.code(410).send({ error: 'Ce lien a expiré' })
+      return reply.code(410).send({ code: 'SHARE_EXPIRED' })
     }
     if (share.maxDownloads && share.downloads >= share.maxDownloads) {
-      return reply.code(410).send({ error: 'Limite de téléchargements atteinte' })
+      return reply.code(410).send({ code: 'SHARE_LIMIT_REACHED' })
     }
 
     if (share.password) {
       const ok = await bcrypt.compare(req.body?.password || '', share.password)
-      if (!ok) return reply.code(401).send({ error: 'Mot de passe incorrect' })
+      if (!ok) return reply.code(401).send({ code: 'WRONG_PASSWORD' })
     }
 
     const fileExists = await fs.pathExists(share.file.path)
-    if (!fileExists) return reply.code(404).send({ error: 'Fichier manquant sur le serveur' })
+    if (!fileExists) return reply.code(404).send({ code: 'FILE_MISSING' })
 
     await prisma.share.update({
       where: { id: share.id },

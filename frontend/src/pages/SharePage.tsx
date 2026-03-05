@@ -37,9 +37,17 @@ export default function SharePage() {
         if (r.data.hasPassword) setShowPassword(true)
       })
       .catch(err => {
-        const msg = err.response?.data?.error || t('share.invalid')
-        setError(msg)
-        setStatus(err.response?.status === 410 ? 'expired' : 'error')
+        const code = err.response?.data?.code
+        if (code === 'SHARE_EXPIRED') {
+          setError(t('share.expiredDesc'))
+          setStatus('expired')
+        } else if (code === 'SHARE_LIMIT_REACHED') {
+          setError(t('share.limitReachedDesc'))
+          setStatus('expired')
+        } else {
+          setError(t('share.invalidDesc'))
+          setStatus('error')
+        }
       })
   }, [token])
 
@@ -55,6 +63,9 @@ export default function SharePage() {
       if (err.response?.status === 401) {
         toast.error(t('toast.passwordWrong'))
         setStatus('ready')
+      } else if (err.response?.data?.code === 'FILE_MISSING') {
+        toast.error(t('error.fileMissing'))
+        setStatus('error')
       } else {
         toast.error(t('common.error'))
         setStatus('ready')

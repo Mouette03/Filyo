@@ -396,4 +396,23 @@ export const fr = {
   'toast.emailFieldRequired': "L'adresse email est obligatoire",
   'toast.messageRequired': 'Le message est obligatoire',
   'toast.sendError': "Erreur lors de l'envoi",
+
+  // ── Erreurs serveur (codes machine) ──────────────────────────
+  'error.invalidCredentials': 'Identifiants incorrects',
+  'error.registrationDisabled': 'Les inscriptions sont désactivées',
+  'error.emailTaken': 'Cet email est déjà utilisé',
+  'error.wrongPassword': 'Mot de passe actuel incorrect',
+  'error.invalidFormat': 'Format non supporté (png, jpg, webp, gif)',
+  'error.cleanupExceedsMax': 'La valeur doit être entre 0 et {{max}} jours',
+  'error.fileMissing': 'Le fichier est introuvable sur le serveur',
+  'error.fileTooLarge': 'Ce fichier dépasse la taille autorisée',
+  'error.userNotFound': 'Utilisateur introuvable',
+  'error.forbidden': 'Accès non autorisé',
+
+  'share.expiredDesc': 'Ce lien de partage a expiré.',
+  'share.limitReachedDesc': 'La limite de téléchargements a été atteinte.',
+  'share.invalidDesc': "Ce lien n'existe pas ou a été supprimé.",
+  'request.expiredDesc': 'Ce lien de dépôt a expiré.',
+  'request.limitReachedDesc': 'La limite de fichiers a été atteinte.',
+  'request.invalidDesc': "Ce lien n'existe pas ou a été désactivé.",
 }

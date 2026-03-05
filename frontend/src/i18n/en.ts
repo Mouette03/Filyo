@@ -396,4 +396,23 @@ export const en = {
   'toast.emailFieldRequired': 'Email address is required',
   'toast.messageRequired': 'Message is required',
   'toast.sendError': 'Error sending',
+
+  // ── Server error codes ────────────────────────────────────────
+  'error.invalidCredentials': 'Invalid credentials',
+  'error.registrationDisabled': 'Registrations are disabled',
+  'error.emailTaken': 'This email is already in use',
+  'error.wrongPassword': 'Current password is incorrect',
+  'error.invalidFormat': 'Unsupported format (png, jpg, webp, gif)',
+  'error.cleanupExceedsMax': 'Value must be between 0 and {{max}} days',
+  'error.fileMissing': 'The file could not be found on the server',
+  'error.fileTooLarge': 'This file exceeds the allowed size',
+  'error.userNotFound': 'User not found',
+  'error.forbidden': 'Access denied',
+
+  'share.expiredDesc': 'This share link has expired.',
+  'share.limitReachedDesc': 'The download limit has been reached.',
+  'share.invalidDesc': 'This link does not exist or has been deleted.',
+  'request.expiredDesc': 'This upload link has expired.',
+  'request.limitReachedDesc': 'The file limit has been reached.',
+  'request.invalidDesc': 'This link does not exist or has been deactivated.',
 }

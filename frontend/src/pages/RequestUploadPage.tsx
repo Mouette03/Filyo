@@ -51,9 +51,17 @@ export default function RequestUploadPage() {
     getUploadRequestInfo(token)
       .then(r => { setInfo(r.data); setStatus('ready') })
       .catch(err => {
-        const msg = err.response?.data?.error || t('request.invalid')
-        setError(msg)
-        setStatus(err.response?.status === 410 ? 'expired' : 'error')
+        const code = err.response?.data?.code
+        if (code === 'REQUEST_EXPIRED') {
+          setError(t('request.expiredDesc'))
+          setStatus('expired')
+        } else if (code === 'REQUEST_LIMIT_REACHED') {
+          setError(t('request.limitReachedDesc'))
+          setStatus('expired')
+        } else {
+          setError(t('request.invalidDesc'))
+          setStatus('error')
+        }
       })
   }, [token])
 
@@ -96,8 +104,11 @@ export default function RequestUploadPage() {
       setStatus('done')
       toast.success(t('toast.filesDeposited'))
     } catch (err: any) {
-      const msg = err.response?.data?.error || t('toast.sendError')
-      toast.error(msg)
+      const code = err.response?.data?.code
+      if (code === 'WRONG_PASSWORD') toast.error(t('toast.passwordWrong'))
+      else if (code === 'REQUEST_LIMIT_REACHED') toast.error(t('request.limitReachedDesc'))
+      else if (code === 'FILE_TOO_LARGE') toast.error(t('error.fileTooLarge'))
+      else toast.error(t('toast.sendError'))
       setStatus('ready')
     }
   }

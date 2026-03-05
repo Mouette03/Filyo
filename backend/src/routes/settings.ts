@@ -98,7 +98,7 @@ export async function settingsRoutes(app: FastifyInstance) {
     { onRequest: [app.authenticate, app.adminOnly] },
     async (req, reply) => {
       const { allowRegistration } = req.body
-      if (typeof allowRegistration !== 'boolean') return reply.code(400).send({ error: 'Valeur invalide' })
+      if (typeof allowRegistration !== 'boolean') return reply.code(400).send({ code: 'INVALID_VALUE' })
       const s = await prisma.appSettings.upsert({
         where: { id: 'singleton' },
         update: { allowRegistration },
@@ -116,7 +116,7 @@ export async function settingsRoutes(app: FastifyInstance) {
     async (req, reply) => {
       const { cleanupAfterDays } = req.body
       if (cleanupAfterDays !== null && (typeof cleanupAfterDays !== 'number' || cleanupAfterDays < 0)) {
-        return reply.code(400).send({ error: 'Valeur invalide' })
+        return reply.code(400).send({ code: 'INVALID_VALUE' })
       }
       const s = await prisma.appSettings.upsert({
         where: { id: 'singleton' },
@@ -134,7 +134,7 @@ export async function settingsRoutes(app: FastifyInstance) {
     { onRequest: [app.authenticate, app.adminOnly] },
     async (req, reply) => {
       const { appName } = req.body
-      if (!appName?.trim()) return reply.code(400).send({ error: 'Nom invalide' })
+      if (!appName?.trim()) return reply.code(400).send({ code: 'INVALID_NAME' })
       const settings = await prisma.appSettings.upsert({
         where: { id: 'singleton' },
         update: { appName: appName.trim() },
@@ -151,9 +151,9 @@ export async function settingsRoutes(app: FastifyInstance) {
   }>('/uploader-fields', { onRequest: [app.authenticate, app.adminOnly] }, async (req, reply) => {
     const valid = ['hidden', 'optional', 'required']
     const { uploaderNameReq, uploaderEmailReq, uploaderMsgReq } = req.body
-    if (uploaderNameReq && !valid.includes(uploaderNameReq)) return reply.code(400).send({ error: 'Valeur invalide' })
-    if (uploaderEmailReq && !valid.includes(uploaderEmailReq)) return reply.code(400).send({ error: 'Valeur invalide' })
-    if (uploaderMsgReq && !valid.includes(uploaderMsgReq)) return reply.code(400).send({ error: 'Valeur invalide' })
+    if (uploaderNameReq && !valid.includes(uploaderNameReq)) return reply.code(400).send({ code: 'INVALID_VALUE' })
+    if (uploaderEmailReq && !valid.includes(uploaderEmailReq)) return reply.code(400).send({ code: 'INVALID_VALUE' })
+    if (uploaderMsgReq && !valid.includes(uploaderMsgReq)) return reply.code(400).send({ code: 'INVALID_VALUE' })
     const updated = await prisma.appSettings.upsert({
       where: { id: 'singleton' },
       update: { uploaderNameReq, uploaderEmailReq, uploaderMsgReq },
@@ -196,12 +196,12 @@ export async function settingsRoutes(app: FastifyInstance) {
       }
 
       const data = await req.file()
-      if (!data) return reply.code(400).send({ error: 'Aucun fichier reçu' })
+      if (!data) return reply.code(400).send({ code: 'NO_FILE' })
 
       const ext = path.extname(data.filename || '.png')
       const allowed = ['.png', '.jpg', '.jpeg', '.svg', '.webp', '.gif']
       if (!allowed.includes(ext.toLowerCase())) {
-        return reply.code(400).send({ error: 'Format non supporté (png, jpg, svg, webp, gif)' })
+        return reply.code(400).send({ code: 'INVALID_FORMAT' })
       }
 
       const filename = `logo_${nanoid(8)}${ext}`

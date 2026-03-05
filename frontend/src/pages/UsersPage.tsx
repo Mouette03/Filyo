@@ -101,7 +101,9 @@ export default function UsersPage() {
       setNewName(''); setNewEmail(''); setNewPassword(''); setNewConfirmPassword(''); setNewRole('USER')
       toast.success(t('toast.userCreated'))
     } catch (err: any) {
-      toast.error(err.response?.data?.error || t('common.error'))
+      const code = err.response?.data?.code
+      if (code === 'EMAIL_TAKEN') toast.error(t('error.emailTaken'))
+      else toast.error(t('common.error'))
     }
     setCreating(false)
   }
@@ -126,7 +128,9 @@ export default function UsersPage() {
       setUsers(prev => prev.filter(u => u.id !== id))
       toast.success(t('toast.userDeleted'))
     } catch (err: any) {
-      toast.error(err.response?.data?.error || t('common.error'))
+      const code = err.response?.data?.code
+      if (code === 'USER_NOT_FOUND') toast.error(t('error.userNotFound'))
+      else toast.error(t('common.error'))
     }
   }
 

@@ -31,18 +31,18 @@ export async function authRoutes(app: FastifyInstance) {
   // POST /api/auth/login
   app.post('/login', async (req, reply) => {
     const body = loginSchema.safeParse(req.body)
-    if (!body.success) return reply.code(400).send({ error: 'Données invalides' })
+    if (!body.success) return reply.code(400).send({ code: 'INVALID_DATA' })
 
     const user = await prisma.user.findUnique({ where: { email: body.data.email } })
     if (!user || !user.active) {
       req.log.warn({ email: body.data.email }, 'Login attempt failed')
-      return reply.code(401).send({ error: 'Identifiants incorrects' })
+      return reply.code(401).send({ code: 'INVALID_CREDENTIALS' })
     }
 
     const ok = await bcrypt.compare(body.data.password, user.password)
     if (!ok) {
       req.log.warn({ email: body.data.email }, 'Login attempt failed')
-      return reply.code(401).send({ error: 'Identifiants incorrects' })
+      return reply.code(401).send({ code: 'INVALID_CREDENTIALS' })
     }
 
     await prisma.user.update({ where: { id: user.id }, data: { lastLogin: new Date() } })
@@ -69,7 +69,7 @@ export async function authRoutes(app: FastifyInstance) {
   // POST /api/auth/register — premier utilisateur OU admin connecté
   app.post('/register', async (req, reply) => {
     const body = registerSchema.safeParse(req.body)
-    if (!body.success) return reply.code(400).send({ error: 'Données invalides' })
+    if (!body.success) return reply.code(400).send({ code: 'INVALID_DATA' })
 
     const count = await prisma.user.count()
     // Le 1er utilisateur est toujours admin
@@ -87,13 +87,13 @@ export async function authRoutes(app: FastifyInstance) {
       if (!isAdmin) {
         const settings = await prisma.appSettings.findUnique({ where: { id: 'singleton' } })
         if (!settings?.allowRegistration) {
-          return reply.code(403).send({ error: 'Les inscriptions sont désactivées' })
+          return reply.code(403).send({ code: 'REGISTRATION_DISABLED' })
         }
       }
     }
 
     const existing = await prisma.user.findUnique({ where: { email: body.data.email } })
-    if (existing) return reply.code(409).send({ error: 'Cet email est déjà utilisé' })
+    if (existing) return reply.code(409).send({ code: 'EMAIL_TAKEN' })
 
     const hashed = await bcrypt.hash(body.data.password, 12)
     const user = await prisma.user.create({
@@ -114,11 +114,11 @@ export async function authRoutes(app: FastifyInstance) {
       await fs.remove(oldFile).catch(() => {})
     }
     const data = await req.file()
-    if (!data) return reply.code(400).send({ error: 'Aucun fichier reçu' })
+    if (!data) return reply.code(400).send({ code: 'NO_FILE' })
     const ext = path.extname(data.filename || '.jpg').toLowerCase()
     const allowed = ['.png', '.jpg', '.jpeg', '.webp', '.gif']
     if (!allowed.includes(ext)) {
-      return reply.code(400).send({ error: 'Format non supporté (png, jpg, webp, gif)' })
+      return reply.code(400).send({ code: 'INVALID_FORMAT' })
     }
     const filename = `avatar_${req.user.id}_${nanoid(6)}${ext}`
     const filePath = path.join(AVATAR_DIR, filename)
@@ -146,7 +146,7 @@ export async function authRoutes(app: FastifyInstance) {
   // PATCH /api/auth/profile — mettre à jour son nom
   app.patch('/profile', { onRequest: [app.authenticate] }, async (req: any, reply) => {
     const { name } = req.body as { name?: string }
-    if (!name?.trim()) return reply.code(400).send({ error: 'Nom invalide' })
+    if (!name?.trim()) return reply.code(400).send({ code: 'INVALID_NAME' })
     const updated = await prisma.user.update({
       where: { id: req.user.id },
       data: { name: name.trim() },
@@ -160,12 +160,12 @@ export async function authRoutes(app: FastifyInstance) {
   app.post('/change-password', { onRequest: [app.authenticate] }, async (req: any, reply) => {
     const { currentPassword, newPassword } = req.body as any
     if (!currentPassword || !newPassword || newPassword.length < 8) {
-      return reply.code(400).send({ error: 'Données invalides' })
+      return reply.code(400).send({ code: 'INVALID_DATA' })
     }
     const user = await prisma.user.findUnique({ where: { id: req.user.id } })
-    if (!user) return reply.code(404).send({ error: 'Introuvable' })
+    if (!user) return reply.code(404).send({ code: 'NOT_FOUND' })
     const ok = await bcrypt.compare(currentPassword, user.password)
-    if (!ok) return reply.code(400).send({ error: 'Mot de passe actuel incorrect' })
+    if (!ok) return reply.code(400).send({ code: 'WRONG_PASSWORD' })
     const hashed = await bcrypt.hash(newPassword, 12)
     await prisma.user.update({ where: { id: req.user.id }, data: { password: hashed } })
     req.log.info({ userId: req.user.id }, 'Password changed')
@@ -181,10 +181,10 @@ export async function authRoutes(app: FastifyInstance) {
       const settings = await prisma.appSettings.findUnique({ where: { id: 'singleton' } })
       const adminMax = settings?.cleanupAfterDays ?? null
       if (adminMax == null) {
-        return reply.code(403).send({ code: 'CLEANUP_DISABLED', error: 'Le nettoyage automatique est désactivé par l\'administrateur' })
+        return reply.code(403).send({ code: 'CLEANUP_DISABLED' })
       }
       if (cleanupAfterDays < 0 || cleanupAfterDays > adminMax) {
-        return reply.code(400).send({ code: 'CLEANUP_EXCEEDS_MAX', error: `La valeur doit être entre 0 et ${adminMax} jours` })
+        return reply.code(400).send({ code: 'CLEANUP_EXCEEDS_MAX', max: adminMax })
       }
     }
 
