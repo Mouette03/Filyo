@@ -246,13 +246,16 @@ export async function shareRoutes(app: FastifyInstance) {
       : `Bonjour,\n\nVoici ${shares.length === 1 ? 'votre lien de partage' : 'vos liens de partage'}\u00a0:\n\n${filesText}\n\nEnvoyé via ${appName}.`
 
     const smtpPort = settings.smtpPort ?? 587
-    // Port 465 = SSL/TLS direct ; port 587/25 = STARTTLS (secure doit être false)
-    const smtpSecure = smtpPort === 465 ? true : false
+    // Port 465 = SSL/TLS direct (secure:true) ; 587/25 = STARTTLS négocié automatiquement
+    const smtpSecure = smtpPort === 465
+    req.log.info({ host: settings.smtpHost, port: smtpPort, secure: smtpSecure }, 'SMTP: tentative envoi')
     const transporter = nodemailer.createTransport({
       host: settings.smtpHost,
       port: smtpPort,
       secure: smtpSecure,
-      requireTLS: smtpPort === 587, // force STARTTLS sur 587
+      connectionTimeout: 10_000,
+      greetingTimeout: 10_000,
+      socketTimeout: 15_000,
       auth: settings.smtpUser ? { user: settings.smtpUser, pass: settings.smtpPass ?? '' } : undefined
     })
 
