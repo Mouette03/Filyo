@@ -238,10 +238,8 @@ export const fr = {
   'settings.smtpUser': 'Identifiant',
   'settings.smtpUserPlaceholder': 'votre@email.fr',
   'settings.smtpPassword': 'Mot de passe',
-  'settings.smtpSecure': 'Connexion sécurisée (TLS)',
   'settings.smtpTest': 'Tester',
   'settings.smtpSave': 'Enregistrer',
-  'settings.smtpSecureHint': 'Port 465 : SSL/TLS direct (activé automatiquement). Port 587 : STARTTLS (activé automatiquement). Ce toggle est ignoré pour l’envoi.',
   'settings.smtpTestHint': "Le test vérifie uniquement l'accessibilité réseau du serveur SMTP. La fonctionnalité d'envoi d'emails sera disponible dans une prochaine version.",
 
   // ── Page de téléchargement (lien public) ────────────────────
@@ -317,7 +315,7 @@ export const fr = {
   'toast.cannotDeleteSelf': 'Impossible de supprimer votre propre compte',
   'toast.filesDeposited': 'Fichiers déposés avec succès !',
   'toast.depositLinkCreated': 'Lien de dépôt créé !',
-  'toast.linkEmailSent': 'Lien${suffix} envoyé${suffix} à {{email}}',
+  'toast.linkEmailSent': 'Lien(s) envoyé(s) à {{email}}',
   'toast.downloadStarted': 'Téléchargement démarré !',
   'toast.passwordWrong': 'Mot de passe incorrect',
   'toast.imageRequired': 'Fichier image requis',

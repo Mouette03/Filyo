@@ -33,7 +33,6 @@ export default function SettingsPage() {
   const [smtpFrom, setSmtpFrom] = useState('')
   const [smtpUser, setSmtpUser] = useState('')
   const [smtpPass, setSmtpPass] = useState('')
-  const [smtpSecure, setSmtpSecure] = useState(true)
   const [showSmtpPass, setShowSmtpPass] = useState(false)
   const [savingSmtp, setSavingSmtp] = useState(false)
   const [testingSmtp, setTestingSmtp] = useState(false)
@@ -70,7 +69,6 @@ export default function SettingsPage() {
       setSmtpFrom(res.data.smtpFrom || '')
       setSmtpUser(res.data.smtpUser || '')
       setSmtpPass(res.data.smtpPass || '')
-      setSmtpSecure(res.data.smtpSecure ?? true)
     }).catch(() => {})
   }, [])
 
@@ -134,7 +132,6 @@ export default function SettingsPage() {
         smtpFrom: smtpFrom.trim() || undefined,
         smtpUser: smtpUser.trim() || undefined,
         smtpPass: smtpPass || undefined,
-        smtpSecure
       })
       toast.success(t('toast.smtpSaved'))
     } catch { toast.error(t('toast.saveError')) }
@@ -159,7 +156,6 @@ export default function SettingsPage() {
         smtpFrom,
         smtpUser,
         smtpPass,
-        smtpSecure,
       })
       const code = res.data.code
       if (code === 'SMTP_OK') {
@@ -576,20 +572,6 @@ export default function SettingsPage() {
                 {showSmtpPass ? <EyeOff size={15} /> : <Eye size={15} />}
               </button>
             </div>
-          </div>
-        </div>
-
-        {/* Option TLS */}
-        <div className="flex items-center justify-between py-3 px-4 bg-white/3 rounded-xl mb-5">
-          <div>
-            <p className="text-sm font-medium">{t('settings.smtpSecure')}</p>
-            <p className="text-xs text-white/40 mt-0.5">{t('settings.smtpSecureHint')}</p>
-          </div>
-          <div
-            onClick={() => setSmtpSecure(!smtpSecure)}
-            className={`w-11 h-6 rounded-full cursor-pointer transition-colors relative flex-shrink-0 ${smtpSecure ? 'bg-brand-500' : 'bg-white/20'}`}
-          >
-            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${smtpSecure ? 'translate-x-6' : 'translate-x-1'}`} />
           </div>
         </div>
 

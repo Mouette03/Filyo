@@ -238,10 +238,8 @@ export const en = {
   'settings.smtpUser': 'Username',
   'settings.smtpUserPlaceholder': 'your@email.com',
   'settings.smtpPassword': 'Password',
-  'settings.smtpSecure': 'Secure connection (TLS)',
   'settings.smtpTest': 'Test',
   'settings.smtpSave': 'Save',
-  'settings.smtpSecureHint': 'Port 465: direct SSL/TLS (auto-enabled). Port 587: STARTTLS (auto-enabled). This toggle is ignored for sending.',
   'settings.smtpTestHint': 'The test only verifies network accessibility of the SMTP server. Email sending functionality will be available in a future version.',
 
   // ── Share page (public download) ─────────────────────────────

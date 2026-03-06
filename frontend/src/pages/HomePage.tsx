@@ -274,7 +274,7 @@ export default function HomePage() {
                 type="password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                placeholder="Aucun"
+                placeholder={t('common.none')}
                 className="input text-sm py-2"
               />
             </div>
@@ -303,7 +303,7 @@ export default function HomePage() {
                 min="1"
                 value={maxDownloads}
                 onChange={e => setMaxDownloads(e.target.value)}
-                placeholder="Illimité"
+                placeholder={t('common.unlimited')}
                 className="input text-sm py-2"
               />
             </div>
