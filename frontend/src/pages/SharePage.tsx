@@ -94,12 +94,12 @@ export default function SharePage() {
   }
 
   // Téléchargement d'un fichier dans un lot
-  const handleDownloadBatch = async (batchToken: string, filename: string) => {
-    setDownloading(p => ({ ...p, [batchToken]: true }))
+  const handleDownloadBatch = async (shareToken: string, filename: string) => {
+    setDownloading(p => ({ ...p, [shareToken]: true }))
     try {
-      const res = await downloadShare(batchToken, password || undefined)
+      const res = await downloadShare(shareToken, password || undefined)
       downloadBlob(res.data, filename)
-      setDownloaded(p => ({ ...p, [batchToken]: true }))
+      setDownloaded(p => ({ ...p, [shareToken]: true }))
       toast.success(t('toast.downloadStarted'))
     } catch (err: any) {
       if (err.response?.status === 401) {
@@ -110,10 +110,10 @@ export default function SharePage() {
         toast.error(t('common.error'))
       }
     }
-    setDownloading(p => ({ ...p, [batchToken]: false }))
+    setDownloading(p => ({ ...p, [shareToken]: false }))
   }
 
-  const isBatch = info?.batchFiles && info.batchFiles.length > 1
+  const isBatch = info?.batchFiles && info.batchFiles.filter(bf => bf.shareToken).length > 1
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12"
@@ -235,7 +235,7 @@ export default function SharePage() {
 
                 {/* Liste des fichiers */}
                 <div className="space-y-2">
-                  {info.batchFiles!.map((bf, idx) => (
+                  {info.batchFiles!.filter(bf => bf.shareToken).map((bf, idx) => (
                     <div key={bf.shareToken}
                       className="flex items-center gap-3 bg-white/5 hover:bg-white/8 rounded-xl px-3 py-2.5 transition-colors">
                       <span className="text-xl flex-shrink-0">{getFileIcon(bf.mimeType)}</span>

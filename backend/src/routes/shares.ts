@@ -25,19 +25,29 @@ export async function shareRoutes(app: FastifyInstance) {
     if (share.file.batchToken) {
       const allInBatch = await prisma.file.findMany({
         where: { batchToken: share.file.batchToken },
-        include: { shares: true },
+        include: {
+          shares: {
+            orderBy: { createdAt: 'asc' },
+            take: 1
+          }
+        },
         orderBy: { uploadedAt: 'asc' }
       })
-      batchFiles = allInBatch.map((f: any) => {
-        const ext = f.originalName.includes('.') ? f.originalName.split('.').pop() : ''
-        return {
-          shareToken: f.shares[0]?.token,
-          filename: f.hideFilenames ? (ext ? `fichier.${ext}` : 'fichier') : f.originalName,
-          mimeType: f.mimeType,
-          size: f.size.toString(),
-          fileId: f.id
-        }
-      })
+      batchFiles = allInBatch
+        .filter((f: any) => f.shares.length > 0 && f.shares[0]?.token)
+        .map((f: any) => {
+          const ext = f.originalName.includes('.') ? f.originalName.split('.').pop() : ''
+          const sh = f.shares[0]
+          return {
+            shareToken: sh.token,
+            fileId: f.id,
+            filename: f.hideFilenames ? (ext ? `fichier.${ext}` : 'fichier') : f.originalName,
+            mimeType: f.mimeType,
+            size: f.size.toString(),
+            downloads: sh.downloads,
+            maxDownloads: sh.maxDownloads
+          }
+        })
     }
 
     const ext = share.file.originalName.includes('.') ? share.file.originalName.split('.').pop() : ''
@@ -128,11 +138,31 @@ export async function shareRoutes(app: FastifyInstance) {
     const baseUrl = (settings.siteUrl || `http://localhost:${process.env.PORT || 3000}`).replace(/\/$/, '')
 
     // Récupérer les infos des partages
-    const shares = await prisma.share.findMany({
+    let shares = await prisma.share.findMany({
       where: { token: { in: tokens } },
       include: { file: true }
     })
     if (shares.length === 0) return reply.code(404).send({ code: 'SHARES_NOT_FOUND' })
+
+    // Si 1 seul token envoyé mais que son fichier appartient à un lot, étendre au lot complet
+    if (shares.length === 1 && shares[0].file.batchToken) {
+      const batchFiles = await prisma.file.findMany({
+        where: { batchToken: shares[0].file.batchToken },
+        include: { shares: { orderBy: { createdAt: 'asc' }, take: 1 } },
+        orderBy: { uploadedAt: 'asc' }
+      })
+      // Récupérer tous les partages du lot
+      const batchShareTokens = batchFiles
+        .filter((f: any) => f.shares.length > 0)
+        .map((f: any) => f.shares[0].token)
+      if (batchShareTokens.length > 1) {
+        shares = await prisma.share.findMany({
+          where: { token: { in: batchShareTokens } },
+          include: { file: true },
+          orderBy: { file: { uploadedAt: 'asc' } }
+        })
+      }
+    }
 
     // Détecter si tous les fichiers appartiennent au même lot → 1 seul lien
     const batchTokens = new Set(shares.map((s: any) => s.file.batchToken).filter(Boolean))
