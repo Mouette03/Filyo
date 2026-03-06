@@ -199,12 +199,39 @@ export default function DashboardPage() {
     setExpiringNowId(null)
   }
 
+  const handleExpireNowBatch = async (batchFiles: FileItem[]) => {
+    const key = batchFiles[0]?.batchToken || batchFiles[0]?.id
+    setExpiringNowId(key)
+    try {
+      const expiresAt = new Date().toISOString()
+      await Promise.all(batchFiles.map(f => updateFileExpiry(f.id, expiresAt)))
+      const ids = new Set(batchFiles.map(f => f.id))
+      setFiles(prev => prev.map(f => ids.has(f.id) ? { ...f, expiresAt } : f))
+      toast.success(t('toast.expiredNow'))
+    } catch { toast.error(t('toast.deleteError')) }
+    setExpiringNowId(null)
+  }
+
   const handleSaveExpiry = async (fileId: string, clear = false) => {
     setSavingExpiryId(fileId)
     try {
       const expiresAt = (!clear && expiryValue) ? new Date(expiryValue).toISOString() : null
       await updateFileExpiry(fileId, expiresAt)
       setFiles(prev => prev.map(f => f.id === fileId ? { ...f, expiresAt } : f))
+      setExpiryEditId(null)
+      toast.success(expiresAt ? t('toast.expiryUpdated') : t('toast.expiryRemoved'))
+    } catch { toast.error(t('toast.updateError')) }
+    setSavingExpiryId(null)
+  }
+
+  const handleSaveBatchExpiry = async (batchFiles: FileItem[], clear = false) => {
+    const key = batchFiles[0]?.batchToken || batchFiles[0]?.id
+    setSavingExpiryId(key)
+    try {
+      const expiresAt = (!clear && expiryValue) ? new Date(expiryValue).toISOString() : null
+      await Promise.all(batchFiles.map(f => updateFileExpiry(f.id, expiresAt)))
+      const ids = new Set(batchFiles.map(f => f.id))
+      setFiles(prev => prev.map(f => ids.has(f.id) ? { ...f, expiresAt } : f))
       setExpiryEditId(null)
       toast.success(expiresAt ? t('toast.expiryUpdated') : t('toast.expiryRemoved'))
     } catch { toast.error(t('toast.updateError')) }
@@ -380,6 +407,24 @@ export default function DashboardPage() {
                           </button>
                         </>
                       )}
+                      <button
+                        onClick={() => {
+                          setExpiryEditId(expiryEditId === batchToken ? null : batchToken)
+                          setExpiryValue(firstFile.expiresAt ? firstFile.expiresAt.substring(0, 10) : '')
+                        }}
+                        className={`btn-icon ${expiryEditId === batchToken ? '!bg-brand-500/20 !text-brand-400 !border-brand-500/30' : ''}`}
+                        title={t('dash.expiryEdit')}>
+                        <Clock size={13} />
+                      </button>
+                      <button
+                        onClick={() => handleExpireNowBatch(bf)}
+                        disabled={expiringNowId === batchToken}
+                        className="btn-icon"
+                        title={t('dash.expiresNow')}>
+                        {expiringNowId === batchToken
+                          ? <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" />
+                          : <TimerOff size={13} />}
+                      </button>
                       <button onClick={() => handleDeleteBatch(bf)} className="btn-icon-danger" title={t('common.delete')}>
                         <Trash2 size={13} />
                       </button>
@@ -421,7 +466,52 @@ export default function DashboardPage() {
                         </button>
                       </>
                     )}
+                    <button
+                      onClick={() => {
+                        setExpiryEditId(expiryEditId === batchToken ? null : batchToken)
+                        setExpiryValue(firstFile.expiresAt ? firstFile.expiresAt.substring(0, 10) : '')
+                      }}
+                      className={`btn-icon flex-shrink-0 ${expiryEditId === batchToken ? '!bg-brand-500/20 !text-brand-400 !border-brand-500/30' : ''}`}>
+                      <Clock size={13} />
+                    </button>
+                    <button
+                      onClick={() => handleExpireNowBatch(bf)}
+                      disabled={expiringNowId === batchToken}
+                      className="btn-icon flex-shrink-0">
+                      {expiringNowId === batchToken
+                        ? <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" />
+                        : <TimerOff size={13} />}
+                    </button>
                   </div>
+                  {/* Expiration inline lot */}
+                  {expiryEditId === batchToken && (
+                    <div className="mt-3 pt-3 border-t border-white/10 flex flex-wrap gap-2 items-center">
+                      <Clock size={13} className="text-white/30 flex-shrink-0" />
+                      <input
+                        type="date"
+                        value={expiryValue}
+                        onChange={e => setExpiryValue(e.target.value)}
+                        min={new Date().toISOString().substring(0, 10)}
+                        className="input text-sm py-1.5 flex-1 min-w-36"
+                      />
+                      <button
+                        onClick={() => handleSaveBatchExpiry(bf)}
+                        disabled={savingExpiryId === batchToken || !expiryValue}
+                        className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1.5 disabled:opacity-40">
+                        {savingExpiryId === batchToken
+                          ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          : <Check size={12} />}
+                        {t('common.save')}
+                      </button>
+                      <button
+                        onClick={() => handleSaveBatchExpiry(bf, true)}
+                        disabled={savingExpiryId === batchToken}
+                        className="btn-secondary text-xs px-2.5 py-1.5 disabled:opacity-40">
+                        {t('dash.noExpiry')}
+                      </button>
+                      <button onClick={() => setExpiryEditId(null)} className="btn-secondary text-xs px-2.5 py-1.5">✕</button>
+                    </div>
+                  )}
                   {/* Email inline lot */}
                   {emailingFileId === batchToken && firstShare && (
                     <div className="mt-3 pt-3 border-t border-white/10 flex gap-2 items-center">

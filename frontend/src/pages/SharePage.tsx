@@ -48,6 +48,7 @@ export default function SharePage() {
   // Pour le mode batch : état de téléchargement par shareToken
   const [downloading, setDownloading] = useState<Record<string, boolean>>({})
   const [downloaded, setDownloaded] = useState<Record<string, boolean>>({})
+  const [downloadingAll, setDownloadingAll] = useState(false)
 
   useEffect(() => {
     if (!token) return
@@ -111,6 +112,34 @@ export default function SharePage() {
       }
     }
     setDownloading(p => ({ ...p, [shareToken]: false }))
+  }
+
+  // Téléchargement de tous les fichiers du lot séquentiellement
+  const handleDownloadAll = async () => {
+    if (!info?.batchFiles) return
+    const files = info.batchFiles.filter(bf => bf.shareToken)
+    setDownloadingAll(true)
+    for (let i = 0; i < files.length; i++) {
+      const bf = files[i]
+      if (downloaded[bf.shareToken]) continue
+      setDownloading(p => ({ ...p, [bf.shareToken]: true }))
+      try {
+        const res = await downloadShare(bf.shareToken, password || undefined)
+        downloadBlob(res.data, info.hideFilenames ? `fichier-${i + 1}` : bf.filename)
+        setDownloaded(p => ({ ...p, [bf.shareToken]: true }))
+      } catch (err: any) {
+        if (err.response?.status === 401) {
+          toast.error(t('toast.passwordWrong'))
+          setDownloading(p => ({ ...p, [bf.shareToken]: false }))
+          setDownloadingAll(false)
+          return
+        }
+        toast.error(t('common.error'))
+      }
+      setDownloading(p => ({ ...p, [bf.shareToken]: false }))
+    }
+    setDownloadingAll(false)
+    toast.success(t('toast.downloadStarted'))
   }
 
   const isBatch = info?.batchFiles && info.batchFiles.filter(bf => bf.shareToken).length > 1
@@ -231,6 +260,18 @@ export default function SharePage() {
                       autoFocus
                     />
                   </div>
+                )}
+
+                {/* Bouton Tout télécharger */}
+                {info.batchFiles!.filter(bf => bf.shareToken && !downloaded[bf.shareToken]).length > 0 && (
+                  <button
+                    onClick={handleDownloadAll}
+                    disabled={downloadingAll}
+                    className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-60">
+                    {downloadingAll
+                      ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> {t('share.downloading')}</>
+                      : <><Download size={16} /> {t('share.batchDownloadAll')}</>}
+                  </button>
                 )}
 
                 {/* Liste des fichiers */}
