@@ -52,7 +52,8 @@ COPY --from=frontend-builder /app/frontend/dist          ./public
 
 # Script d'entrypoint (corrige les permissions du volume au démarrage)
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN chmod +x /entrypoint.sh \
+    && chown -R node:node /app
 
 ENV NODE_ENV=production
 ENV PORT=3001

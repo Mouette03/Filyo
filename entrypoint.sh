@@ -1,9 +1,10 @@
 #!/bin/sh
 set -e
 
-# Fix permissions on the data volume and app directory at runtime (runs as root before dropping to node)
+# Fix permissions on the data volume at runtime (runs as root before dropping to node)
+# /app is built into the image with correct ownership — no need to rechown it on every start
 mkdir -p /data/uploads
-chown -R node:node /data /app
+chown -R node:node /data
 
 # Run prisma db push as node user
 # Exit code 139 = segfault of the schema engine binary on ARM64 after a successful push — safe to ignore
