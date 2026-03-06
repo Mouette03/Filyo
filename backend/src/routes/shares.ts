@@ -1,8 +1,16 @@
 import { FastifyInstance } from 'fastify'
 import bcrypt from 'bcryptjs'
 import fs from 'fs-extra'
-import nodemailer from 'nodemailer'
 import { prisma } from '../lib/prisma'
+import { getAppSettings } from '../lib/appSettings'
+import { createSmtpTransport } from '../lib/smtp'
+
+/** Retourne le nom d'affichage d'un fichier en tenant compte de hideFilenames. */
+function getDisplayName(originalName: string, hideFilenames: boolean): string {
+  if (!hideFilenames) return originalName
+  const ext = originalName.includes('.') ? originalName.split('.').pop() : ''
+  return ext ? `fichier.${ext}` : 'fichier'
+}
 
 export async function shareRoutes(app: FastifyInstance) {
   // GET /api/shares/:token/info - Info publique (sans téléchargement)
@@ -36,12 +44,11 @@ export async function shareRoutes(app: FastifyInstance) {
       batchFiles = allInBatch
         .filter((f: any) => f.shares.length > 0 && f.shares[0]?.token)
         .map((f: any) => {
-          const ext = f.originalName.includes('.') ? f.originalName.split('.').pop() : ''
           const sh = f.shares[0]
           return {
             shareToken: sh.token,
             fileId: f.id,
-            filename: f.hideFilenames ? (ext ? `fichier.${ext}` : 'fichier') : f.originalName,
+            filename: getDisplayName(f.originalName, f.hideFilenames),
             mimeType: f.mimeType,
             size: f.size.toString(),
             downloads: sh.downloads,
@@ -50,10 +57,7 @@ export async function shareRoutes(app: FastifyInstance) {
         })
     }
 
-    const ext = share.file.originalName.includes('.') ? share.file.originalName.split('.').pop() : ''
-    const displayName = share.file.hideFilenames
-      ? (ext ? `fichier.${ext}` : 'fichier')
-      : share.file.originalName
+    const displayName = getDisplayName(share.file.originalName, share.file.hideFilenames)
 
     return {
       token: share.token,
@@ -132,8 +136,8 @@ export async function shareRoutes(app: FastifyInstance) {
       return reply.code(400).send({ code: 'NO_TOKENS' })
     }
 
-    const settings = await prisma.appSettings.findUnique({ where: { id: 'singleton' } })
-    if (!settings?.smtpHost || !settings?.smtpFrom) {
+    const settings = await getAppSettings()
+    if (!settings.smtpHost || !settings.smtpFrom) {
       return reply.code(503).send({ code: 'SMTP_NOT_CONFIGURED' })
     }
 
@@ -179,10 +183,7 @@ export async function shareRoutes(app: FastifyInstance) {
       // Un seul lien pour tout le lot, affiche la liste des noms dans l'email
       const batchUrl = `${baseUrl}/s/${shares[0].token}`
       const fileListHtml = shares.map((s: any) => {
-        const displayName = s.file.hideFilenames
-          ? (s.file.originalName.includes('.') ? `fichier.${s.file.originalName.split('.').pop()}` : 'fichier')
-          : s.file.originalName
-        return `<li style="color:#ccc;font-size:13px;padding:2px 0">${displayName}</li>`
+        return `<li style="color:#ccc;font-size:13px;padding:2px 0">${getDisplayName(s.file.originalName, s.file.hideFilenames)}</li>`
       }).join('')
       const fileListText = shares.map((s: any) => {
         return s.file.hideFilenames ? '- [nom masqué]' : `- ${s.file.originalName}`
@@ -206,9 +207,7 @@ export async function shareRoutes(app: FastifyInstance) {
     } else {
       filesHtml = shares.map((s: any) => {
         const url = `${baseUrl}/s/${s.token}`
-        const displayName = s.file.hideFilenames
-          ? (s.file.originalName.includes('.') ? `fichier.${s.file.originalName.split('.').pop()}` : 'fichier')
-          : s.file.originalName
+        const displayName = getDisplayName(s.file.originalName, s.file.hideFilenames)
         const expiry = s.expiresAt
           ? (isEn
               ? `Expires ${new Date(s.expiresAt).toLocaleDateString('en-GB')}`
@@ -247,19 +246,8 @@ export async function shareRoutes(app: FastifyInstance) {
       ? `Hello,\n\nHere ${shares.length === 1 ? 'is your share link' : 'are your share links'}:\n\n${filesText}\n\nSent via ${appName}.`
       : `Bonjour,\n\nVoici ${shares.length === 1 ? 'votre lien de partage' : 'vos liens de partage'}\u00a0:\n\n${filesText}\n\nEnvoyé via ${appName}.`
 
-    const smtpPort = settings.smtpPort ?? 587
-    // Port 465 = SSL/TLS direct (secure:true) ; 587/25 = STARTTLS négocié automatiquement
-    const smtpSecure = smtpPort === 465
-    req.log.info({ host: settings.smtpHost, port: smtpPort, secure: smtpSecure }, 'SMTP: tentative envoi')
-    const transporter = nodemailer.createTransport({
-      host: settings.smtpHost,
-      port: smtpPort,
-      secure: smtpSecure,
-      connectionTimeout: 10_000,
-      greetingTimeout: 10_000,
-      socketTimeout: 15_000,
-      auth: settings.smtpUser ? { user: settings.smtpUser, pass: settings.smtpPass ?? '' } : undefined
-    })
+    req.log.info({ host: settings.smtpHost, port: settings.smtpPort ?? 587, secure: (settings.smtpPort ?? 587) === 465 }, 'SMTP: tentative envoi')
+    const transporter = createSmtpTransport(settings)
 
     try {
       await transporter.sendMail({

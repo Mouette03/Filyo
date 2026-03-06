@@ -14,6 +14,7 @@ import { authRoutes } from './routes/auth'
 import { userRoutes } from './routes/users'
 import { settingsRoutes } from './routes/settings'
 import { runScheduledCleanup } from './lib/cleanup'
+import { UPLOAD_DIR } from './lib/config'
 
 const app = Fastify({
   logger: {
@@ -62,7 +63,6 @@ async function bootstrap() {
   })
 
   // Servir les fichiers statiques uploadés (logos…)
-  const UPLOAD_DIR = process.env.UPLOAD_DIR || '/data/uploads'
   await app.register(staticFiles, { root: UPLOAD_DIR, prefix: '/uploads/' })
 
   // ── Routes ──

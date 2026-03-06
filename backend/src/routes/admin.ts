@@ -4,8 +4,7 @@ import fs from 'fs-extra'
 import path from 'path'
 import { execSync } from 'child_process'
 import { runForceCleanup } from '../lib/cleanup'
-
-const UPLOAD_DIR = process.env.UPLOAD_DIR || '/data/uploads'
+import { UPLOAD_DIR } from '../lib/config'
 
 function getDiskSpace(dir: string): { total: string; used: string; free: string; totalBytes: number; usedBytes: number; freeBytes: number } {
   try {

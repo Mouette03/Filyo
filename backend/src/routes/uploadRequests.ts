@@ -5,8 +5,7 @@ import { nanoid } from 'nanoid'
 import mime from 'mime-types'
 import bcrypt from 'bcryptjs'
 import { prisma } from '../lib/prisma'
-
-const UPLOAD_DIR = process.env.UPLOAD_DIR || '/data/uploads'
+import { UPLOAD_DIR } from '../lib/config'
 
 export async function uploadRequestRoutes(app: FastifyInstance) {
   const auth = { onRequest: [app.authenticate] }

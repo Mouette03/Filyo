@@ -3,10 +3,11 @@ import bcrypt from 'bcryptjs'
 import path from 'path'
 import fs from 'fs-extra'
 import { nanoid } from 'nanoid'
-import nodemailer from 'nodemailer'
 import { prisma } from '../lib/prisma'
 import { z } from 'zod'
 import { UPLOAD_DIR } from '../lib/config'
+import { getAppSettings } from '../lib/appSettings'
+import { createSmtpTransport } from '../lib/smtp'
 
 const AVATAR_DIR = path.join(UPLOAD_DIR, 'avatars')
 
@@ -85,8 +86,8 @@ export async function authRoutes(app: FastifyInstance) {
       } catch { /* non authentifié */ }
 
       if (!isAdmin) {
-        const settings = await prisma.appSettings.findUnique({ where: { id: 'singleton' } })
-        if (!settings?.allowRegistration) {
+        const settings = await getAppSettings()
+        if (!settings.allowRegistration) {
           return reply.code(403).send({ code: 'REGISTRATION_DISABLED' })
         }
       }
@@ -178,8 +179,8 @@ export async function authRoutes(app: FastifyInstance) {
 
     // Valider contre le maximum admin
     if (cleanupAfterDays != null) {
-      const settings = await prisma.appSettings.findUnique({ where: { id: 'singleton' } })
-      const adminMax = settings?.cleanupAfterDays ?? null
+      const settings = await getAppSettings()
+      const adminMax = settings.cleanupAfterDays ?? null
       if (adminMax == null) {
         return reply.code(403).send({ code: 'CLEANUP_DISABLED' })
       }
@@ -205,8 +206,8 @@ export async function authRoutes(app: FastifyInstance) {
     const user = await prisma.user.findUnique({ where: { email } })
     if (!user) return reply.send({ success: true })
 
-    const settings = await prisma.appSettings.findUnique({ where: { id: 'singleton' } })
-    if (!settings?.smtpHost || !settings?.smtpFrom) {
+    const settings = await getAppSettings()
+    if (!settings.smtpHost || !settings.smtpFrom) {
       return reply.code(503).send({ code: 'SMTP_NOT_CONFIGURED' })
     }
 
@@ -221,16 +222,8 @@ export async function authRoutes(app: FastifyInstance) {
     const siteUrl = settings.siteUrl || `${req.protocol}://${req.hostname}`
     const resetUrl = `${siteUrl}/reset-password?token=${token}`
     const appName = settings.appName || 'Filyo'
-    const smtpPort = settings.smtpPort ?? 587
-    const smtpSecure = smtpPort === 465
 
-    const transporter = nodemailer.createTransport({
-      host: settings.smtpHost,
-      port: smtpPort,
-      secure: smtpSecure,
-      requireTLS: smtpPort === 587,
-      auth: settings.smtpUser ? { user: settings.smtpUser, pass: settings.smtpPass ?? '' } : undefined
-    })
+    const transporter = createSmtpTransport(settings)
 
     try {
       await transporter.sendMail({

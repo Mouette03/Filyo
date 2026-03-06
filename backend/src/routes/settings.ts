@@ -3,17 +3,10 @@ import path from 'path'
 import fs from 'fs-extra'
 import { nanoid } from 'nanoid'
 import { prisma } from '../lib/prisma'
+import { UPLOAD_DIR } from '../lib/config'
+import { getAppSettings as getSettings } from '../lib/appSettings'
 
-const UPLOAD_DIR = process.env.UPLOAD_DIR || '/data/uploads'
 const LOGO_DIR = path.join(UPLOAD_DIR, 'logos')
-
-async function getSettings() {
-  return prisma.appSettings.upsert({
-    where: { id: 'singleton' },
-    update: {},
-    create: { id: 'singleton', appName: 'Filyo' }
-  })
-}
 
 export async function settingsRoutes(app: FastifyInstance) {
   // GET /api/settings — public (pour charger le nom/logo au démarrage), sans données SMTP

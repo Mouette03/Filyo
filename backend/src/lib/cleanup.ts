@@ -1,8 +1,7 @@
 import fs from 'fs-extra'
 import path from 'path'
 import { prisma } from './prisma'
-
-const UPLOAD_DIR = process.env.UPLOAD_DIR || '/data/uploads'
+import { UPLOAD_DIR } from './config'
 
 /**
  * Nettoyage planifié automatique.
@@ -32,7 +31,6 @@ export async function runScheduledCleanup(): Promise<{ deletedFiles: number; del
   const filesToDelete = expiredFiles.filter(file => {
     // null = l'utilisateur suit le défaut admin (opt-out)
     const userPref = file.user?.cleanupAfterDays ?? adminMax
-    if (userPref == null) return false   // adminMax aussi null → nettoyage désactivé
     const effective = Math.min(userPref, adminMax)  // capé au max admin
     const cutoff = new Date(file.expiresAt!.getTime() + effective * 86_400_000)
     return cutoff.getTime() <= now
@@ -55,7 +53,6 @@ export async function runScheduledCleanup(): Promise<{ deletedFiles: number; del
   const requestsToDelete = expiredRequests.filter(req => {
     // null = l'utilisateur suit le défaut admin (opt-out)
     const userPref = req.user?.cleanupAfterDays ?? adminMax
-    if (userPref == null) return false
     const effective = Math.min(userPref, adminMax)
     const cutoff = new Date(req.expiresAt!.getTime() + effective * 86_400_000)
     return cutoff.getTime() <= now

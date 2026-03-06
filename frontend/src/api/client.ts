@@ -31,8 +31,6 @@ export const checkSetup = () => api.get('/auth/setup')
 export const login = (email: string, password: string) =>
   api.post('/auth/login', { email, password })
 
-export const getMe = () => api.get('/auth/me')
-
 export const registerUser = (data: { email: string; name: string; password: string; role?: string }) =>
   api.post('/auth/register', data)
 
