@@ -249,16 +249,16 @@ export default function DashboardPage() {
   return (
     <div className="max-w-5xl mx-auto px-4 py-10">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-2">
         <h1 className="text-2xl font-bold">{t('dash.title')}</h1>
         <div className="flex gap-2">
           {isAdmin && (
-            <button onClick={handleCleanup} className="btn-secondary flex items-center gap-2 text-sm">
-              <Trash2 size={14} /> {t('dash.cleanExpired')}
+            <button onClick={handleCleanup} className="btn-secondary flex items-center gap-1.5 text-xs sm:text-sm px-2.5 py-1.5 sm:px-3 sm:py-2">
+              <Trash2 size={13} /> {t('dash.cleanExpired')}
             </button>
           )}
-          <button onClick={load} className="btn-secondary flex items-center gap-2 text-sm">
-            <RefreshCw size={14} /> {t('common.refresh')}
+          <button onClick={load} className="btn-secondary flex items-center gap-1.5 text-xs sm:text-sm px-2.5 py-1.5 sm:px-3 sm:py-2">
+            <RefreshCw size={13} /> {t('common.refresh')}
           </button>
         </div>
       </div>

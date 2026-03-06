@@ -35,7 +35,7 @@ export default function Layout() {
   }
 
   const navClass = ({ isActive }: { isActive: boolean }) =>
-    `flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all
+    `flex items-center gap-2 px-2 py-2 sm:px-3 rounded-lg text-sm font-medium transition-all
      ${isActive ? 'text-white bg-white/10' : 'text-white/50 hover:text-white hover:bg-white/5'}`
 
   return (
@@ -51,7 +51,7 @@ export default function Layout() {
                 <ArrowDownUp size={16} className="text-white" />
               </div>
             )}
-            <span className="font-bold text-lg tracking-tight">{settings.appName}</span>
+            <span className="hidden sm:inline font-bold text-lg tracking-tight">{settings.appName}</span>
           </NavLink>
 
           {/* Nav links — centré en absolu */}

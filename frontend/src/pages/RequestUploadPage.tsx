@@ -6,6 +6,8 @@ import toast from 'react-hot-toast'
 import { getUploadRequestInfo, submitToUploadRequest, getSettings } from '../api/client'
 import { formatBytes, formatDate, getFileIcon } from '../lib/utils'
 import { useT } from '../i18n'
+import { useAppSettingsStore } from '../stores/useAppSettingsStore'
+import LanguageSwitcher from '../components/LanguageSwitcher'
 
 type FieldReq = 'hidden' | 'optional' | 'required'
 
@@ -36,13 +38,16 @@ export default function RequestUploadPage() {
   const [emailReq, setEmailReq] = useState<FieldReq>('optional')
   const [msgReq, setMsgReq] = useState<FieldReq>('optional')
   const { t } = useT()
+  const { settings, setSettings } = useAppSettingsStore()
+  const appName = settings.appName || 'Filyo'
 
   useEffect(() => {
-    // Charger config champs déposant
+    // Charger config champs déposant + paramètres app
     getSettings().then(r => {
       setNameReq(r.data.uploaderNameReq || 'optional')
       setEmailReq(r.data.uploaderEmailReq || 'optional')
       setMsgReq(r.data.uploaderMsgReq || 'optional')
+      setSettings(r.data)
     }).catch(() => {})
   }, [])
 
@@ -118,14 +123,21 @@ export default function RequestUploadPage() {
       style={{
         background: 'radial-gradient(ellipse 80% 80% at 50% -20%, rgba(92, 107, 250, 0.12), transparent), #0d0e1a'
       }}>
+      {/* Sélecteur de langue — coin haut droit */}
+      <div className="fixed top-4 right-4 z-50">
+        <LanguageSwitcher />
+      </div>
+
       {/* Logo */}
       <div className="flex items-center gap-2 mb-10">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center shadow-lg shadow-brand-500/30">
-          <ArrowDownUp size={16} className="text-white" />
-        </div>
-        <span className="font-bold text-lg tracking-tight">
-          Fil<span className="text-brand-400">yo</span>
-        </span>
+        {settings.logoUrl ? (
+          <img src={settings.logoUrl} alt="logo" className="h-8 w-auto object-contain" />
+        ) : (
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center shadow-lg shadow-brand-500/30">
+            <ArrowDownUp size={16} className="text-white" />
+          </div>
+        )}
+        <span className="font-bold text-lg tracking-tight">{appName}</span>
       </div>
 
       <div className="w-full max-w-md space-y-5">
@@ -330,7 +342,7 @@ export default function RequestUploadPage() {
         )}
 
         <p className="text-center text-white/20 text-xs">
-          {t('share.footer', { app: 'Filyo' })}
+          {t('share.footer', { app: appName })}
         </p>
       </div>
     </div>
