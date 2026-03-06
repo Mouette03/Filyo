@@ -131,10 +131,10 @@ export default function LoginPage() {
           <ArrowDownUp size={26} className="text-white" />
         </div>
       )}
-      <h1 className="text-2xl font-bold tracking-tight text-white">
+      <h1 className="text-2xl font-bold tracking-tight [color:var(--text-base)]">
         {settings.appName}
       </h1>
-      <p className="text-white/50 text-sm mt-1">
+      <p className="[color:var(--text-50)] text-sm mt-1">
         {setupNeeded
           ? t('login.subtitleSetup')
           : mode === 'register'
@@ -145,10 +145,7 @@ export default function LoginPage() {
   )
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4"
-      style={{
-        background: 'radial-gradient(ellipse 80% 80% at 50% -20%, rgba(92, 107, 250, 0.12), transparent), #0d0e1a'
-      }}>
+    <div className="min-h-screen flex flex-col items-center justify-center px-4">
       {/* Sélecteur de langue en haut à droite */}
       <div className="absolute top-4 right-4">
         <LanguageSwitcher />
@@ -164,29 +161,29 @@ export default function LoginPage() {
               {t('login.setupNotice')}
             </div>
             <div>
-              <label className="text-xs text-white/50 mb-1.5 block font-medium uppercase tracking-wider">{t('login.fullName')}</label>
+              <label className="text-xs [color:var(--text-50)] mb-1.5 block font-medium uppercase tracking-wider">{t('login.fullName')}</label>
               <input type="text" value={name} onChange={e => setName(e.target.value)}
                 placeholder={t('login.fullNamePlaceholder')} className="input" autoFocus required />
             </div>
             <div>
-              <label className="text-xs text-white/50 mb-1.5 block font-medium uppercase tracking-wider">{t('login.email')}</label>
+              <label className="text-xs [color:var(--text-50)] mb-1.5 block font-medium uppercase tracking-wider">{t('login.email')}</label>
               <input type="email" value={email} onChange={e => setEmail(e.target.value)}
                 placeholder={t('login.emailPlaceholder')} className="input" required />
             </div>
             <div>
-              <label className="text-xs text-white/50 mb-1.5 block font-medium uppercase tracking-wider">{t('login.password')}</label>
+              <label className="text-xs [color:var(--text-50)] mb-1.5 block font-medium uppercase tracking-wider">{t('login.password')}</label>
               <div className="relative">
                 <input type={showPwd ? 'text' : 'password'} value={password}
                   onChange={e => setPassword(e.target.value)}
                   placeholder={t('login.passwordPlaceholder')} className="input pr-11" required minLength={8} />
                 <button type="button" onClick={() => setShowPwd(!showPwd)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors">
+                  className="absolute right-3 top-1/2 -translate-y-1/2 [color:var(--text-30)] hover:[color:var(--text-60)] transition-colors">
                   {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
             </div>
             <div>
-              <label className="text-xs text-white/50 mb-1.5 block font-medium uppercase tracking-wider">{t('login.confirmPassword')}</label>
+              <label className="text-xs [color:var(--text-50)] mb-1.5 block font-medium uppercase tracking-wider">{t('login.confirmPassword')}</label>
               <input type={showPwd ? 'text' : 'password'} value={confirmPwd}
                 onChange={e => setConfirmPwd(e.target.value)}
                 placeholder={t('login.confirmPasswordPlaceholder')} className="input" required />
@@ -210,7 +207,7 @@ export default function LoginPage() {
                     <Mail size={22} className="text-emerald-400" />
                   </div>
                   <h3 className="font-bold text-lg mb-1">{t('login.forgotSent')}</h3>
-                  <p className="text-sm text-white/50">{t('login.forgotSentHint')}</p>
+                  <p className="text-sm [color:var(--text-50)]">{t('login.forgotSentHint')}</p>
                 </div>
                 <button type="button" onClick={() => { resetForm(); setMode('login') }}
                   className="btn-secondary w-full flex items-center justify-center gap-2 text-sm">
@@ -219,9 +216,9 @@ export default function LoginPage() {
               </>
             ) : (
               <form onSubmit={handleForgot} className="space-y-4">
-                <p className="text-sm text-white/50">{t('login.forgotSubtitle')}</p>
+                <p className="text-sm [color:var(--text-50)]">{t('login.forgotSubtitle')}</p>
                 <div>
-                  <label className="text-xs text-white/50 mb-1.5 block font-medium uppercase tracking-wider">{t('login.email')}</label>
+                  <label className="text-xs [color:var(--text-50)] mb-1.5 block font-medium uppercase tracking-wider">{t('login.email')}</label>
                   <input type="email" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)}
                     placeholder={t('login.emailPlaceholder')} className="input" autoFocus required />
                 </div>
@@ -244,18 +241,18 @@ export default function LoginPage() {
           /* ── Connexion ── */
           <form onSubmit={handleLogin} className="card space-y-4">
             <div>
-              <label className="text-xs text-white/50 mb-1.5 block font-medium uppercase tracking-wider">{t('login.email')}</label>
+              <label className="text-xs [color:var(--text-50)] mb-1.5 block font-medium uppercase tracking-wider">{t('login.email')}</label>
               <input type="email" value={email} onChange={e => setEmail(e.target.value)}
                 placeholder={t('login.emailPlaceholder')} className="input" autoFocus required />
             </div>
             <div>
-              <label className="text-xs text-white/50 mb-1.5 block font-medium uppercase tracking-wider">{t('login.password')}</label>
+              <label className="text-xs [color:var(--text-50)] mb-1.5 block font-medium uppercase tracking-wider">{t('login.password')}</label>
               <div className="relative">
                 <input type={showPwd ? 'text' : 'password'} value={password}
                   onChange={e => setPassword(e.target.value)}
                   placeholder="••••••••" className="input pr-11" required />
                 <button type="button" onClick={() => setShowPwd(!showPwd)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors">
+                  className="absolute right-3 top-1/2 -translate-y-1/2 [color:var(--text-30)] hover:[color:var(--text-60)] transition-colors">
                   {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
@@ -285,29 +282,29 @@ export default function LoginPage() {
           /* ── Inscription libre ── */
           <form onSubmit={handleRegister} className="card space-y-4">
             <div>
-              <label className="text-xs text-white/50 mb-1.5 block font-medium uppercase tracking-wider">{t('login.fullName')}</label>
+              <label className="text-xs [color:var(--text-50)] mb-1.5 block font-medium uppercase tracking-wider">{t('login.fullName')}</label>
               <input type="text" value={name} onChange={e => setName(e.target.value)}
                 placeholder={t('login.fullNamePlaceholder')} className="input" autoFocus required />
             </div>
             <div>
-              <label className="text-xs text-white/50 mb-1.5 block font-medium uppercase tracking-wider">{t('login.email')}</label>
+              <label className="text-xs [color:var(--text-50)] mb-1.5 block font-medium uppercase tracking-wider">{t('login.email')}</label>
               <input type="email" value={email} onChange={e => setEmail(e.target.value)}
                 placeholder={t('login.emailPlaceholder')} className="input" required />
             </div>
             <div>
-              <label className="text-xs text-white/50 mb-1.5 block font-medium uppercase tracking-wider">{t('login.password')}</label>
+              <label className="text-xs [color:var(--text-50)] mb-1.5 block font-medium uppercase tracking-wider">{t('login.password')}</label>
               <div className="relative">
                 <input type={showPwd ? 'text' : 'password'} value={password}
                   onChange={e => setPassword(e.target.value)}
                   placeholder={t('login.passwordPlaceholder')} className="input pr-11" required minLength={8} />
                 <button type="button" onClick={() => setShowPwd(!showPwd)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors">
+                  className="absolute right-3 top-1/2 -translate-y-1/2 [color:var(--text-30)] hover:[color:var(--text-60)] transition-colors">
                   {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
             </div>
             <div>
-              <label className="text-xs text-white/50 mb-1.5 block font-medium uppercase tracking-wider">{t('login.confirmPassword')}</label>
+              <label className="text-xs [color:var(--text-50)] mb-1.5 block font-medium uppercase tracking-wider">{t('login.confirmPassword')}</label>
               <input type={showPwd ? 'text' : 'password'} value={confirmPwd}
                 onChange={e => setConfirmPwd(e.target.value)}
                 placeholder={t('login.confirmPasswordPlaceholder')} className="input" required />
@@ -327,7 +324,7 @@ export default function LoginPage() {
           </form>
         )}
 
-        <p className="text-center text-white/40 text-xs mt-6">
+        <p className="text-center [color:var(--text-40)] text-xs mt-6">
           {settings.appName} — {t('login.footer')}
         </p>
       </div>
