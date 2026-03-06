@@ -5,6 +5,7 @@ import { usePreferencesStore, applyTheme, applyAccent, applyBgColor } from './st
 import HomePage from './pages/HomePage'
 import SharePage from './pages/SharePage'
 import RequestUploadPage from './pages/RequestUploadPage'
+import ResetPasswordPage from './pages/ResetPasswordPage'
 import CreateRequestPage from './pages/CreateRequestPage'
 import DashboardPage from './pages/DashboardPage'
 import LoginPage from './pages/LoginPage'
@@ -51,6 +52,7 @@ export default function App() {
         {/* Pages publiques sans layout */}
         <Route path="/s/:token" element={<SharePage />} />
         <Route path="/r/:token" element={<RequestUploadPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
         {/* Pages protégées avec layout */}
         <Route element={

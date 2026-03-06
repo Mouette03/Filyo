@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs'
 import path from 'path'
 import fs from 'fs-extra'
 import { nanoid } from 'nanoid'
+import nodemailer from 'nodemailer'
 import { prisma } from '../lib/prisma'
 import { z } from 'zod'
 
@@ -193,5 +194,87 @@ export async function authRoutes(app: FastifyInstance) {
     })
     req.log.debug({ userId: req.user.id, cleanupAfterDays }, 'Cleanup preference updated')
     return { cleanupAfterDays }
+  })
+
+  // POST /api/auth/forgot-password — demander un lien de réinitialisation
+  app.post('/forgot-password', async (req, reply) => {
+    const { email } = req.body as { email?: string }
+    // Toujours répondre 200 pour ne pas révéler l'existence d'un compte
+    if (!email) return reply.send({ success: true })
+
+    const user = await prisma.user.findUnique({ where: { email } })
+    if (!user) return reply.send({ success: true })
+
+    const settings = await prisma.appSettings.findUnique({ where: { id: 'singleton' } })
+    if (!settings?.smtpHost || !settings?.smtpFrom) {
+      return reply.code(503).send({ code: 'SMTP_NOT_CONFIGURED' })
+    }
+
+    // Générer le token (1h de validité)
+    const token = nanoid(40)
+    const expiry = new Date(Date.now() + 60 * 60 * 1000)
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { resetToken: token, resetTokenExpiry: expiry }
+    })
+
+    const siteUrl = settings.siteUrl || `${req.protocol}://${req.hostname}`
+    const resetUrl = `${siteUrl}/reset-password?token=${token}`
+    const appName = settings.appName || 'Filyo'
+    const smtpPort = settings.smtpPort ?? 587
+    const smtpSecure = smtpPort === 465
+
+    const transporter = nodemailer.createTransport({
+      host: settings.smtpHost,
+      port: smtpPort,
+      secure: smtpSecure,
+      requireTLS: smtpPort === 587,
+      auth: settings.smtpUser ? { user: settings.smtpUser, pass: settings.smtpPass ?? '' } : undefined
+    })
+
+    try {
+      await transporter.sendMail({
+        from: `"${appName}" <${settings.smtpFrom}>`,
+        to: user.email,
+        subject: `[${appName}] Réinitialisation de votre mot de passe`,
+        text: `Bonjour ${user.name},\n\nVous avez demandé la réinitialisation de votre mot de passe.\n\nCliquez sur ce lien (valide 1h) :\n${resetUrl}\n\nSi vous n'avez pas fait cette demande, ignorez cet email.\n\nEnvoyé via ${appName}.`,
+        html: `
+          <div style="font-family:system-ui,sans-serif;max-width:520px;margin:0 auto;background:#0d0e1a;color:#e8eaf6;padding:32px 24px;border-radius:16px">
+            <h2 style="margin:0 0 6px;color:#7a8dff;font-size:20px">${appName}</h2>
+            <p style="color:#aaa;font-size:13px;margin:0 0 24px">Réinitialisation de mot de passe</p>
+            <p style="margin:0 0 12px">Bonjour <strong>${user.name}</strong>,</p>
+            <p style="margin:0 0 24px;color:#ccc">Vous avez demandé la réinitialisation de votre mot de passe. Cliquez sur le bouton ci-dessous (lien valide <strong>1 heure</strong>).</p>
+            <a href="${resetUrl}" style="display:inline-block;background:#5c6bfa;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px">Réinitialiser mon mot de passe</a>
+            <p style="margin:24px 0 0;font-size:12px;color:#666">Si vous n'avez pas demandé cette réinitialisation, ignorez cet email. Votre mot de passe ne changera pas.</p>
+            <p style="margin:16px 0 0;font-size:11px;color:#444">${appName}</p>
+          </div>`
+      })
+    } catch (err: any) {
+      req.log.error({ err: err.message }, 'Reset password email failed')
+      return reply.code(502).send({ code: 'EMAIL_SEND_FAILED', detail: err.message })
+    }
+
+    return reply.send({ success: true })
+  })
+
+  // POST /api/auth/reset-password — appliquer le nouveau mot de passe
+  app.post('/reset-password', async (req, reply) => {
+    const { token, password } = req.body as { token?: string; password?: string }
+    if (!token || !password || password.length < 8) {
+      return reply.code(400).send({ code: 'INVALID_DATA' })
+    }
+
+    const user = await prisma.user.findFirst({
+      where: { resetToken: token, resetTokenExpiry: { gt: new Date() } }
+    })
+    if (!user) return reply.code(400).send({ code: 'INVALID_RESET_TOKEN' })
+
+    const hashed = await bcrypt.hash(password, 12)
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { password: hashed, resetToken: null, resetTokenExpiry: null }
+    })
+    req.log.info({ userId: user.id }, 'Password reset')
+    return reply.send({ success: true })
   })
 }

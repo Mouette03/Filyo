@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowDownUp, Eye, EyeOff, LogIn, UserPlus } from 'lucide-react'
+import { ArrowDownUp, Eye, EyeOff, LogIn, Mail, UserPlus } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { login, getSettings, checkSetup, registerUser } from '../api/client'
+import { login, getSettings, checkSetup, registerUser, forgotPassword } from '../api/client'
 import { useAuthStore } from '../stores/useAuthStore'
 import { useAppSettingsStore } from '../stores/useAppSettingsStore'
 import { useT } from '../i18n'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 
-type Mode = 'login' | 'register'
+type Mode = 'login' | 'register' | 'forgot'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -19,6 +19,9 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [setupNeeded, setSetupNeeded] = useState<boolean | null>(null)
   const [mode, setMode] = useState<Mode>('login')
+  const [forgotEmail, setForgotEmail] = useState('')
+  const [loadingForgot, setLoadingForgot] = useState(false)
+  const [forgotSent, setForgotSent] = useState(false)
   const { setAuth, isAuthenticated } = useAuthStore()
   const { setSettings, settings } = useAppSettingsStore()
   const navigate = useNavigate()
@@ -32,6 +35,7 @@ export default function LoginPage() {
 
   const resetForm = () => {
     setEmail(''); setPassword(''); setConfirmPwd(''); setName(''); setShowPwd(false)
+    setForgotEmail(''); setForgotSent(false)
   }
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -92,6 +96,21 @@ export default function LoginPage() {
       else toast.error(t('toast.accountError'))
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleForgot = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoadingForgot(true)
+    try {
+      await forgotPassword(forgotEmail)
+      setForgotSent(true)
+    } catch (err: any) {
+      const code = err.response?.data?.code
+      if (code === 'SMTP_NOT_CONFIGURED') toast.error(t('toast.smtpNotConfigured'))
+      else toast.error(t('toast.sendError'))
+    } finally {
+      setLoadingForgot(false)
     }
   }
 
@@ -181,6 +200,46 @@ export default function LoginPage() {
             </button>
           </form>
 
+        ) : mode === 'forgot' ? (
+          /* ── Mot de passe oublié ── */
+          <div className="card space-y-4">
+            {forgotSent ? (
+              <>
+                <div className="text-center py-2">
+                  <div className="w-12 h-12 bg-emerald-500/20 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                    <Mail size={22} className="text-emerald-400" />
+                  </div>
+                  <h3 className="font-bold text-lg mb-1">{t('login.forgotSent')}</h3>
+                  <p className="text-sm text-white/50">{t('login.forgotSentHint')}</p>
+                </div>
+                <button type="button" onClick={() => { resetForm(); setMode('login') }}
+                  className="btn-secondary w-full flex items-center justify-center gap-2 text-sm">
+                  <LogIn size={15} /> {t('login.backToLogin')}
+                </button>
+              </>
+            ) : (
+              <form onSubmit={handleForgot} className="space-y-4">
+                <p className="text-sm text-white/50">{t('login.forgotSubtitle')}</p>
+                <div>
+                  <label className="text-xs text-white/50 mb-1.5 block font-medium uppercase tracking-wider">{t('login.email')}</label>
+                  <input type="email" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)}
+                    placeholder={t('login.emailPlaceholder')} className="input" autoFocus required />
+                </div>
+                <button type="submit" disabled={loadingForgot}
+                  className="btn-primary w-full flex items-center justify-center gap-2 mt-2">
+                  {loadingForgot
+                    ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    : <Mail size={16} />}
+                  {t('login.forgotBtn')}
+                </button>
+                <button type="button" onClick={() => { resetForm(); setMode('login') }}
+                  className="btn-secondary w-full flex items-center justify-center gap-2 text-sm">
+                  <LogIn size={15} /> {t('login.backToLogin')}
+                </button>
+              </form>
+            )}
+          </div>
+
         ) : mode === 'login' ? (
           /* ── Connexion ── */
           <form onSubmit={handleLogin} className="card space-y-4">
@@ -207,6 +266,11 @@ export default function LoginPage() {
                 ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 : <LogIn size={16} />}
               {t('login.loginBtn')}
+            </button>
+            <button type="button"
+              onClick={() => { resetForm(); setMode('forgot') }}
+              className="text-xs text-brand-400 hover:text-brand-300 transition-colors w-full text-center">
+              {t('login.forgotPassword')}
             </button>
             {settings.allowRegistration && (
               <button type="button"

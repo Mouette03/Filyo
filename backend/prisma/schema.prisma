@@ -18,7 +18,9 @@ model User {
   avatarUrl      String?
   createdAt      DateTime        @default(now())
   lastLogin      DateTime?
-  cleanupAfterDays Int?          // préférence perso : null=jamais, 0=à expiration, N=N jours après
+  cleanupAfterDays   Int?          // préférence perso : null=jamais, 0=à expiration, N=N jours après
+  resetToken         String?
+  resetTokenExpiry   DateTime?
   files          File[]
   uploadRequests UploadRequest[]
 }
