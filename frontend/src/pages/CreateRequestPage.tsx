@@ -63,7 +63,7 @@ export default function CreateRequestPage() {
       if (addresses.length === 1) {
         toast.success(t('toast.requestEmailSent', { email: addresses[0] }))
       } else {
-        toast.success(t('toast.requestEmailsSent', { count: addresses.length }))
+        toast.success(t('toast.requestEmailsSent', { count: String(addresses.length) }))
       }
       setTimeout(() => setEmailSent(false), 3000)
     } catch (err: any) {
