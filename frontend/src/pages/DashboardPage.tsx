@@ -54,7 +54,7 @@ export default function DashboardPage() {
   const [expiryValue, setExpiryValue] = useState('')
   const [savingExpiryId, setSavingExpiryId] = useState<string | null>(null)
   const [expiringNowId, setExpiringNowId] = useState<string | null>(null)
-  const [collapsedBatches, setCollapsedBatches] = useState<Set<string>>(new Set())
+  const [expandedBatches, setExpandedBatches] = useState<Set<string>>(new Set())
 
   // Grouper les fichiers par batchToken pour l'affichage
   type DisplayItem =
@@ -355,7 +355,7 @@ export default function DashboardPage() {
             if (item.type === 'batch') {
               const { batchToken, files: bf } = item
               const firstShare = bf[0]?.shares?.[0]
-              const isCollapsed = collapsedBatches.has(batchToken)
+              const isCollapsed = !expandedBatches.has(batchToken)
               const totalSize = bf.reduce((acc, f) => acc + Number(f.size), 0)
               const firstFile = bf[0]
               return (
@@ -431,7 +431,7 @@ export default function DashboardPage() {
                     </div>
                     {/* Bouton expand/collapse */}
                     <button
-                      onClick={() => setCollapsedBatches(s => {
+                      onClick={() => setExpandedBatches(s => {
                         const n = new Set(s)
                         n.has(batchToken) ? n.delete(batchToken) : n.add(batchToken)
                         return n
