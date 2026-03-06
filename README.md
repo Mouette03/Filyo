@@ -1,6 +1,6 @@
 # Filyo — Transfert de fichiers local & privé
 
-Application de partage de fichiers **auto-hébergée**, sans stockage S3. Avec un design glassmorphism sombre et une fonctionnalité de **partage inversé**.
+Application de partage de fichiers **auto-hébergée**, sans stockage S3. Design glassmorphism sombre, interface bilingue (FR/EN), et fonctionnalité de **partage inversé**.
 
 ## Captures d'écran
 
@@ -20,14 +20,17 @@ Application de partage de fichiers **auto-hébergée**, sans stockage S3. Avec u
 | **Protection** | Mot de passe optionnel par fichier/lien |
 | **Expiration** | 1h / 24h / 7j / 30j / jamais |
 | **Max téléchargements** | Limite configurable par lien |
+| **Envoi par email** | Envoi du lien de partage par email |
 | **Partage inversé** | Créer un lien pour recevoir des fichiers d'un tiers |
+| **Email partage inversé** | Envoi du lien de dépôt par email à un ou plusieurs destinataires (adresses séparées par des virgules) |
 | **Info déposant** | Nom, email, message joint au dépôt |
-| **Dashboard** | Statistiques, fichiers envoyés & reçus, demandes de dépôt |
+| **Dashboard** | Statistiques, fichiers envoyés & reçus, demandes de dépôt (groupes repliés par défaut) |
 | **Multi-utilisateurs** | Rôles Administrateur / Utilisateur, gestion depuis le panneau admin |
 | **Inscription libre** | Activation optionnelle de l'inscription publique depuis les réglages |
 | **Profil** | Avatar, nom affiché, changement de mot de passe |
 | **Réglages** | Nom de l'app, logo, SMTP, inscription, apparence |
 | **Thèmes** | Sombre / Clair / Automatique avec couleurs d'accent personnalisables |
+| **i18n** | Interface entièrement traduite en français et anglais |
 | **Docker** | Images multi-arch (amd64 + arm64) |
 
 ## Lancement rapide
@@ -69,12 +72,15 @@ filyo/
 ├── backend/         # Node.js + Fastify + Prisma + SQLite
 │   ├── src/
 │   │   ├── index.ts
-│   │   ├── lib/prisma.ts
+│   │   ├── lib/
+│   │   │   ├── prisma.ts         # Client Prisma singleton
+│   │   │   ├── config.ts         # Constantes centralisées (UPLOAD_DIR…)
+│   │   │   └── cleanup.ts        # Nettoyage automatique des fichiers expirés
 │   │   └── routes/
 │   │       ├── auth.ts           # Authentification & profil
 │   │       ├── files.ts          # Upload/download fichiers
-│   │       ├── shares.ts         # Liens de partage
-│   │       ├── uploadRequests.ts # Partage inversé
+│   │       ├── shares.ts         # Liens de partage + envoi email
+│   │       ├── uploadRequests.ts # Partage inversé + envoi email
 │   │       ├── users.ts          # Gestion utilisateurs (admin)
 │   │       ├── settings.ts       # Réglages application
 │   │       └── admin.ts          # Stats & cleanup
@@ -92,19 +98,20 @@ filyo/
 │       │   ├── SettingsPage.tsx      # Réglages (admin)
 │       │   ├── UsersPage.tsx         # Administration (admin)
 │       │   └── LoginPage.tsx         # Connexion / Inscription
-│       └── api/client.ts
+│       ├── api/client.ts             # Client axios centralisé
+│       ├── types/common.ts           # Types partagés
+│       └── i18n/                     # Traductions FR / EN
 │
 ├── docs/screenshots/              # Captures d'écran
 ├── .github/workflows/docker.yml   # CI/CD → GHCR
-├── docker-compose.yml
-└── preview.html
+└── docker-compose.yml
 ```
 
 ## Partage inversé
 
 1. Allez sur **"Partage inversé"** → configurez titre, message, expiration, limite de fichiers
-2. Partagez le lien `/r/<token>` avec votre contact
-3. Il dépose ses fichiers (avec son nom, email, message optionnel)
+2. Copiez le lien `/r/<token>` ou envoyez-le directement par email à un ou plusieurs destinataires (adresses séparées par des virgules)
+3. Le destinataire dépose ses fichiers (avec son nom, email, message optionnel)
 4. Vous les retrouvez dans le **Dashboard** → onglet "Partages inversés"
 
 ## Variables d'environnement
@@ -114,6 +121,20 @@ filyo/
 | `DATA_PATH` | `./data` | Dossier données hôte |
 | `LOG_LEVEL` | `info` | Niveau de log (`silent`, `error`, `warn`, `info`, `debug`) |
 | `JWT_SECRET` | *(généré)* | Clé secrète JWT — à changer en production |
+
+## CI/CD — GitHub Actions
+
+Le workflow `.github/workflows/docker.yml` :
+- **Lint + type-check** sur chaque push/PR
+- **Build multi-arch** (amd64 + arm64) et push sur `ghcr.io`
+- Tags automatiques : `latest`, `sha-xxxx`, et versions sémantiques (`v1.2.3`)
+- **Release GitHub** avec `docker-compose.release.yml` joint en artifact sur chaque tag `v*`
+
+```bash
+# Utiliser une image de release spécifique
+IMAGE_TAG=v1.0.0 docker compose up -d
+```
+
 
 
 ## CI/CD — GitHub Actions
