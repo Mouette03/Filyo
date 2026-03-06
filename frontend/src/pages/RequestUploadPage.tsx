@@ -8,8 +8,7 @@ import { formatBytes, formatDate, getFileIcon } from '../lib/utils'
 import { useT } from '../i18n'
 import { useAppSettingsStore } from '../stores/useAppSettingsStore'
 import LanguageSwitcher from '../components/LanguageSwitcher'
-
-type FieldReq = 'hidden' | 'optional' | 'required'
+import type { FieldReq } from '../types/common'
 
 interface RequestInfo {
   token: string
@@ -187,7 +186,7 @@ export default function RequestUploadPage() {
               <div className="flex flex-wrap gap-2 mt-3">
                 {info.expiresAt && (
                   <span className="badge-orange flex items-center gap-1">
-                    <Clock size={10} /> Expire {formatDate(info.expiresAt)}
+                    <Clock size={10} /> {t('dash.expires')} {formatDate(info.expiresAt)}
                   </span>
                 )}
                 {info.maxFiles && (
@@ -196,7 +195,7 @@ export default function RequestUploadPage() {
                   </span>
                 )}
                 {info.maxSizeBytes && (
-                  <span className="badge-blue">Max {formatBytes(info.maxSizeBytes)} / fichier</span>
+                  <span className="badge-blue">{t('request.maxSize', { size: formatBytes(info.maxSizeBytes) })}</span>
                 )}
               </div>
             </div>

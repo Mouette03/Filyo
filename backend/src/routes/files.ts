@@ -5,8 +5,7 @@ import { nanoid } from 'nanoid'
 import mime from 'mime-types'
 import bcrypt from 'bcryptjs'
 import { prisma } from '../lib/prisma'
-
-const UPLOAD_DIR = process.env.UPLOAD_DIR || '/data/uploads'
+import { UPLOAD_DIR } from '../lib/config'
 
 export async function fileRoutes(app: FastifyInstance) {
   const auth = { onRequest: [app.authenticate] }
@@ -57,8 +56,8 @@ export async function fileRoutes(app: FastifyInstance) {
 
     const hashedPassword = rawPassword ? await bcrypt.hash(rawPassword, 10) : null
 
-    // Tous les fichiers de ce lot partagent le même batchToken
-    const batchToken = nanoid(16)
+    // Lot : batchToken uniquement si plusieurs fichiers
+    const batchToken = uploadedFiles.length > 1 ? nanoid(16) : null
 
     const files = await Promise.all(
       uploadedFiles.map(f =>

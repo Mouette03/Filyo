@@ -6,8 +6,8 @@ import { nanoid } from 'nanoid'
 import nodemailer from 'nodemailer'
 import { prisma } from '../lib/prisma'
 import { z } from 'zod'
+import { UPLOAD_DIR } from '../lib/config'
 
-const UPLOAD_DIR = process.env.UPLOAD_DIR || '/data/uploads'
 const AVATAR_DIR = path.join(UPLOAD_DIR, 'avatars')
 
 const loginSchema = z.object({

@@ -97,14 +97,16 @@ export async function shareRoutes(app: FastifyInstance) {
     const fileExists = await fs.pathExists(share.file.path)
     if (!fileExists) return reply.code(404).send({ code: 'FILE_MISSING' })
 
-    await prisma.share.update({
-      where: { id: share.id },
-      data: { downloads: { increment: 1 } }
-    })
-    await prisma.file.update({
-      where: { id: share.fileId },
-      data: { downloads: { increment: 1 } }
-    })
+    await prisma.$transaction([
+      prisma.share.update({
+        where: { id: share.id },
+        data: { downloads: { increment: 1 } }
+      }),
+      prisma.file.update({
+        where: { id: share.fileId },
+        data: { downloads: { increment: 1 } }
+      })
+    ])
 
     req.log.info({ token: req.params.token, filename: share.file.originalName }, 'File downloaded')
     const stream = fs.createReadStream(share.file.path)

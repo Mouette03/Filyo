@@ -167,6 +167,7 @@ export const en = {
   'request.uploading': 'Uploading… {{pct}}%',
   'request.submitBtn': 'Deposit {{count}} file(s)',
   'request.maxFiles': 'Max {{count}} file(s)',
+  'request.maxSize': 'Max {{size}} / file',
 
   // ── Profile ──────────────────────────────────────────────────
   'profile.title': 'My Profile',

@@ -438,7 +438,7 @@ export default function HomePage() {
             onClick={() => { setResults([]); setFiles([]) }}
             className="btn-secondary w-full flex items-center justify-center gap-2"
           >
-            <Plus size={16} /> Envoyer d'autres fichiers
+            <Plus size={16} /> {t('home.modal.newUpload')}
           </button>
         </div>
       )}

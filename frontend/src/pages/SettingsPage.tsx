@@ -5,6 +5,7 @@ import { getSettings, updateAppName, uploadLogo, deleteLogo, getSmtpSettings, up
 import { useAppSettingsStore } from '../stores/useAppSettingsStore'
 import { usePreferencesStore, ACCENT_PRESETS, BG_PRESETS, type ThemeMode, type AccentKey, type BgColorKey } from '../stores/usePreferencesStore'
 import { useT } from '../i18n'
+import type { FieldReq } from '../types/common'
 
 export default function SettingsPage() {
   const { settings, setSettings } = useAppSettingsStore()
@@ -38,7 +39,6 @@ export default function SettingsPage() {
   const [testingSmtp, setTestingSmtp] = useState(false)
 
   // Champs déposant
-  type FieldReq = 'hidden' | 'optional' | 'required'
   const [uploaderNameReq, setUploaderNameReq] = useState<FieldReq>('optional')
   const [uploaderEmailReq, setUploaderEmailReq] = useState<FieldReq>('optional')
   const [uploaderMsgReq, setUploaderMsgReq] = useState<FieldReq>('optional')
@@ -157,12 +157,8 @@ export default function SettingsPage() {
         smtpUser,
         smtpPass,
       })
-      const code = res.data.code
-      if (code === 'SMTP_OK') {
-        toast.success(t('toast.smtpOk', { host: res.data.host, port: String(res.data.port) }))
-      } else {
-        toast.success(t('toast.smtpOk'))
-      }
+      void res
+      toast.success(t('toast.smtpOk'))
     } catch (err: any) {
       const code = err.response?.data?.code
       if (code === 'SMTP_INCOMPLETE') {
