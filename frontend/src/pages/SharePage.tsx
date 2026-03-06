@@ -149,10 +149,7 @@ export default function SharePage() {
   const isBatch = info?.batchFiles && info.batchFiles.filter(bf => bf.shareToken).length > 1
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12"
-      style={{
-        background: 'radial-gradient(ellipse 80% 80% at 50% -20%, rgba(92, 107, 250, 0.12), transparent), #0d0e1a'
-      }}>
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12">
 
       {/* Sélecteur de langue — coin haut droit */}
       <div className="fixed top-4 right-4 z-50">
@@ -176,7 +173,7 @@ export default function SharePage() {
         {status === 'loading' && (
           <div className="card text-center py-12">
             <div className="w-10 h-10 border-2 border-brand-500/40 border-t-brand-500 rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-white/50">{t('common.loading')}</p>
+            <p className="[color:var(--text-50)]">{t('common.loading')}</p>
           </div>
         )}
 
@@ -187,7 +184,7 @@ export default function SharePage() {
               <AlertTriangle size={28} className="text-red-400" />
             </div>
             <h2 className="text-xl font-bold mb-2">{status === 'expired' ? t('share.expired') : t('share.invalid')}</h2>
-            <p className="text-white/50 text-sm">{error}</p>
+            <p className="[color:var(--text-50)] text-sm">{error}</p>
           </div>
         )}
 
@@ -207,15 +204,15 @@ export default function SharePage() {
                     <h2 className="font-bold text-lg leading-tight">
                       {t('share.batchTitle', { count: String(info.batchFiles!.length) })}
                     </h2>
-                    <p className="text-white/50 text-sm mt-0.5">{t('share.batchSubtitle')}</p>
+                    <p className="[color:var(--text-50)] text-sm mt-0.5">{t('share.batchSubtitle')}</p>
                   </div>
                 </div>
 
                 {/* Badge noms masqués */}
                 {info.hideFilenames && (
-                  <div className="flex items-center gap-2 bg-white/5 rounded-xl px-3 py-2">
-                    <EyeOff size={13} className="text-white/40" />
-                    <p className="text-xs text-white/50">{t('share.batchHideFilenamesNote')}</p>
+                  <div className="flex items-center gap-2 [background:var(--surface-700)] rounded-xl px-3 py-2">
+                    <EyeOff size={13} className="[color:var(--text-40)]" />
+                    <p className="text-xs [color:var(--text-50)]">{t('share.batchHideFilenamesNote')}</p>
                   </div>
                 )}
 
@@ -223,16 +220,16 @@ export default function SharePage() {
                 {(info.expiresAt || info.maxDownloads) && (
                   <div className="grid grid-cols-2 gap-3">
                     {info.expiresAt && (
-                      <div className="bg-white/5 rounded-xl px-3 py-2.5">
-                        <p className="text-xs text-white/40 flex items-center gap-1 mb-0.5">
+                      <div className="[background:var(--surface-700)] rounded-xl px-3 py-2.5">
+                        <p className="text-xs [color:var(--text-40)] flex items-center gap-1 mb-0.5">
                           <Clock size={10} /> {t('share.expires')}
                         </p>
                         <p className="text-sm font-medium">{formatDate(info.expiresAt)}</p>
                       </div>
                     )}
                     {info.maxDownloads && (
-                      <div className="bg-white/5 rounded-xl px-3 py-2.5">
-                        <p className="text-xs text-white/40 flex items-center gap-1 mb-0.5">
+                      <div className="[background:var(--surface-700)] rounded-xl px-3 py-2.5">
+                        <p className="text-xs [color:var(--text-40)] flex items-center gap-1 mb-0.5">
                           <Download size={10} /> {t('share.downloads')}
                         </p>
                         <p className="text-sm font-medium">{info.downloads} / {info.maxDownloads}</p>
@@ -252,7 +249,7 @@ export default function SharePage() {
                 {/* Saisie mot de passe (une seule fois pour tout le lot) */}
                 {showPassword && (
                   <div>
-                    <label className="text-xs text-white/50 mb-1.5 flex items-center gap-1">
+                    <label className="text-xs [color:var(--text-50)] mb-1.5 flex items-center gap-1">
                       <Shield size={11} /> {t('share.passwordLabel')}
                     </label>
                     <input
@@ -282,7 +279,7 @@ export default function SharePage() {
                 <div className="space-y-2">
                   {info.batchFiles!.filter(bf => bf.shareToken).map((bf, idx) => (
                     <div key={bf.shareToken}
-                      className="flex items-center gap-3 bg-white/5 hover:bg-white/8 rounded-xl px-3 py-2.5 transition-colors">
+                      className="flex items-center gap-3 [background:var(--surface-700)] hover:[background:var(--surface-600)] rounded-xl px-3 py-2.5 transition-colors">
                       <span className="text-xl flex-shrink-0">{getFileIcon(bf.mimeType)}</span>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">
@@ -290,7 +287,7 @@ export default function SharePage() {
                             ? t('share.hiddenFilename', { index: String(idx + 1) })
                             : bf.filename}
                         </p>
-                        <p className="text-xs text-white/40 mt-0.5">{formatBytes(bf.size)}</p>
+                        <p className="text-xs [color:var(--text-40)] mt-0.5">{formatBytes(bf.size)}</p>
                       </div>
                       {downloaded[bf.shareToken] ? (
                         <span className="text-xs text-emerald-400 flex-shrink-0">✓</span>
@@ -319,23 +316,23 @@ export default function SharePage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <h2 className="font-bold text-lg leading-tight truncate">{info.filename}</h2>
-                    <p className="text-white/50 text-sm mt-0.5">{formatBytes(info.size)}</p>
+                    <p className="[color:var(--text-50)] text-sm mt-0.5">{formatBytes(info.size)}</p>
                   </div>
                 </div>
 
                 {/* Meta */}
                 <div className="grid grid-cols-2 gap-3">
                   {info.expiresAt && (
-                    <div className="bg-white/5 rounded-xl px-3 py-2.5">
-                      <p className="text-xs text-white/40 flex items-center gap-1 mb-0.5">
+                    <div className="[background:var(--surface-700)] rounded-xl px-3 py-2.5">
+                      <p className="text-xs [color:var(--text-40)] flex items-center gap-1 mb-0.5">
                         <Clock size={10} /> {t('share.expires')}
                       </p>
                       <p className="text-sm font-medium">{formatDate(info.expiresAt)}</p>
                     </div>
                   )}
                   {info.maxDownloads && (
-                    <div className="bg-white/5 rounded-xl px-3 py-2.5">
-                      <p className="text-xs text-white/40 flex items-center gap-1 mb-0.5">
+                    <div className="[background:var(--surface-700)] rounded-xl px-3 py-2.5">
+                      <p className="text-xs [color:var(--text-40)] flex items-center gap-1 mb-0.5">
                         <Download size={10} /> {t('share.downloads')}
                       </p>
                       <p className="text-sm font-medium">{info.downloads} / {info.maxDownloads}</p>
@@ -352,7 +349,7 @@ export default function SharePage() {
                 {/* Password input */}
                 {showPassword && (
                   <div>
-                    <label className="text-xs text-white/50 mb-1.5 flex items-center gap-1">
+                    <label className="text-xs [color:var(--text-50)] mb-1.5 flex items-center gap-1">
                       <Shield size={11} /> {t('share.passwordLabel')}
                     </label>
                     <input
@@ -395,7 +392,7 @@ export default function SharePage() {
           </div>
         )}
 
-        <p className="text-center text-white/20 text-xs mt-6">
+        <p className="text-center [color:var(--text-20)] text-xs mt-6">
           {t('share.footer', { app: appName })}
         </p>
       </div>

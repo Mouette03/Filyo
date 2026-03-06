@@ -118,10 +118,7 @@ export default function RequestUploadPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12"
-      style={{
-        background: 'radial-gradient(ellipse 80% 80% at 50% -20%, rgba(92, 107, 250, 0.12), transparent), #0d0e1a'
-      }}>
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12">
       {/* Sélecteur de langue — coin haut droit */}
       <div className="fixed top-4 right-4 z-50">
         <LanguageSwitcher />
@@ -143,7 +140,7 @@ export default function RequestUploadPage() {
         {status === 'loading' && (
           <div className="card text-center py-12">
             <div className="w-10 h-10 border-2 border-brand-500/40 border-t-brand-500 rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-white/50">{t('common.loading')}</p>
+            <p className="[color:var(--text-50)]">{t('common.loading')}</p>
           </div>
         )}
 
@@ -153,7 +150,7 @@ export default function RequestUploadPage() {
               <AlertTriangle size={28} className="text-red-400" />
             </div>
             <h2 className="text-xl font-bold mb-2">{status === 'expired' ? t('request.expired') : t('request.invalid')}</h2>
-            <p className="text-white/50 text-sm">{error}</p>
+            <p className="[color:var(--text-50)] text-sm">{error}</p>
           </div>
         )}
 
@@ -163,7 +160,7 @@ export default function RequestUploadPage() {
               <Check size={28} className="text-emerald-400" />
             </div>
             <h2 className="text-xl font-bold mb-2">{t('request.doneTitle')}</h2>
-            <p className="text-white/50 text-sm">{t('request.doneMsg')}</p>
+            <p className="[color:var(--text-50)] text-sm">{t('request.doneMsg')}</p>
           </div>
         )}
 
@@ -177,11 +174,11 @@ export default function RequestUploadPage() {
                 </div>
                 <div>
                   <h1 className="font-bold text-lg leading-tight">{info.title}</h1>
-                  <p className="text-xs text-white/40">{t('request.depositRequest')}</p>
+                  <p className="text-xs [color:var(--text-40)]">{t('request.depositRequest')}</p>
                 </div>
               </div>
               {info.message && (
-                <p className="text-white/70 text-sm bg-white/5 rounded-xl px-4 py-3">{info.message}</p>
+                <p className="[color:var(--text-70)] text-sm [background:var(--surface-700)] rounded-xl px-4 py-3">{info.message}</p>
               )}
               <div className="flex flex-wrap gap-2 mt-3">
                 {info.expiresAt && (
@@ -209,10 +206,10 @@ export default function RequestUploadPage() {
                   const hasOptional = nameReq === 'optional' || emailReq === 'optional' || msgReq === 'optional'
                   const allRequired = [nameReq, emailReq, msgReq].filter(r => r !== 'hidden').every(r => r === 'required')
                   return (
-                    <h3 className="text-sm font-semibold text-white/60 uppercase tracking-wider">
+                    <h3 className="text-sm font-semibold [color:var(--text-60)] uppercase tracking-wider">
                       {t('request.uploaderInfo')}
                       {!allRequired && hasOptional && hasRequired && (
-                        <span className="ml-2 text-white/30 normal-case tracking-normal font-normal text-xs">{t('request.requiredNote')}</span>
+                        <span className="ml-2 [color:var(--text-30)] normal-case tracking-normal font-normal text-xs">{t('request.requiredNote')}</span>
                       )}
                     </h3>
                   )
@@ -223,7 +220,7 @@ export default function RequestUploadPage() {
                   }`}>
                     {nameReq !== 'hidden' && (
                       <div>
-                        <label className="text-xs text-white/50 mb-1.5 flex items-center gap-1">
+                        <label className="text-xs [color:var(--text-50)] mb-1.5 flex items-center gap-1">
                           <User size={11} /> {t('request.nameLabel')}
                           {nameReq === 'required' && <span className="text-red-400 ml-0.5">*</span>}
                         </label>
@@ -234,7 +231,7 @@ export default function RequestUploadPage() {
                     )}
                     {emailReq !== 'hidden' && (
                       <div>
-                        <label className="text-xs text-white/50 mb-1.5 flex items-center gap-1">
+                        <label className="text-xs [color:var(--text-50)] mb-1.5 flex items-center gap-1">
                           <Mail size={11} /> Email
                           {emailReq === 'required' && <span className="text-red-400 ml-0.5">*</span>}
                         </label>
@@ -247,10 +244,10 @@ export default function RequestUploadPage() {
                 )}
                 {msgReq !== 'hidden' && (
                   <div>
-                    <label className="text-xs text-white/50 mb-1.5 flex items-center gap-1">
+                    <label className="text-xs [color:var(--text-50)] mb-1.5 flex items-center gap-1">
                       <MessageSquare size={11} /> {t('request.messageLabel')}
                       {msgReq === 'required' && <span className="text-red-400 ml-0.5">*</span>}
-                      {msgReq === 'optional' && <span className="text-white/25 ml-1">{t('request.messageOptional')}</span>}
+                      {msgReq === 'optional' && <span className="[color:var(--text-20)] ml-1">{t('request.messageOptional')}</span>}
                     </label>
                     <textarea value={message} onChange={e => setMessage(e.target.value)}
                       placeholder={msgReq === 'required' ? t('request.messagePlaceholderReq') : t('request.messagePlaceholderOpt')}
@@ -259,7 +256,7 @@ export default function RequestUploadPage() {
                 )}
                 {info.hasPassword && (
                   <div>
-                    <label className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
+                    <label className="text-xs [color:var(--text-50)] mb-1.5 block flex items-center gap-1">
                       <Lock size={11} /> {t('request.passwordLabel')}
                     </label>
                     <input type="password" value={password} onChange={e => setPassword(e.target.value)}
@@ -271,7 +268,7 @@ export default function RequestUploadPage() {
             {/* Mot de passe seul si tous les champs déposant masqués */}
             {nameReq === 'hidden' && emailReq === 'hidden' && msgReq === 'hidden' && info.hasPassword && (
               <div className="card">
-                <label className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
+                <label className="text-xs [color:var(--text-50)] mb-1.5 block flex items-center gap-1">
                   <Lock size={11} /> {t('request.passwordLabel')}
                 </label>
                 <input type="password" value={password} onChange={e => setPassword(e.target.value)}
@@ -285,25 +282,25 @@ export default function RequestUploadPage() {
               className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all duration-300
                 ${isDragActive
                   ? 'border-brand-500 bg-brand-500/10'
-                  : 'border-white/20 hover:border-brand-500/50 hover:bg-brand-500/5'}`}
+                  : '[border-color:var(--glass-border)] hover:border-brand-500/50 hover:bg-brand-500/5'}`}
             >
               <input {...getInputProps()} />
-              <Upload size={24} className={`mx-auto mb-3 ${isDragActive ? 'text-brand-400' : 'text-white/40'}`} />
-              <p className="text-white/70 font-medium">
+              <Upload size={24} className={`mx-auto mb-3 ${isDragActive ? 'text-brand-400' : '[color:var(--text-40)]'}`} />
+              <p className="[color:var(--text-70)] font-medium">
                 {isDragActive ? t('request.dropActive') : t('request.dropHint')}
               </p>
-              <p className="text-white/30 text-sm mt-1">{t('request.dropBrowse')}</p>
+              <p className="[color:var(--text-30)] text-sm mt-1">{t('request.dropBrowse')}</p>
             </div>
 
             {/* File list */}
             {files.length > 0 && (
               <div className="card space-y-2">
                 {files.map((f, i) => (
-                  <div key={i} className="flex items-center gap-3 bg-white/5 rounded-xl px-3 py-2.5">
+                    <div key={i} className="flex items-center gap-3 [background:var(--surface-700)] rounded-xl px-3 py-2.5">
                     <span className="text-xl">{getFileIcon(f.type)}</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{f.name}</p>
-                      <p className="text-xs text-white/40">{formatBytes(f.size)}</p>
+                      <p className="text-xs [color:var(--text-40)]">{formatBytes(f.size)}</p>
                     </div>
                   </div>
                 ))}
@@ -312,7 +309,7 @@ export default function RequestUploadPage() {
 
             {/* Progress bar */}
             {status === 'uploading' && (
-              <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+              <div className="h-1.5 [background:var(--surface-600)] rounded-full overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-brand-600 to-brand-400 rounded-full transition-all duration-300"
                   style={{ width: `${progress}%` }}
@@ -340,7 +337,7 @@ export default function RequestUploadPage() {
           </>
         )}
 
-        <p className="text-center text-white/20 text-xs">
+        <p className="text-center [color:var(--text-20)] text-xs">
           {t('share.footer', { app: appName })}
         </p>
       </div>
