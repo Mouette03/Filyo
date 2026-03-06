@@ -116,6 +116,3 @@ CREATE UNIQUE INDEX "Share_token_key" ON "Share"("token");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "UploadRequest_token_key" ON "UploadRequest"("token");
-
--- CreateIndex
-CREATE UNIQUE INDEX "UploadRequest_token_key" ON "UploadRequest"("token");
