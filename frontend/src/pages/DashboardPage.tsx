@@ -134,18 +134,9 @@ export default function DashboardPage() {
     } catch { toast.error(t('common.error')) }
   }
 
-  const copyShareLink = async (token: string) => {
+  const copyLink = async (prefix: 's' | 'r', token: string) => {
     try {
-      await copyToClipboard(`${window.location.origin}/s/${token}`)
-      setCopiedToken(token)
-      toast.success(t('toast.linkCopied'))
-      setTimeout(() => setCopiedToken(null), 2000)
-    } catch { toast.error(t('toast.cannotCopy')) }
-  }
-
-  const copyRequestLink = async (token: string) => {
-    try {
-      await copyToClipboard(`${window.location.origin}/r/${token}`)
+      await copyToClipboard(`${window.location.origin}/${prefix}/${token}`)
       setCopiedToken(token)
       toast.success(t('toast.linkCopied'))
       setTimeout(() => setCopiedToken(null), 2000)
@@ -394,7 +385,7 @@ export default function DashboardPage() {
                             <ExternalLink size={12} /> {t('common.view')}
                           </button>
                           <button
-                            onClick={() => copyShareLink(firstShare.token)}
+                            onClick={() => copyLink('s', firstShare.token)}
                             className={`flex items-center gap-1.5 px-2.5 h-8 rounded-lg text-xs font-medium transition-all flex-shrink-0
                               ${copiedToken === firstShare.token ? 'bg-emerald-500/20 text-emerald-400' : 'btn-secondary'}`}>
                             {copiedToken === firstShare.token ? <Check size={12} /> : <Copy size={12} />}
@@ -450,7 +441,7 @@ export default function DashboardPage() {
                           <ExternalLink size={12} /> {t('common.view')}
                         </button>
                         <button
-                          onClick={() => copyShareLink(firstShare.token)}
+                          onClick={() => copyLink('s', firstShare.token)}
                           className={`flex items-center gap-1.5 px-2.5 h-8 rounded-lg text-xs font-medium transition-all flex-shrink-0
                             ${copiedToken === firstShare.token ? 'bg-emerald-500/20 text-emerald-400' : 'btn-secondary'}`}>
                           {copiedToken === firstShare.token ? <Check size={12} /> : <Copy size={12} />}
@@ -597,7 +588,7 @@ export default function DashboardPage() {
                           <ExternalLink size={12} /> {t('common.view')}
                         </button>
                         <button
-                          onClick={() => copyShareLink(share.token)}
+                          onClick={() => copyLink('s', share.token)}
                           className={`flex items-center gap-1.5 px-2.5 h-8 rounded-lg text-xs font-medium transition-all flex-shrink-0
                             ${copiedToken === share.token ? 'bg-emerald-500/20 text-emerald-400' : 'btn-secondary'}`}>
                           {copiedToken === share.token ? <Check size={12} /> : <Copy size={12} />}
@@ -645,7 +636,7 @@ export default function DashboardPage() {
                         <ExternalLink size={12} /> {t('common.view')}
                       </button>
                       <button
-                        onClick={() => copyShareLink(share.token)}
+                        onClick={() => copyLink('s', share.token)}
                         className={`flex items-center gap-1.5 px-2.5 h-8 rounded-lg text-xs font-medium transition-all flex-shrink-0
                           ${copiedToken === share.token ? 'bg-emerald-500/20 text-emerald-400' : 'btn-secondary'}`}>
                         {copiedToken === share.token ? <Check size={12} /> : <Copy size={12} />}
@@ -772,7 +763,7 @@ export default function DashboardPage() {
                     className="btn-secondary flex items-center gap-1.5 text-xs px-2.5 h-8">
                     <Eye size={12} /> {t('dash.filesBtn')}
                   </button>
-                  <button onClick={() => copyRequestLink(r.token)}
+                  <button onClick={() => copyLink('r', r.token)}
                     className={`flex items-center gap-1.5 px-2.5 h-8 rounded-lg text-xs font-medium transition-all
                       ${copiedToken === r.token ? 'bg-emerald-500/20 text-emerald-400' : 'btn-secondary'}`}>
                     {copiedToken === r.token ? <Check size={12} /> : <Copy size={12} />}
@@ -795,7 +786,7 @@ export default function DashboardPage() {
                   className="btn-secondary flex items-center gap-1.5 text-xs px-2.5 h-8 flex-1 justify-center">
                   <Eye size={12} /> {t('dash.filesBtn')}
                 </button>
-                <button onClick={() => copyRequestLink(r.token)}
+                <button onClick={() => copyLink('r', r.token)}
                   className={`flex items-center gap-1.5 px-2.5 h-8 rounded-lg text-xs font-medium transition-all flex-1 justify-center
                     ${copiedToken === r.token ? 'bg-emerald-500/20 text-emerald-400' : 'btn-secondary'}`}>
                   {copiedToken === r.token ? <Check size={12} /> : <Copy size={12} />}

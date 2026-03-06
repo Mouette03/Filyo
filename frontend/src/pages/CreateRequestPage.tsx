@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { Copy, Check, Plus, ArrowDownUp, Clock, FileUp, Lock, Hash } from 'lucide-react'
+import { Copy, Check, Plus, ArrowDownUp, Clock, FileUp, Lock, Hash, Mail, Send } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { createUploadRequest } from '../api/client'
+import { createUploadRequest, sendRequestByEmail } from '../api/client'
 import { copyToClipboard } from '../lib/utils'
 import { useT } from '../i18n'
 
@@ -22,7 +22,10 @@ export default function CreateRequestPage() {
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<CreatedRequest | null>(null)
   const [copied, setCopied] = useState(false)
-  const { t } = useT()
+  const [emailTo, setEmailTo] = useState('')
+  const [emailSending, setEmailSending] = useState(false)
+  const [emailSent, setEmailSent] = useState(false)
+  const { t, lang } = useT()
 
   const handleCreate = async () => {
     if (!title.trim()) {
@@ -46,6 +49,30 @@ export default function CreateRequestPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleSendEmail = async () => {
+    const addresses = emailTo.split(',').map(s => s.trim()).filter(Boolean)
+    if (addresses.length === 0) return toast.error(t('toast.emailRequired'))
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (addresses.some(a => !emailRegex.test(a))) return toast.error(t('toast.emailInvalid'))
+    setEmailSending(true)
+    try {
+      await sendRequestByEmail(result!.id, addresses.join(','), lang)
+      setEmailSent(true)
+      if (addresses.length === 1) {
+        toast.success(t('toast.requestEmailSent', { email: addresses[0] }))
+      } else {
+        toast.success(t('toast.requestEmailsSent', { count: addresses.length }))
+      }
+      setTimeout(() => setEmailSent(false), 3000)
+    } catch (err: any) {
+      const code = err.response?.data?.code
+      if (code === 'SMTP_NOT_CONFIGURED') toast.error(t('toast.smtpNotConfigured'))
+      else if (code === 'EMAIL_SEND_FAILED') toast.error(t('toast.emailSendFailed', { detail: err.response?.data?.detail || '' }))
+      else toast.error(t('toast.requestEmailError'))
+    }
+    setEmailSending(false)
   }
 
   const link = result ? `${window.location.origin}/r/${result.token}` : ''
@@ -194,7 +221,38 @@ export default function CreateRequestPage() {
             </div>
           </div>
 
-          <button onClick={() => { setResult(null); setTitle(''); setMessage('') }}
+          {/* Email */}
+          <div className="card">
+            <p className="text-xs text-white/50 mb-2 font-medium uppercase tracking-wider flex items-center gap-1">
+              <Mail size={11} /> {t('create.emailLabel')}
+            </p>
+            <div className="flex items-center gap-2">
+              <input
+                type="email"
+                value={emailTo}
+                onChange={e => setEmailTo(e.target.value)}
+                placeholder={t('create.emailPlaceholder')}
+                className="input flex-1 text-sm"
+              />
+              <button
+                onClick={handleSendEmail}
+                disabled={emailSending || emailSent}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap
+                  ${emailSent ? 'bg-emerald-500/20 text-emerald-400' : 'btn-secondary'}`}
+              >
+                {emailSent ? (
+                  <><Check size={14} /> {t('create.emailSent')}</>
+                ) : emailSending ? (
+                  <><div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> {t('create.emailSending')}</>
+                ) : (
+                  <><Send size={14} /> {t('create.emailSend')}</>
+                )}
+              </button>
+            </div>
+            <p className="text-xs text-white/30 mt-2">{t('create.emailHint')}</p>
+          </div>
+
+          <button onClick={() => { setResult(null); setTitle(''); setMessage(''); setEmailTo(''); setEmailSent(false) }}
             className="btn-secondary w-full flex items-center justify-center gap-2">
             <Plus size={16} /> {t('create.anotherLink')}
           </button>

@@ -1,7 +1,7 @@
 ﻿import { useEffect, useState, useRef } from 'react'
 import { Settings, Upload, Trash2, Check, Type, Image, RefreshCw, Mail, Eye, EyeOff, Wifi, Globe, Users, Palette, Moon, Sun, Monitor, Clock } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { getSettings, updateAppName, uploadLogo, deleteLogo, getSmtpSettings, updateSmtpSettings, testSmtp, updateSiteUrl, updateUploaderFields, updateAllowRegistration, updateCleanupSetting } from '../api/client'
+import { updateAppName, uploadLogo, deleteLogo, getSmtpSettings, updateSmtpSettings, testSmtp, updateSiteUrl, updateUploaderFields, updateAllowRegistration, updateCleanupSetting } from '../api/client'
 import { useAppSettingsStore } from '../stores/useAppSettingsStore'
 import { usePreferencesStore, ACCENT_PRESETS, BG_PRESETS, type ThemeMode, type AccentKey, type BgColorKey } from '../stores/usePreferencesStore'
 import { useT } from '../i18n'
@@ -22,7 +22,7 @@ export default function SettingsPage() {
   const [appName, setAppName] = useState(settings.appName || 'Filyo')
   const [logoUrl, setLogoUrl] = useState(settings.logoUrl || '')
   const [saving, setSaving] = useState(false)
-  const [siteUrl, setSiteUrl] = useState('')
+  const [siteUrl, setSiteUrl] = useState(settings.siteUrl || '')
   const [savingUrl, setSavingUrl] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -39,30 +39,20 @@ export default function SettingsPage() {
   const [testingSmtp, setTestingSmtp] = useState(false)
 
   // Champs déposant
-  const [uploaderNameReq, setUploaderNameReq] = useState<FieldReq>('optional')
-  const [uploaderEmailReq, setUploaderEmailReq] = useState<FieldReq>('optional')
-  const [uploaderMsgReq, setUploaderMsgReq] = useState<FieldReq>('optional')
+  const [uploaderNameReq, setUploaderNameReq] = useState<FieldReq>(settings.uploaderNameReq)
+  const [uploaderEmailReq, setUploaderEmailReq] = useState<FieldReq>(settings.uploaderEmailReq)
+  const [uploaderMsgReq, setUploaderMsgReq] = useState<FieldReq>(settings.uploaderMsgReq)
   const [savingFields, setSavingFields] = useState(false)
 
   // Inscription
-  const [allowRegistration, setAllowRegistration] = useState(false)
+  const [allowRegistration, setAllowRegistration] = useState(settings.allowRegistration)
   const [savingRegistration, setSavingRegistration] = useState(false)
 
   // Nettoyage automatique
-  const [cleanupAfterDays, setCleanupAfterDays] = useState<number | null>(null)
+  const [cleanupAfterDays, setCleanupAfterDays] = useState<number | null>(settings.cleanupAfterDays)
   const [savingCleanup, setSavingCleanup] = useState(false)
 
   useEffect(() => {
-    getSettings().then(res => {
-      setAppName(res.data.appName || 'Filyo')
-      setLogoUrl(res.data.logoUrl || '')
-      setSiteUrl(res.data.siteUrl || '')
-      setUploaderNameReq(res.data.uploaderNameReq || 'optional')
-      setUploaderEmailReq(res.data.uploaderEmailReq || 'optional')
-      setUploaderMsgReq(res.data.uploaderMsgReq || 'optional')
-      setAllowRegistration(res.data.allowRegistration ?? false)
-      setCleanupAfterDays(res.data.cleanupAfterDays ?? null)
-    }).catch(() => {})
     getSmtpSettings().then(res => {
       setSmtpHost(res.data.smtpHost || '')
       setSmtpPort(String(res.data.smtpPort || 587))

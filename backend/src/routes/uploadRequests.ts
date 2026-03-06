@@ -6,6 +6,8 @@ import mime from 'mime-types'
 import bcrypt from 'bcryptjs'
 import { prisma } from '../lib/prisma'
 import { UPLOAD_DIR } from '../lib/config'
+import { getAppSettings } from '../lib/appSettings'
+import { createSmtpTransport } from '../lib/smtp'
 
 export async function uploadRequestRoutes(app: FastifyInstance) {
   const auth = { onRequest: [app.authenticate] }
@@ -235,6 +237,64 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
     })
     return { active: updated.active }
   })
+
+  // POST /api/upload-requests/:id/send-email (proprietaire ou admin)
+  app.post<{ Params: { id: string }; Body: { to: string; lang?: string } }>(
+    '/:id/send-email',
+    auth,
+    async (req: any, reply) => {
+      const { to, lang = 'fr' } = req.body
+      const isEn = lang === 'en'
+      const addresses: string[] = (to || '').split(',').map((s: string) => s.trim()).filter(Boolean)
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (addresses.length === 0 || addresses.some(a => !emailRegex.test(a))) {
+        return reply.code(400).send({ code: 'EMAIL_INVALID' })
+      }
+      const toField = addresses.join(', ')
+      const where =
+        req.user.role === 'ADMIN'
+          ? { id: req.params.id }
+          : { id: req.params.id, userId: req.user.id }
+      const request = await prisma.uploadRequest.findFirst({ where })
+      if (!request) return reply.code(403).send({ code: 'FORBIDDEN' })
+
+      const settings = await getAppSettings()
+      if (!settings.smtpHost || !settings.smtpFrom) {
+        return reply.code(503).send({ code: 'SMTP_NOT_CONFIGURED' })
+      }
+      const baseUrl = (settings.siteUrl || `http://localhost:${process.env.PORT || 3000}`).replace(/\/$/, '')
+      const depositUrl = `${baseUrl}/r/${request.token}`
+      const appName = settings.appName || 'Filyo'
+      const transporter = createSmtpTransport(settings)
+      const subject = isEn
+        ? `[${appName}] File deposit request: ${request.title}`
+        : `[${appName}] Demande de dépôt : ${request.title}`
+      const bodyText = isEn
+        ? `Hello,\n\nYou have been invited to deposit files: "${request.title}".\n\n${request.message ? request.message + '\n\n' : ''}Deposit link:\n${depositUrl}\n\nSent via ${appName}.`
+        : `Bonjour,\n\nVous êtes invité(e) à déposer des fichiers : "${request.title}".\n\n${request.message ? request.message + '\n\n' : ''}Lien de dépôt :\n${depositUrl}\n\nEnvoyé via ${appName}.`
+      try {
+        await transporter.sendMail({
+          from: `"${appName}" <${settings.smtpFrom}>`,
+          to: toField,
+          subject,
+          text: bodyText,
+          html: `<div style="font-family:system-ui,sans-serif;max-width:520px;margin:0 auto;background:#0d0e1a;color:#e8eaf6;padding:32px 24px;border-radius:16px">
+          <h2 style="margin:0 0 6px;color:#7a8dff;font-size:20px">${appName}</h2>
+          <p style="color:#aaa;font-size:13px;margin:0 0 24px">${isEn ? 'File deposit request' : 'Demande de dépôt de fichiers'}</p>
+          <p style="margin:0 0 8px">${isEn ? 'You have been invited to deposit files:' : 'Vous êtes invité(e) à déposer des fichiers :'} <strong>${request.title}</strong></p>
+          ${request.message ? `<p style="margin:0 0 16px;color:#ccc;font-style:italic">"${request.message}"</p>` : ''}
+          <a href="${depositUrl}" style="display:inline-block;background:#5c6bfa;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px">${isEn ? 'Deposit files' : 'Déposer des fichiers'}</a>
+          <p style="margin:12px 0 0;font-size:12px;color:#666;font-family:monospace">${depositUrl}</p>
+          <p style="margin:24px 0 0;font-size:11px;color:#444">${appName}</p>
+        </div>`
+        })
+      } catch (err: any) {
+        req.log.error({ err: err.message }, 'Upload request email failed')
+        return reply.code(502).send({ code: 'EMAIL_SEND_FAILED', detail: err.message })
+      }
+      return { success: true }
+    }
+  )
 
   // DELETE /api/upload-requests/:id (proprietaire ou admin)
   app.delete<{ Params: { id: string } }>('/:id', auth, async (req: any, reply) => {

@@ -119,6 +119,9 @@ export const downloadReceivedFile = (requestId: string, fileId: string) =>
 export const sendShareByEmail = (to: string, tokens: string[], lang: string = 'fr') =>
   api.post('/shares/send-email', { to, tokens, lang })
 
+export const sendRequestByEmail = (id: string, to: string, lang: string = 'fr') =>
+  api.post(`/upload-requests/${id}/send-email`, { to, lang })
+
 // ---- Expiration fichier ----
 export const updateFileExpiry = (id: string, expiresAt: string | null) =>
   api.patch(`/files/${id}/expiry`, { expiresAt })
