@@ -1,3 +1,12 @@
+-- Squashed migration: contient le schéma final complet (toutes les migrations fusionnées)
+-- Migrations fusionnées :
+--   20260303000000_init
+--   20260305000000_add_cleanup
+--   20260305000001_cleanup_per_item  (colonnes File/UploadRequest.cleanupAfterDays, non suivies par Prisma)
+--   20260305000002_cleanup_user_pref
+--   20260306000000_add_reset_token
+--   20260306000001_add_batch_token
+
 -- CreateTable
 CREATE TABLE "User" (
     "id" TEXT NOT NULL PRIMARY KEY,
@@ -8,7 +17,10 @@ CREATE TABLE "User" (
     "active" BOOLEAN NOT NULL DEFAULT true,
     "avatarUrl" TEXT,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "lastLogin" DATETIME
+    "lastLogin" DATETIME,
+    "cleanupAfterDays" INTEGER,
+    "resetToken" TEXT,
+    "resetTokenExpiry" DATETIME
 );
 
 -- CreateTable
@@ -27,6 +39,7 @@ CREATE TABLE "AppSettings" (
     "uploaderEmailReq" TEXT NOT NULL DEFAULT 'optional',
     "uploaderMsgReq" TEXT NOT NULL DEFAULT 'optional',
     "allowRegistration" BOOLEAN NOT NULL DEFAULT false,
+    "cleanupAfterDays" INTEGER,
     "updatedAt" DATETIME NOT NULL
 );
 
@@ -43,6 +56,8 @@ CREATE TABLE "File" (
     "downloads" INTEGER NOT NULL DEFAULT 0,
     "maxDownloads" INTEGER,
     "password" TEXT,
+    "batchToken" TEXT,
+    "hideFilenames" BOOLEAN NOT NULL DEFAULT false,
     "userId" TEXT,
     CONSTRAINT "File_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
@@ -98,6 +113,9 @@ CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Share_token_key" ON "Share"("token");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "UploadRequest_token_key" ON "UploadRequest"("token");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "UploadRequest_token_key" ON "UploadRequest"("token");
