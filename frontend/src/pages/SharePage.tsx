@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { Download, Lock, AlertTriangle, ArrowDownUp, Clock, Shield, EyeOff, Package } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { getShareInfo, downloadShare } from '../api/client'
+import { getShareInfo, downloadShare, getSettings } from '../api/client'
 import { formatBytes, formatDate, getFileIcon, downloadBlob } from '../lib/utils'
 import { useT } from '../i18n'
 import LanguageSwitcher from '../components/LanguageSwitcher'
@@ -36,8 +36,12 @@ type Status = 'loading' | 'ready' | 'error' | 'expired'
 export default function SharePage() {
   const { token } = useParams<{ token: string }>()
   const { t } = useT()
-  const { settings } = useAppSettingsStore()
+  const { settings, setSettings } = useAppSettingsStore()
   const appName = settings.appName || 'Filyo'
+
+  useEffect(() => {
+    getSettings().then(r => setSettings(r.data)).catch(() => {})
+  }, [])
 
   const [info, setInfo] = useState<ShareInfo | null>(null)
   const [status, setStatus] = useState<Status>('loading')

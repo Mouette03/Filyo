@@ -65,47 +65,6 @@ labels:
 
 > Pensez à configurer l'**Adresse du site** dans Réglages → SMTP pour que les liens de partage par email soient corrects.
 
-## Architecture
-
-```
-filyo/
-├── backend/         # Node.js + Fastify + Prisma + SQLite
-│   ├── src/
-│   │   ├── index.ts
-│   │   ├── lib/
-│   │   │   ├── prisma.ts         # Client Prisma singleton
-│   │   │   ├── config.ts         # Constantes centralisées (UPLOAD_DIR…)
-│   │   │   └── cleanup.ts        # Nettoyage automatique des fichiers expirés
-│   │   └── routes/
-│   │       ├── auth.ts           # Authentification & profil
-│   │       ├── files.ts          # Upload/download fichiers
-│   │       ├── shares.ts         # Liens de partage + envoi email
-│   │       ├── uploadRequests.ts # Partage inversé + envoi email
-│   │       ├── users.ts          # Gestion utilisateurs (admin)
-│   │       ├── settings.ts       # Réglages application
-│   │       └── admin.ts          # Stats & cleanup
-│   └── prisma/schema.prisma
-│
-├── frontend/        # React + TypeScript + Vite + Tailwind CSS
-│   └── src/
-│       ├── pages/
-│       │   ├── HomePage.tsx          # Envoi de fichiers (drag & drop)
-│       │   ├── DashboardPage.tsx     # Tableau de bord
-│       │   ├── CreateRequestPage.tsx # Créer un lien de dépôt inversé
-│       │   ├── RequestUploadPage.tsx # Dépôt via lien inversé (public)
-│       │   ├── SharePage.tsx         # Téléchargement (lien public)
-│       │   ├── ProfilePage.tsx       # Profil utilisateur
-│       │   ├── SettingsPage.tsx      # Réglages (admin)
-│       │   ├── UsersPage.tsx         # Administration (admin)
-│       │   └── LoginPage.tsx         # Connexion / Inscription
-│       ├── api/client.ts             # Client axios centralisé
-│       ├── types/common.ts           # Types partagés
-│       └── i18n/                     # Traductions FR / EN
-│
-├── docs/screenshots/              # Captures d'écran
-├── .github/workflows/docker.yml   # CI/CD → GHCR
-└── docker-compose.yml
-```
 
 ## Partage inversé
 
