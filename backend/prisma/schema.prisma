@@ -56,6 +56,8 @@ model File {
   downloads        Int      @default(0)
   maxDownloads     Int?
   password         String?
+  batchToken       String?
+  hideFilenames    Boolean  @default(false)
   shares           Share[]
   userId           String?
   user             User?    @relation(fields: [userId], references: [id])

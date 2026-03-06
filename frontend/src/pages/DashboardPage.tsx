@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Trash2, Download, RefreshCw, Copy, Check, Eye, ToggleLeft, ToggleRight, HardDrive, Clock, Mail, Send, ExternalLink, User, TimerOff, AlertTriangle, MessageSquare } from 'lucide-react'
+import { Trash2, Download, RefreshCw, Copy, Check, Eye, ToggleLeft, ToggleRight, HardDrive, Clock, Mail, Send, ExternalLink, User, TimerOff, AlertTriangle, MessageSquare, Package, EyeOff, ChevronDown, ChevronUp } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '../stores/useAuthStore'
 import {
@@ -15,6 +15,8 @@ interface FileItem {
   id: string; originalName: string; mimeType: string; size: string
   uploadedAt: string; expiresAt: string | null; downloads: number; maxDownloads: number | null
   shares: { token: string; downloads: number; maxDownloads: number | null }[]
+  batchToken?: string | null
+  hideFilenames?: boolean
 }
 interface UploadRequest {
   id: string; token: string; title: string; message: string | null
@@ -52,6 +54,38 @@ export default function DashboardPage() {
   const [expiryValue, setExpiryValue] = useState('')
   const [savingExpiryId, setSavingExpiryId] = useState<string | null>(null)
   const [expiringNowId, setExpiringNowId] = useState<string | null>(null)
+  const [collapsedBatches, setCollapsedBatches] = useState<Set<string>>(new Set())
+
+  // Grouper les fichiers par batchToken pour l'affichage
+  type DisplayItem =
+    | { type: 'single'; file: FileItem }
+    | { type: 'batch'; batchToken: string; files: FileItem[] }
+
+  const displayItems: DisplayItem[] = (() => {
+    const batchMap = new Map<string, FileItem[]>()
+    const singles: FileItem[] = []
+    for (const f of files) {
+      if (f.batchToken) {
+        const arr = batchMap.get(f.batchToken) ?? []
+        arr.push(f)
+        batchMap.set(f.batchToken, arr)
+      } else {
+        singles.push(f)
+      }
+    }
+    const result: DisplayItem[] = []
+    // Lots (ordre d'apparition : premier fichier du lot)
+    const seenBatch = new Set<string>()
+    for (const f of files) {
+      if (f.batchToken && !seenBatch.has(f.batchToken)) {
+        seenBatch.add(f.batchToken)
+        result.push({ type: 'batch', batchToken: f.batchToken, files: batchMap.get(f.batchToken)! })
+      } else if (!f.batchToken) {
+        result.push({ type: 'single', file: f })
+      }
+    }
+    return result
+  })()
 
   const load = async () => {
     setLoading(true)
@@ -72,6 +106,15 @@ export default function DashboardPage() {
     try {
       await deleteFile(id)
       setFiles(prev => prev.filter(f => f.id !== id))
+      toast.success(t('toast.fileDeleted'))
+    } catch { toast.error(t('toast.deleteError')) }
+  }
+
+  const handleDeleteBatch = async (batchFiles: FileItem[]) => {
+    try {
+      await Promise.all(batchFiles.map(f => deleteFile(f.id)))
+      const ids = new Set(batchFiles.map(f => f.id))
+      setFiles(prev => prev.filter(f => !ids.has(f.id)))
       toast.success(t('toast.fileDeleted'))
     } catch { toast.error(t('toast.deleteError')) }
   }
@@ -259,7 +302,7 @@ export default function DashboardPage() {
         <button onClick={() => setTab('sent')}
           className={`px-5 py-2 rounded-lg text-sm font-medium transition-all
             ${tab === 'sent' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white'}`}>
-          {t('dash.tabSent')} ({files.length})
+          {t('dash.tabSent')} ({displayItems.length})
         </button>
         <button onClick={() => setTab('requests')}
           className={`px-5 py-2 rounded-lg text-sm font-medium transition-all
@@ -281,7 +324,151 @@ export default function DashboardPage() {
           {files.length === 0 && (
             <div className="card text-center py-12 text-white/40">{t('dash.noFiles')}</div>
           )}
-          {files.map(f => {
+          {displayItems.map(item => {
+            if (item.type === 'batch') {
+              const { batchToken, files: bf } = item
+              const firstShare = bf[0]?.shares?.[0]
+              const isCollapsed = collapsedBatches.has(batchToken)
+              const totalSize = bf.reduce((acc, f) => acc + Number(f.size), 0)
+              const firstFile = bf[0]
+              return (
+                <div key={batchToken} className="card overflow-hidden border border-brand-500/20">
+                  {/* Entête du lot */}
+                  <div className="flex items-start sm:items-center gap-3 sm:gap-4">
+                    <div className="w-10 h-10 bg-brand-500/15 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <Package size={18} className="text-brand-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-semibold">{t('dash.batchGroupTitle', { count: String(bf.length) })}</p>
+                        {firstFile?.hideFilenames && (
+                          <span className="flex items-center gap-1 text-xs text-white/40 bg-white/5 px-2 py-0.5 rounded-full">
+                            <EyeOff size={10} /> {t('dash.batchHideFilenames')}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-white/40 mt-0.5">
+                        {t('dash.batchGroupSize', { count: String(bf.length), size: formatBytes(String(totalSize)) })}
+                        {' · '}{formatDate(firstFile.uploadedAt)}
+                        {firstFile.expiresAt
+                          ? new Date(firstFile.expiresAt) <= new Date()
+                            ? <span className="text-red-400"> · {t('dash.expired')}</span>
+                            : ` · ${t('dash.expires')} ${formatDate(firstFile.expiresAt)}`
+                          : ` · ${t('dash.noExpiry')}`}
+                      </p>
+                    </div>
+                    {/* Boutons desktop lot */}
+                    <div className="hidden sm:flex items-center gap-1.5 flex-shrink-0">
+                      {firstShare && (
+                        <>
+                          <button
+                            onClick={() => window.open(`${window.location.origin}/s/${firstShare.token}`, '_blank')}
+                            className="btn-secondary flex items-center gap-1.5 text-xs px-2.5 h-8 flex-shrink-0">
+                            <ExternalLink size={12} /> {t('common.view')}
+                          </button>
+                          <button
+                            onClick={() => copyShareLink(firstShare.token)}
+                            className={`flex items-center gap-1.5 px-2.5 h-8 rounded-lg text-xs font-medium transition-all flex-shrink-0
+                              ${copiedToken === firstShare.token ? 'bg-emerald-500/20 text-emerald-400' : 'btn-secondary'}`}>
+                            {copiedToken === firstShare.token ? <Check size={12} /> : <Copy size={12} />}
+                            {t('common.copy')}
+                          </button>
+                          <button
+                            onClick={() => { setEmailingFileId(emailingFileId === batchToken ? null : batchToken); setEmailToFile('') }}
+                            className={`btn-icon ${emailingFileId === batchToken ? '!bg-brand-500/20 !text-brand-400 !border-brand-500/30' : ''}`}>
+                            <Mail size={13} />
+                          </button>
+                        </>
+                      )}
+                      <button onClick={() => handleDeleteBatch(bf)} className="btn-icon-danger" title={t('common.delete')}>
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                    {/* Bouton expand/collapse */}
+                    <button
+                      onClick={() => setCollapsedBatches(s => {
+                        const n = new Set(s)
+                        n.has(batchToken) ? n.delete(batchToken) : n.add(batchToken)
+                        return n
+                      })}
+                      className="btn-icon flex-shrink-0">
+                      {isCollapsed ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
+                    </button>
+                  </div>
+                  {/* Boutons mobile lot */}
+                  <div className="flex sm:hidden items-center gap-1.5 mt-3 pt-3 border-t border-white/5 overflow-x-auto">
+                    {firstShare && (
+                      <>
+                        <button
+                          onClick={() => window.open(`${window.location.origin}/s/${firstShare.token}`, '_blank')}
+                          className="btn-secondary flex items-center gap-1.5 text-xs px-2.5 h-8 flex-shrink-0">
+                          <ExternalLink size={12} /> {t('common.view')}
+                        </button>
+                        <button
+                          onClick={() => copyShareLink(firstShare.token)}
+                          className={`flex items-center gap-1.5 px-2.5 h-8 rounded-lg text-xs font-medium transition-all flex-shrink-0
+                            ${copiedToken === firstShare.token ? 'bg-emerald-500/20 text-emerald-400' : 'btn-secondary'}`}>
+                          {copiedToken === firstShare.token ? <Check size={12} /> : <Copy size={12} />}
+                          {t('common.copy')}
+                        </button>
+                        <button
+                          onClick={() => { setEmailingFileId(emailingFileId === batchToken ? null : batchToken); setEmailToFile('') }}
+                          className={`btn-icon flex-shrink-0 ${emailingFileId === batchToken ? '!bg-brand-500/20 !text-brand-400 !border-brand-500/30' : ''}`}>
+                          <Mail size={13} />
+                        </button>
+                        <button onClick={() => handleDeleteBatch(bf)} className="btn-icon-danger flex-shrink-0">
+                          <Trash2 size={13} />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                  {/* Email inline lot */}
+                  {emailingFileId === batchToken && firstShare && (
+                    <div className="mt-3 pt-3 border-t border-white/10 flex gap-2 items-center">
+                      <Mail size={13} className="text-white/30 flex-shrink-0" />
+                      <input
+                        type="email"
+                        value={emailToFile}
+                        onChange={e => setEmailToFile(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && handleSendFileEmail(firstShare.token)}
+                        placeholder={t('dash.emailPlaceholder')}
+                        className="input text-sm py-1.5 flex-1"
+                        autoFocus
+                      />
+                      <button
+                        onClick={() => handleSendFileEmail(firstShare.token)}
+                        disabled={emailSendingToken === firstShare.token || !emailToFile.trim()}
+                        className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1.5 disabled:opacity-40">
+                        {emailSendingToken === firstShare.token
+                          ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          : <Send size={12} />}
+                        {t('common.send')}
+                      </button>
+                      <button onClick={() => setEmailingFileId(null)} className="btn-secondary text-xs px-2.5 py-1.5">✕</button>
+                    </div>
+                  )}
+                  {/* Liste des fichiers du lot */}
+                  {!isCollapsed && (
+                    <div className="mt-3 pt-3 border-t border-white/5 space-y-1">
+                      {bf.map((f, idx) => (
+                        <div key={f.id} className="flex items-center gap-2 px-1 py-1.5">
+                          <span className="text-base flex-shrink-0">{getFileIcon(f.mimeType)}</span>
+                          <p className="flex-1 min-w-0 text-sm truncate text-white/80">
+                            {firstFile.hideFilenames
+                              ? `Fichier ${idx + 1}`
+                              : f.originalName}
+                          </p>
+                          <span className="text-xs text-white/40 flex-shrink-0">{formatBytes(f.size)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            }
+
+            // Fichier individuel
+            const f = item.file
             const share = f.shares[0]
             return (
               <div key={f.id} className="card overflow-hidden">
@@ -317,14 +504,14 @@ export default function DashboardPage() {
                           onClick={() => window.open(`${window.location.origin}/s/${share.token}`, '_blank')}
                           className="btn-secondary flex items-center gap-1.5 text-xs px-2.5 h-8 flex-shrink-0"
                           title="Voir la page de partage">
-                          <ExternalLink size={12} /> Voir
+                          <ExternalLink size={12} /> {t('common.view')}
                         </button>
                         <button
                           onClick={() => copyShareLink(share.token)}
                           className={`flex items-center gap-1.5 px-2.5 h-8 rounded-lg text-xs font-medium transition-all flex-shrink-0
                             ${copiedToken === share.token ? 'bg-emerald-500/20 text-emerald-400' : 'btn-secondary'}`}>
                           {copiedToken === share.token ? <Check size={12} /> : <Copy size={12} />}
-                          Copier
+                          {t('common.copy')}
                         </button>
                         <button
                           onClick={() => { setEmailingFileId(emailingFileId === f.id ? null : f.id); setEmailToFile('') }}
@@ -365,14 +552,14 @@ export default function DashboardPage() {
                       <button
                         onClick={() => window.open(`${window.location.origin}/s/${share.token}`, '_blank')}
                         className="btn-secondary flex items-center gap-1.5 text-xs px-2.5 h-8 flex-shrink-0">
-                        <ExternalLink size={12} /> Voir
+                        <ExternalLink size={12} /> {t('common.view')}
                       </button>
                       <button
                         onClick={() => copyShareLink(share.token)}
                         className={`flex items-center gap-1.5 px-2.5 h-8 rounded-lg text-xs font-medium transition-all flex-shrink-0
                           ${copiedToken === share.token ? 'bg-emerald-500/20 text-emerald-400' : 'btn-secondary'}`}>
                         {copiedToken === share.token ? <Check size={12} /> : <Copy size={12} />}
-                        Copier
+                        {t('common.copy')}
                       </button>
                       <button
                         onClick={() => { setEmailingFileId(emailingFileId === f.id ? null : f.id); setEmailToFile('') }}

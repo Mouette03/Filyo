@@ -22,6 +22,7 @@ export const en = {
   'common.refresh': 'Refresh',
   'common.copy': 'Copy',
   'common.copied': 'Copied!',
+  'common.view': 'View',
   'common.send': 'Send',
   'common.sent': 'Sent',
   'common.download': 'Download',
@@ -83,6 +84,10 @@ export const en = {
   'home.modal.emailHint': 'The share link(s) will be sent to this address.',
   'home.modal.newUpload': 'New upload',
   'home.modal.done': 'Done',
+  'home.modal.linksBatch': '{{count}} files — 1 shared link',
+  'home.batchLinkLabel': 'Single batch link',
+  'home.hideFilenames': 'Hide filenames',
+  'home.hideFilenamesHint': 'Recipients will see the file type but not the real name',
   'home.resultTitle': 'Files sent!',
   'home.resultSubtitle': 'Share these links with your recipients.',
 
@@ -117,6 +122,11 @@ export const en = {
   'dash.requestActive': 'Active',
   'dash.requestInactive': 'Inactive',
   'dash.downloadReceived': 'Download',
+  'dash.batch': 'Batch of {{count}} file(s)',
+  'dash.batchSize': '{{size}} total',
+  'dash.batchFiles': '{{count}} file(s)',
+  'dash.batchGroupTitle': 'Batch of {{count}} files',
+  'dash.batchGroupSize': '{{count}} files · {{size}}',
 
   // ── Create deposit request ───────────────────────────────────
   'create.title': 'Reverse Share',
@@ -254,6 +264,17 @@ export const en = {
   'share.footer': 'Shared via {{app}} — Self-hosted & private',
   'share.expired': 'Link expired',
   'share.invalid': 'Invalid link',
+  'share.batchTitle': '{{count}} file(s) shared',
+  'share.batchSubtitle': 'Click a file to download it',
+  'share.batchDownloadBtn': 'Download',
+  'share.hiddenFilename': 'File {{index}}',
+  'share.batchHideFilenamesNote': 'Filenames are hidden by the sender',
+  'share.batchDownloadAll': 'Download all files',
+  'share.batchPasswordProtected': 'This file batch is password protected',
+  'share.batchFileIndex': 'File {{index}} of {{total}}',
+  'share.batchMultipleFiles': '{{count}} files shared',
+  'share.batchSingleFile': '1 file shared',
+  'share.batchDownloadEach': 'Download each file individually',
 
   // ── Admin (UsersPage) ────────────────────────────────────────
   'users.title': 'Administration',

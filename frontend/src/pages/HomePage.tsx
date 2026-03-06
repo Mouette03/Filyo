@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
-import { Upload, X, Copy, Check, Lock, Clock, Download, Plus, Trash2, Share2, Mail, Send } from 'lucide-react'
+import { Upload, X, Copy, Check, Lock, Clock, Download, Plus, Trash2, Share2, Mail, Send, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { uploadFiles, sendShareByEmail } from '../api/client'
 import { formatBytes, getFileIcon, copyToClipboard } from '../lib/utils'
@@ -13,6 +13,7 @@ interface UploadedResult {
   size: string
   shareToken: string
   expiresAt: string | null
+  batchToken?: string | null
 }
 
 export default function HomePage() {
@@ -24,6 +25,7 @@ export default function HomePage() {
   const [uploading, setUploading] = useState(false)
   const [progress, setProgress] = useState(0)
   const [results, setResults] = useState<UploadedResult[]>([])
+  const [hideFilenames, setHideFilenames] = useState(false)
   const [copiedToken, setCopiedToken] = useState<string | null>(null)
   const [showShareModal, setShowShareModal] = useState(false)
   const [emailTo, setEmailTo] = useState('')
@@ -56,6 +58,7 @@ export default function HomePage() {
     if (password) formData.append('password', password)
     if (expiresIn) formData.append('expiresIn', expiresIn)
     if (maxDownloads) formData.append('maxDownloads', maxDownloads)
+    if (hideFilenames) formData.append('hideFilenames', 'true')
 
     try {
       const res = await uploadFiles(formData, setProgress)
@@ -75,7 +78,11 @@ export default function HomePage() {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTo)) return toast.error(t('toast.emailInvalid'))
     setEmailSending(true)
     try {
-      await sendShareByEmail(emailTo.trim(), results.map(r => r.shareToken), lang)
+      // Si lot : envoyer un seul token (le backend renvoie tous les fichiers)
+      const batchToken = results.length > 1 && results.every(r => r.batchToken && r.batchToken === results[0].batchToken)
+        ? results[0].batchToken : null
+      const tokens = batchToken ? [results[0].shareToken] : results.map(r => r.shareToken)
+      await sendShareByEmail(emailTo.trim(), tokens, lang)
       setEmailSent(true)
       toast.success(t('toast.linkEmailSent', { email: emailTo }))
       setTimeout(() => setEmailSent(false), 3000)
@@ -100,6 +107,9 @@ export default function HomePage() {
     } catch { toast.error(t('toast.cannotCopy')) }
   }
 
+  const isBatch = results.length > 1 && results.every(r => r.batchToken && r.batchToken === results[0].batchToken)
+  const batchShareToken = isBatch ? results[0].shareToken : null
+
   return (
     <div className="max-w-2xl mx-auto px-4 py-12">
       {/* Modale de partage post-upload */}
@@ -115,7 +125,10 @@ export default function HomePage() {
               <div className="flex-1">
                 <h2 className="text-lg font-bold">{t('home.modal.title')}</h2>
                 <p className="text-xs text-white/40">
-                  {results.length === 1 ? t('home.modal.linkSingle') : t('home.modal.linksMultiple', { count: String(results.length) })}
+                  {isBatch
+                    ? t('home.modal.linksBatch', { count: String(results.length) })
+                    : results.length === 1 ? t('home.modal.linkSingle') : t('home.modal.linksMultiple', { count: String(results.length) })}
+
                 </p>
               </div>
               <button onClick={closeModal}
@@ -126,28 +139,59 @@ export default function HomePage() {
 
             {/* Liste des liens */}
             <div className="space-y-2 mb-5 max-h-72 overflow-y-auto pr-1">
-              {results.map(r => {
-                const url = `${window.location.origin}/s/${r.shareToken}`
-                return (
-                  <div key={r.id} className="flex items-center gap-3 bg-white/5 rounded-xl px-3 py-2.5">
-                    <span className="text-xl flex-shrink-0">{getFileIcon(r.mimeType)}</span>
+              {isBatch && batchShareToken ? (
+                /* Mode lot : un seul lien pour tous les fichiers */
+                <>
+                  <div className="flex items-center gap-3 bg-white/5 rounded-xl px-3 py-2.5">
+                    <Share2 size={18} className="text-brand-400 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{r.originalName}</p>
-                      <p className="text-xs text-white/30 truncate font-mono">{url}</p>
+                      <p className="text-sm font-medium">{t('home.batchLinkLabel')}</p>
+                      <p className="text-xs text-white/30 truncate font-mono">
+                        {`${window.location.origin}/s/${batchShareToken}`}
+                      </p>
                     </div>
                     <button
-                      onClick={() => copyLink(r.shareToken)}
+                      onClick={() => copyLink(batchShareToken)}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex-shrink-0
-                        ${ copiedToken === r.shareToken
-                          ? 'bg-emerald-500/20 text-emerald-400'
-                          : 'btn-secondary' }`}
-                    >
-                      {copiedToken === r.shareToken ? <Check size={12} /> : <Copy size={12} />}
-                      {copiedToken === r.shareToken ? t('common.copied') : t('common.copy')}
+                        ${copiedToken === batchShareToken ? 'bg-emerald-500/20 text-emerald-400' : 'btn-secondary'}`}>
+                      {copiedToken === batchShareToken ? <Check size={12} /> : <Copy size={12} />}
+                      {copiedToken === batchShareToken ? t('common.copied') : t('common.copy')}
                     </button>
                   </div>
-                )
-              })}
+                  <div className="px-1 pt-1 space-y-1">
+                    {results.map((r, idx) => (
+                      <div key={r.id} className="flex items-center gap-2 text-xs text-white/50">
+                        <span>{getFileIcon(r.mimeType)}</span>
+                        <span className="truncate">
+                          {hideFilenames ? `Fichier ${idx + 1}` : r.originalName}
+                        </span>
+                        <span className="flex-shrink-0 text-white/30">{formatBytes(r.size)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                /* Mode individuel : un lien par fichier */
+                results.map(r => {
+                  const url = `${window.location.origin}/s/${r.shareToken}`
+                  return (
+                    <div key={r.id} className="flex items-center gap-3 bg-white/5 rounded-xl px-3 py-2.5">
+                      <span className="text-xl flex-shrink-0">{getFileIcon(r.mimeType)}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{r.originalName}</p>
+                        <p className="text-xs text-white/30 truncate font-mono">{url}</p>
+                      </div>
+                      <button
+                        onClick={() => copyLink(r.shareToken)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex-shrink-0
+                          ${copiedToken === r.shareToken ? 'bg-emerald-500/20 text-emerald-400' : 'btn-secondary'}`}>
+                        {copiedToken === r.shareToken ? <Check size={12} /> : <Copy size={12} />}
+                        {copiedToken === r.shareToken ? t('common.copied') : t('common.copy')}
+                      </button>
+                    </div>
+                  )
+                })
+              )}
             </div>
 
             {/* Envoi par email */}
@@ -306,6 +350,22 @@ export default function HomePage() {
                 placeholder={t('common.unlimited')}
                 className="input text-sm py-2"
               />
+            </div>
+            <div className="col-span-2">
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <div className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0
+                  ${hideFilenames ? 'bg-brand-500' : 'bg-white/10'}`}
+                  onClick={() => setHideFilenames(v => !v)}>
+                  <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform
+                    ${hideFilenames ? 'translate-x-4' : ''}`} />
+                </div>
+                <div>
+                  <p className="text-sm font-medium flex items-center gap-1.5">
+                    <EyeOff size={13} className="text-white/50" /> {t('home.hideFilenames')}
+                  </p>
+                  <p className="text-xs text-white/40 mt-0.5">{t('home.hideFilenamesHint')}</p>
+                </div>
+              </label>
             </div>
           </div>
 

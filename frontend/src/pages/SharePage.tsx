@@ -1,10 +1,21 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { Download, Lock, AlertTriangle, ArrowDownUp, Clock, Shield } from 'lucide-react'
+import { Download, Lock, AlertTriangle, ArrowDownUp, Clock, Shield, EyeOff, Package } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { getShareInfo, downloadShare } from '../api/client'
 import { formatBytes, formatDate, getFileIcon, downloadBlob } from '../lib/utils'
 import { useT } from '../i18n'
+import LanguageSwitcher from '../components/LanguageSwitcher'
+import { useAppSettingsStore } from '../stores/useAppSettingsStore'
+
+interface BatchFile {
+  shareToken: string
+  filename: string
+  mimeType: string
+  size: string
+  downloads: number
+  maxDownloads: number | null
+}
 
 interface ShareInfo {
   token: string
@@ -15,25 +26,35 @@ interface ShareInfo {
   hasPassword: boolean
   downloads: number
   maxDownloads: number | null
+  batchFiles: BatchFile[] | null
+  batchToken: string | null
+  hideFilenames: boolean
 }
 
-type Status = 'loading' | 'ready' | 'error' | 'expired' | 'downloading' | 'done'
+type Status = 'loading' | 'ready' | 'error' | 'expired'
 
 export default function SharePage() {
   const { token } = useParams<{ token: string }>()
   const { t } = useT()
+  const { settings } = useAppSettingsStore()
+  const appName = settings.appName || 'Filyo'
+
   const [info, setInfo] = useState<ShareInfo | null>(null)
   const [status, setStatus] = useState<Status>('loading')
   const [error, setError] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
 
+  // Pour le mode batch : état de téléchargement par shareToken
+  const [downloading, setDownloading] = useState<Record<string, boolean>>({})
+  const [downloaded, setDownloaded] = useState<Record<string, boolean>>({})
+
   useEffect(() => {
     if (!token) return
     getShareInfo(token)
       .then(r => {
         setInfo(r.data)
-        setStatus(r.data.hasPassword ? 'ready' : 'ready')
+        setStatus('ready')
         if (r.data.hasPassword) setShowPassword(true)
       })
       .catch(err => {
@@ -51,41 +72,70 @@ export default function SharePage() {
       })
   }, [token])
 
-  const handleDownload = async () => {
+  // Téléchargement d'un fichier unique
+  const handleDownloadSingle = async () => {
     if (!token || !info) return
-    setStatus('downloading')
+    setDownloading(p => ({ ...p, [token]: true }))
     try {
       const res = await downloadShare(token, password || undefined)
       downloadBlob(res.data, info.filename)
-      setStatus('done')
+      setDownloaded(p => ({ ...p, [token]: true }))
       toast.success(t('toast.downloadStarted'))
     } catch (err: any) {
       if (err.response?.status === 401) {
         toast.error(t('toast.passwordWrong'))
-        setStatus('ready')
       } else if (err.response?.data?.code === 'FILE_MISSING') {
         toast.error(t('error.fileMissing'))
-        setStatus('error')
       } else {
         toast.error(t('common.error'))
-        setStatus('ready')
       }
     }
+    setDownloading(p => ({ ...p, [token]: false }))
   }
+
+  // Téléchargement d'un fichier dans un lot
+  const handleDownloadBatch = async (batchToken: string, filename: string) => {
+    setDownloading(p => ({ ...p, [batchToken]: true }))
+    try {
+      const res = await downloadShare(batchToken, password || undefined)
+      downloadBlob(res.data, filename)
+      setDownloaded(p => ({ ...p, [batchToken]: true }))
+      toast.success(t('toast.downloadStarted'))
+    } catch (err: any) {
+      if (err.response?.status === 401) {
+        toast.error(t('toast.passwordWrong'))
+      } else if (err.response?.data?.code === 'FILE_MISSING') {
+        toast.error(t('error.fileMissing'))
+      } else {
+        toast.error(t('common.error'))
+      }
+    }
+    setDownloading(p => ({ ...p, [batchToken]: false }))
+  }
+
+  const isBatch = info?.batchFiles && info.batchFiles.length > 1
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12"
       style={{
         background: 'radial-gradient(ellipse 80% 80% at 50% -20%, rgba(92, 107, 250, 0.12), transparent), #0d0e1a'
       }}>
+
+      {/* Sélecteur de langue — coin haut droit */}
+      <div className="fixed top-4 right-4 z-50">
+        <LanguageSwitcher />
+      </div>
+
       {/* Logo */}
       <div className="flex items-center gap-2 mb-10">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center shadow-lg shadow-brand-500/30">
-          <ArrowDownUp size={16} className="text-white" />
-        </div>
-        <span className="font-bold text-lg tracking-tight">
-          Fil<span className="text-brand-400">yo</span>
-        </span>
+        {settings.logoUrl ? (
+          <img src={settings.logoUrl} alt="logo" className="h-8 w-auto object-contain" />
+        ) : (
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center shadow-lg shadow-brand-500/30">
+            <ArrowDownUp size={16} className="text-white" />
+          </div>
+        )}
+        <span className="font-bold text-lg tracking-tight">{appName}</span>
       </div>
 
       <div className="w-full max-w-md">
@@ -108,93 +158,200 @@ export default function SharePage() {
           </div>
         )}
 
-        {/* File ready to download */}
-        {(status === 'ready' || status === 'downloading' || status === 'done') && info && (
+        {/* Prêt */}
+        {status === 'ready' && info && (
           <div className="card space-y-6">
-            {/* File info */}
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-brand-500/20 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0">
-                {getFileIcon(info.mimeType)}
-              </div>
-              <div className="flex-1 min-w-0">
-                <h2 className="font-bold text-lg leading-tight truncate">{info.filename}</h2>
-                <p className="text-white/50 text-sm mt-0.5">{formatBytes(info.size)}</p>
-              </div>
-            </div>
 
-            {/* Meta */}
-            <div className="grid grid-cols-2 gap-3">
-              {info.expiresAt && (
-                <div className="bg-white/5 rounded-xl px-3 py-2.5">
-                  <p className="text-xs text-white/40 flex items-center gap-1 mb-0.5">
-                    <Clock size={10} /> {t('share.expires')}
-                  </p>
-                  <p className="text-sm font-medium">{formatDate(info.expiresAt)}</p>
+            {/* ── Mode LOT ── */}
+            {isBatch ? (
+              <>
+                {/* Entête lot */}
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 bg-brand-500/20 rounded-2xl flex items-center justify-center flex-shrink-0">
+                    <Package size={26} className="text-brand-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h2 className="font-bold text-lg leading-tight">
+                      {t('share.batchTitle', { count: String(info.batchFiles!.length) })}
+                    </h2>
+                    <p className="text-white/50 text-sm mt-0.5">{t('share.batchSubtitle')}</p>
+                  </div>
                 </div>
-              )}
-              {info.maxDownloads && (
-                <div className="bg-white/5 rounded-xl px-3 py-2.5">
-                  <p className="text-xs text-white/40 flex items-center gap-1 mb-0.5">
-                    <Download size={10} /> {t('share.downloads')}
-                  </p>
-                  <p className="text-sm font-medium">{info.downloads} / {info.maxDownloads}</p>
-                </div>
-              )}
-              {info.hasPassword && (
-                <div className="col-span-2 bg-orange-500/10 border border-orange-500/20 rounded-xl px-3 py-2.5 flex items-center gap-2">
-                  <Lock size={14} className="text-orange-400" />
-                  <p className="text-sm text-orange-300">{t('share.passwordProtected')}</p>
-                </div>
-              )}
-            </div>
 
-            {/* Password input */}
-            {showPassword && (
-              <div>
-                <label className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
-                  <Shield size={11} /> {t('share.passwordLabel')}
-                </label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleDownload()}
-                  placeholder={t('share.passwordPlaceholder')}
-                  className="input"
-                  autoFocus
-                />
-              </div>
-            )}
-
-            {/* Download button */}
-            {status !== 'done' ? (
-              <button
-                onClick={handleDownload}
-                disabled={status === 'downloading'}
-                className="btn-primary w-full flex items-center justify-center gap-2"
-              >
-                {status === 'downloading' ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    {t('share.downloading')}
-                  </>
-                ) : (
-                  <>
-                    <Download size={16} />
-                    {t('share.downloadBtn')}
-                  </>
+                {/* Badge noms masqués */}
+                {info.hideFilenames && (
+                  <div className="flex items-center gap-2 bg-white/5 rounded-xl px-3 py-2">
+                    <EyeOff size={13} className="text-white/40" />
+                    <p className="text-xs text-white/50">{t('share.batchHideFilenamesNote')}</p>
+                  </div>
                 )}
-              </button>
+
+                {/* Meta expiration / téléchargements */}
+                {(info.expiresAt || info.maxDownloads) && (
+                  <div className="grid grid-cols-2 gap-3">
+                    {info.expiresAt && (
+                      <div className="bg-white/5 rounded-xl px-3 py-2.5">
+                        <p className="text-xs text-white/40 flex items-center gap-1 mb-0.5">
+                          <Clock size={10} /> {t('share.expires')}
+                        </p>
+                        <p className="text-sm font-medium">{formatDate(info.expiresAt)}</p>
+                      </div>
+                    )}
+                    {info.maxDownloads && (
+                      <div className="bg-white/5 rounded-xl px-3 py-2.5">
+                        <p className="text-xs text-white/40 flex items-center gap-1 mb-0.5">
+                          <Download size={10} /> {t('share.downloads')}
+                        </p>
+                        <p className="text-sm font-medium">{info.downloads} / {info.maxDownloads}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Badge protégé */}
+                {info.hasPassword && (
+                  <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl px-3 py-2.5 flex items-center gap-2">
+                    <Lock size={14} className="text-orange-400" />
+                    <p className="text-sm text-orange-300">{t('share.batchPasswordProtected')}</p>
+                  </div>
+                )}
+
+                {/* Saisie mot de passe (une seule fois pour tout le lot) */}
+                {showPassword && (
+                  <div>
+                    <label className="text-xs text-white/50 mb-1.5 flex items-center gap-1">
+                      <Shield size={11} /> {t('share.passwordLabel')}
+                    </label>
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      placeholder={t('share.passwordPlaceholder')}
+                      className="input"
+                      autoFocus
+                    />
+                  </div>
+                )}
+
+                {/* Liste des fichiers */}
+                <div className="space-y-2">
+                  {info.batchFiles!.map((bf, idx) => (
+                    <div key={bf.shareToken}
+                      className="flex items-center gap-3 bg-white/5 hover:bg-white/8 rounded-xl px-3 py-2.5 transition-colors">
+                      <span className="text-xl flex-shrink-0">{getFileIcon(bf.mimeType)}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">
+                          {info.hideFilenames
+                            ? t('share.hiddenFilename', { index: String(idx + 1) })
+                            : bf.filename}
+                        </p>
+                        <p className="text-xs text-white/40 mt-0.5">{formatBytes(bf.size)}</p>
+                      </div>
+                      {downloaded[bf.shareToken] ? (
+                        <span className="text-xs text-emerald-400 flex-shrink-0">✓</span>
+                      ) : (
+                        <button
+                          onClick={() => handleDownloadBatch(bf.shareToken, bf.filename)}
+                          disabled={downloading[bf.shareToken]}
+                          className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1.5 flex-shrink-0 disabled:opacity-50">
+                          {downloading[bf.shareToken]
+                            ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            : <Download size={13} />}
+                          {t('share.batchDownloadBtn')}
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </>
             ) : (
-              <div className="bg-emerald-500/20 border border-emerald-500/30 rounded-xl px-4 py-3 text-center text-emerald-400 font-medium">
-                {t('share.downloadStarted')}
-              </div>
+              /* ── Mode FICHIER UNIQUE ── */
+              <>
+                {/* File info */}
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 bg-brand-500/20 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0">
+                    {getFileIcon(info.mimeType)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h2 className="font-bold text-lg leading-tight truncate">{info.filename}</h2>
+                    <p className="text-white/50 text-sm mt-0.5">{formatBytes(info.size)}</p>
+                  </div>
+                </div>
+
+                {/* Meta */}
+                <div className="grid grid-cols-2 gap-3">
+                  {info.expiresAt && (
+                    <div className="bg-white/5 rounded-xl px-3 py-2.5">
+                      <p className="text-xs text-white/40 flex items-center gap-1 mb-0.5">
+                        <Clock size={10} /> {t('share.expires')}
+                      </p>
+                      <p className="text-sm font-medium">{formatDate(info.expiresAt)}</p>
+                    </div>
+                  )}
+                  {info.maxDownloads && (
+                    <div className="bg-white/5 rounded-xl px-3 py-2.5">
+                      <p className="text-xs text-white/40 flex items-center gap-1 mb-0.5">
+                        <Download size={10} /> {t('share.downloads')}
+                      </p>
+                      <p className="text-sm font-medium">{info.downloads} / {info.maxDownloads}</p>
+                    </div>
+                  )}
+                  {info.hasPassword && (
+                    <div className="col-span-2 bg-orange-500/10 border border-orange-500/20 rounded-xl px-3 py-2.5 flex items-center gap-2">
+                      <Lock size={14} className="text-orange-400" />
+                      <p className="text-sm text-orange-300">{t('share.passwordProtected')}</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Password input */}
+                {showPassword && (
+                  <div>
+                    <label className="text-xs text-white/50 mb-1.5 flex items-center gap-1">
+                      <Shield size={11} /> {t('share.passwordLabel')}
+                    </label>
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && handleDownloadSingle()}
+                      placeholder={t('share.passwordPlaceholder')}
+                      className="input"
+                      autoFocus
+                    />
+                  </div>
+                )}
+
+                {/* Download button */}
+                {downloaded[token!] ? (
+                  <div className="bg-emerald-500/20 border border-emerald-500/30 rounded-xl px-4 py-3 text-center text-emerald-400 font-medium">
+                    {t('share.downloadStarted')}
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleDownloadSingle}
+                    disabled={downloading[token!]}
+                    className="btn-primary w-full flex items-center justify-center gap-2">
+                    {downloading[token!] ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        {t('share.downloading')}
+                      </>
+                    ) : (
+                      <>
+                        <Download size={16} />
+                        {t('share.downloadBtn')}
+                      </>
+                    )}
+                  </button>
+                )}
+              </>
             )}
           </div>
         )}
 
         <p className="text-center text-white/20 text-xs mt-6">
-          {t('share.footer', { app: 'Filyo' })}
+          {t('share.footer', { app: appName })}
         </p>
       </div>
     </div>

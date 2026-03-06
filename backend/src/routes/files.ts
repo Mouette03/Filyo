@@ -19,12 +19,14 @@ export async function fileRoutes(app: FastifyInstance) {
     let expiresIn: string | undefined
     let maxDownloads: string | undefined
     let rawPassword: string | undefined
+    let hideFilenames = false
 
     for await (const part of parts) {
       if (part.type === 'field') {
         if (part.fieldname === 'expiresIn') expiresIn = part.value as string
         if (part.fieldname === 'maxDownloads') maxDownloads = part.value as string
         if (part.fieldname === 'password') rawPassword = part.value as string
+        if (part.fieldname === 'hideFilenames') hideFilenames = part.value === 'true'
       } else {
         const ext = path.extname(part.filename || '') || ''
         const filename = `${nanoid(12)}${ext}`
@@ -55,6 +57,9 @@ export async function fileRoutes(app: FastifyInstance) {
 
     const hashedPassword = rawPassword ? await bcrypt.hash(rawPassword, 10) : null
 
+    // Tous les fichiers de ce lot partagent le même batchToken
+    const batchToken = nanoid(16)
+
     const files = await Promise.all(
       uploadedFiles.map(f =>
         prisma.file.create({
@@ -64,6 +69,8 @@ export async function fileRoutes(app: FastifyInstance) {
             expiresAt,
             maxDownloads: maxDownloads ? parseInt(maxDownloads) : null,
             password: hashedPassword,
+            batchToken,
+            hideFilenames,
             shares: {
               create: {
                 token: nanoid(16),
@@ -86,7 +93,8 @@ export async function fileRoutes(app: FastifyInstance) {
         mimeType: f.mimeType,
         size: f.size.toString(),
         expiresAt: f.expiresAt,
-        shareToken: f.shares[0]?.token
+        shareToken: f.shares[0]?.token,
+        batchToken: f.batchToken
       }))
     )
   })

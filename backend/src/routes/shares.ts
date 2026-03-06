@@ -9,7 +9,7 @@ export async function shareRoutes(app: FastifyInstance) {
   app.get<{ Params: { token: string } }>('/:token/info', async (req, reply) => {
     const share = await prisma.share.findUnique({
       where: { token: req.params.token },
-      include: { file: true }
+      include: { file: { include: { shares: true } } }
     })
     if (!share) return reply.code(404).send({ code: 'SHARE_NOT_FOUND' })
 
@@ -20,16 +20,44 @@ export async function shareRoutes(app: FastifyInstance) {
       return reply.code(410).send({ code: 'SHARE_LIMIT_REACHED' })
     }
 
+    // Récupère tous les fichiers du lot si batchToken existe
+    let batchFiles: any[] = []
+    if (share.file.batchToken) {
+      const allInBatch = await prisma.file.findMany({
+        where: { batchToken: share.file.batchToken },
+        include: { shares: true },
+        orderBy: { uploadedAt: 'asc' }
+      })
+      batchFiles = allInBatch.map((f: any) => {
+        const ext = f.originalName.includes('.') ? f.originalName.split('.').pop() : ''
+        return {
+          shareToken: f.shares[0]?.token,
+          filename: f.hideFilenames ? (ext ? `fichier.${ext}` : 'fichier') : f.originalName,
+          mimeType: f.mimeType,
+          size: f.size.toString(),
+          fileId: f.id
+        }
+      })
+    }
+
+    const ext = share.file.originalName.includes('.') ? share.file.originalName.split('.').pop() : ''
+    const displayName = share.file.hideFilenames
+      ? (ext ? `fichier.${ext}` : 'fichier')
+      : share.file.originalName
+
     return {
       token: share.token,
       label: share.label,
-      filename: share.file.originalName,
+      filename: displayName,
       mimeType: share.file.mimeType,
       size: share.file.size.toString(),
       expiresAt: share.expiresAt,
       hasPassword: !!share.password,
       downloads: share.downloads,
-      maxDownloads: share.maxDownloads
+      maxDownloads: share.maxDownloads,
+      hideFilenames: share.file.hideFilenames,
+      batchToken: share.file.batchToken ?? null,
+      batchFiles: batchFiles.length > 1 ? batchFiles : null
     }
   })
 
@@ -106,42 +134,86 @@ export async function shareRoutes(app: FastifyInstance) {
     })
     if (shares.length === 0) return reply.code(404).send({ code: 'SHARES_NOT_FOUND' })
 
-    // Corps du mail
+    // Détecter si tous les fichiers appartiennent au même lot → 1 seul lien
+    const batchTokens = new Set(shares.map((s: any) => s.file.batchToken).filter(Boolean))
+    const isSingleBatch = batchTokens.size === 1 && shares.length > 1
+
     const appName = settings.appName || 'Filyo'
-    const filesHtml = shares.map(s => {
-      const url = `${baseUrl}/s/${s.token}`
-      const expiry = s.expiresAt
+
+    let filesHtml: string
+    let filesText: string
+
+    if (isSingleBatch) {
+      // Un seul lien pour tout le lot, affiche la liste des noms dans l'email
+      const batchUrl = `${baseUrl}/s/${shares[0].token}`
+      const fileListHtml = shares.map((s: any) => {
+        const displayName = s.file.hideFilenames
+          ? (s.file.originalName.includes('.') ? `fichier.${s.file.originalName.split('.').pop()}` : 'fichier')
+          : s.file.originalName
+        return `<li style="color:#ccc;font-size:13px;padding:2px 0">${displayName}</li>`
+      }).join('')
+      const fileListText = shares.map((s: any) => {
+        return s.file.hideFilenames ? '- [nom masqué]' : `- ${s.file.originalName}`
+      }).join('\n')
+      const expiry = shares[0].expiresAt
         ? (isEn
-            ? `Expires ${new Date(s.expiresAt).toLocaleDateString('en-GB')}`
-            : `Expire le ${new Date(s.expiresAt).toLocaleDateString('fr-FR')}`)
+            ? `Expires ${new Date(shares[0].expiresAt).toLocaleDateString('en-GB')}`
+            : `Expire le ${new Date(shares[0].expiresAt).toLocaleDateString('fr-FR')}`)
         : (isEn ? 'No expiry' : 'Sans expiration')
-      return `
+
+      filesHtml = `
         <tr>
           <td style="padding:10px 12px;border-bottom:1px solid #2a2d4a">
-            <a href="${url}" style="color:#7a8dff;font-weight:600;text-decoration:none">${s.file.originalName}</a><br>
-            <span style="font-size:12px;color:#666;font-family:monospace">${url}</span><br>
+            <ul style="margin:0 0 8px;padding-left:16px">${fileListHtml}</ul>
+            <a href="${batchUrl}" style="color:#7a8dff;font-weight:600;text-decoration:none">${isEn ? 'Download all files' : 'Télécharger tous les fichiers'}</a><br>
+            <span style="font-size:12px;color:#666;font-family:monospace">${batchUrl}</span><br>
             <span style="font-size:11px;color:#888">${expiry}</span>
           </td>
         </tr>`
-    }).join('')
-    const filesText = shares.map(s =>
-      `- ${s.file.originalName}\n  ${baseUrl}/s/${s.token}`
-    ).join('\n')
+      filesText = (isEn ? 'Files:\n' : 'Fichiers :\n') + fileListText + `\n\n${batchUrl}`
+    } else {
+      filesHtml = shares.map((s: any) => {
+        const url = `${baseUrl}/s/${s.token}`
+        const displayName = s.file.hideFilenames
+          ? (s.file.originalName.includes('.') ? `fichier.${s.file.originalName.split('.').pop()}` : 'fichier')
+          : s.file.originalName
+        const expiry = s.expiresAt
+          ? (isEn
+              ? `Expires ${new Date(s.expiresAt).toLocaleDateString('en-GB')}`
+              : `Expire le ${new Date(s.expiresAt).toLocaleDateString('fr-FR')}`)
+          : (isEn ? 'No expiry' : 'Sans expiration')
+        return `
+          <tr>
+            <td style="padding:10px 12px;border-bottom:1px solid #2a2d4a">
+              <a href="${url}" style="color:#7a8dff;font-weight:600;text-decoration:none">${displayName}</a><br>
+              <span style="font-size:12px;color:#666;font-family:monospace">${url}</span><br>
+              <span style="font-size:11px;color:#888">${expiry}</span>
+            </td>
+          </tr>`
+      }).join('')
+      filesText = shares.map((s: any) => {
+        const displayName = s.file.hideFilenames ? '[nom masqué]' : s.file.originalName
+        return `- ${displayName}\n  ${baseUrl}/s/${s.token}`
+      }).join('\n')
+    }
+
+    const firstDisplayName = shares[0].file.hideFilenames
+      ? (isEn ? 'a file' : 'un fichier')
+      : shares[0].file.originalName
 
     const subjectSingle = isEn
-      ? `Share: ${shares[0].file.originalName}`
-      : `Partage\u00a0: ${shares[0].file.originalName}`
+      ? `Share: ${firstDisplayName}`
+      : `Partage\u00a0: ${firstDisplayName}`
     const subjectMulti = isEn
       ? `${shares.length} files shared with you`
-      : `${shares.length} fichiers partag\u00e9s avec vous`
-    const introSingle = isEn ? 'A file has been shared with you.' : 'Un fichier a \u00e9t\u00e9 partag\u00e9 avec vous.'
+      : `${shares.length} fichiers partagés avec vous`
+    const introSingle = isEn ? 'A file has been shared with you.' : 'Un fichier a été partagé avec vous.'
     const introMulti = isEn
       ? `${shares.length} files have been shared with you.`
-      : `${shares.length} fichiers ont \u00e9t\u00e9 partag\u00e9s avec vous.`
+      : `${shares.length} fichiers ont été partagés avec vous.`
     const greetingText = isEn
       ? `Hello,\n\nHere ${shares.length === 1 ? 'is your share link' : 'are your share links'}:\n\n${filesText}\n\nSent via ${appName}.`
-      : `Bonjour,\n\nVoici ${shares.length === 1 ? 'votre lien de partage' : 'vos liens de partage'}\u00a0:\n\n${filesText}\n\nEnvoy\u00e9 via ${appName}.`
-    const footerText = isEn ? `Sent via ${appName}` : `Envoy\u00e9 via ${appName}`
+      : `Bonjour,\n\nVoici ${shares.length === 1 ? 'votre lien de partage' : 'vos liens de partage'}\u00a0:\n\n${filesText}\n\nEnvoyé via ${appName}.`
 
     const smtpPort = settings.smtpPort ?? 587
     // Port 465 = SSL/TLS direct ; port 587/25 = STARTTLS (secure doit être false)
@@ -169,7 +241,7 @@ export async function shareRoutes(app: FastifyInstance) {
             <table style="width:100%;border-collapse:collapse;background:#13152a;border-radius:12px;overflow:hidden">
               ${filesHtml}
             </table>
-            <p style="font-size:11px;color:#555;margin-top:24px;text-align:center">${footerText}</p>
+            <p style="font-size:11px;color:#555;margin-top:24px;text-align:center">${isEn ? `Sent via ${appName}` : `Envoyé via ${appName}`}</p>
           </div>`
       })
     } catch (err: any) {
