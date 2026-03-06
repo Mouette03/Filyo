@@ -1,7 +1,7 @@
 import nodemailer from 'nodemailer'
 
 interface SmtpConfig {
-  smtpHost: string
+  smtpHost: string | null
   smtpPort?: number | null
   smtpUser?: string | null
   smtpPass?: string | null
@@ -17,7 +17,7 @@ export function createSmtpTransport(cfg: SmtpConfig) {
   const port = cfg.smtpPort ?? 587
   const secure = port === 465
   return nodemailer.createTransport({
-    host: cfg.smtpHost,
+    host: cfg.smtpHost ?? undefined,
     port,
     secure,
     requireTLS: port === 587,
