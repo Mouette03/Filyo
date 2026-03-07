@@ -278,8 +278,8 @@ export default function UsersPage() {
                 <div key={u.id} className="card">
                   {editId === u.id ? (
                     <div className="space-y-3">
-                      <div className="grid grid-cols-3 gap-3">
-                        <div className="col-span-1">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
                           <label className="text-xs text-white/50 mb-1.5 block">{t('users.nameLabel')}</label>
                           <input value={editName} onChange={e => setEditName(e.target.value)} className="input text-sm py-2" />
                         </div>
