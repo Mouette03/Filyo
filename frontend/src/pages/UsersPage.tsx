@@ -285,15 +285,21 @@ export default function UsersPage() {
                         </div>
                         <div>
                           <label className="text-xs text-white/50 mb-1.5 block">{t('users.roleLabel')}</label>
-                          <select value={editRole} onChange={e => setEditRole(e.target.value)} className="input bg-surface-700 text-sm py-2">
+                          <select
+                            value={editRole}
+                            onChange={e => setEditRole(e.target.value)}
+                            disabled={editId === me?.id}
+                            className={`input bg-surface-700 text-sm py-2 ${editId === me?.id ? 'opacity-40 cursor-not-allowed' : ''}`}
+                          >
                             <option value="USER">{t('role.user')}</option>
                             <option value="ADMIN">{t('role.admin')}</option>
                           </select>
                         </div>
                         <div className="flex items-end gap-3">
-                          <label className="flex items-center gap-2 cursor-pointer pb-2">
-                            <div onClick={() => setEditActive(!editActive)}
-                              className={`w-10 h-5 rounded-full transition-colors relative ${editActive ? 'bg-brand-500' : 'bg-white/20'}`}>
+                          <label className={`flex items-center gap-2 pb-2 ${editId === me?.id ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}>
+                            <div
+                              onClick={() => editId !== me?.id && setEditActive(!editActive)}
+                              className={`w-10 h-5 rounded-full transition-colors relative ${editActive ? 'bg-brand-500' : 'bg-white/20'} ${editId === me?.id ? 'pointer-events-none' : ''}`}>
                               <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${editActive ? 'translate-x-5' : 'translate-x-0.5'}`} />
                             </div>
                             <span className="text-sm text-white/60">{editActive ? t('common.active') : t('common.inactive')}</span>
