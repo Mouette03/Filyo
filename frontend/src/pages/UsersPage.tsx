@@ -42,6 +42,7 @@ export default function UsersPage() {
   const [creating, setCreating] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
+  const [editEmail, setEditEmail] = useState('')
   const [editRole, setEditRole] = useState('')
   const [editActive, setEditActive] = useState(true)
 
@@ -109,12 +110,12 @@ export default function UsersPage() {
   }
 
   const startEdit = (u: UserItem) => {
-    setEditId(u.id); setEditName(u.name); setEditRole(u.role); setEditActive(u.active)
+    setEditId(u.id); setEditName(u.name); setEditEmail(u.email); setEditRole(u.role); setEditActive(u.active)
   }
 
   const saveEdit = async (id: string) => {
     try {
-      const res = await updateUser(id, { name: editName, role: editRole, active: editActive })
+      const res = await updateUser(id, { name: editName, email: editEmail, role: editRole, active: editActive })
       setUsers(prev => prev.map(u => u.id === id ? { ...u, ...res.data } : u))
       setEditId(null)
       toast.success(t('toast.edited'))
@@ -123,6 +124,7 @@ export default function UsersPage() {
       if (code === 'CANNOT_DEMOTE_SELF') toast.error(t('toast.cannotDemoteSelf'))
       else if (code === 'CANNOT_DEACTIVATE_SELF') toast.error(t('toast.cannotDeactivateSelf'))
       else if (code === 'LAST_ADMIN') toast.error(t('toast.lastAdmin'))
+      else if (code === 'EMAIL_TAKEN') toast.error(t('error.emailTaken'))
       else toast.error(t('common.error'))
     }
   }
@@ -282,6 +284,10 @@ export default function UsersPage() {
                         <div>
                           <label className="text-xs text-white/50 mb-1.5 block">{t('users.nameLabel')}</label>
                           <input value={editName} onChange={e => setEditName(e.target.value)} className="input text-sm py-2" />
+                        </div>
+                        <div>
+                          <label className="text-xs text-white/50 mb-1.5 block">{t('users.emailLabel')}</label>
+                          <input type="email" value={editEmail} onChange={e => setEditEmail(e.target.value)} className="input text-sm py-2" />
                         </div>
                         <div>
                           <label className="text-xs text-white/50 mb-1.5 block">{t('users.roleLabel')}</label>
