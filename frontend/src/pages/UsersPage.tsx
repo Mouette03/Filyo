@@ -339,8 +339,8 @@ export default function UsersPage() {
                         </p>
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
-                        <button onClick={() => startEdit(u)} className="btn-secondary flex items-center gap-1.5 text-xs px-3 py-2">
-                          <Pencil size={12} /> {t('common.edit')}
+                        <button onClick={() => startEdit(u)} className="btn-secondary flex items-center gap-1.5 text-xs px-2.5 sm:px-3 py-2">
+                          <Pencil size={12} /><span className="hidden sm:inline">{t('common.edit')}</span>
                         </button>
                         {u.id !== me?.id && (
                           <button onClick={() => handleDelete(u.id)} className="btn-danger flex items-center gap-1 text-xs px-2.5 py-2">
