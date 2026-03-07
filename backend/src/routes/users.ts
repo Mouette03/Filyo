@@ -79,7 +79,7 @@ export async function userRoutes(app: FastifyInstance) {
           data,
           select: { id: true, email: true, name: true, role: true, active: true, createdAt: true }
         })
-        req.log.info({ id: req.params.id }, 'Utilisateur modifié par admin')
+        req.log.info({ id: req.params.id }, 'User updated by admin')
         return user
       } catch {
         return reply.code(404).send({ code: 'USER_NOT_FOUND' })
@@ -95,7 +95,7 @@ export async function userRoutes(app: FastifyInstance) {
     }
     try {
       await prisma.user.delete({ where: { id: req.params.id } })
-      req.log.info({ id: req.params.id }, 'Utilisateur supprimé par admin')
+      req.log.info({ id: req.params.id }, 'User deleted by admin')
       return { success: true }
     } catch {
       return reply.code(404).send({ code: 'USER_NOT_FOUND' })
