@@ -95,7 +95,7 @@ export default function Layout() {
               >
                 {user?.name?.charAt(0).toUpperCase()}
               </div>
-              <span className="hidden sm:block text-sm font-medium text-white/80">{user?.name}</span>
+              <span className="hidden md:block text-sm font-medium text-white/80">{user?.name}</span>
               <ChevronDown size={14} className={`text-white/40 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
             </button>
 

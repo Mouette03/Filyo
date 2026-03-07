@@ -3,6 +3,7 @@
 
 services:
   filyo:
+    image: ghcr.io/votre-utilisateur/filyo:${FILYO_VERSION:-latest}
     build:
       context: .
       dockerfile: Dockerfile

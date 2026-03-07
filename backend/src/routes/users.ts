@@ -41,7 +41,31 @@ export async function userRoutes(app: FastifyInstance) {
     '/:id',
     adminOnly,
     async (req, reply) => {
+      const caller = (req as any).user
       const { name, email, role, active, password } = req.body
+      const isSelf = caller.id === req.params.id
+
+      // Bloquer auto-rétrogradation et auto-désactivation
+      if (isSelf && role !== undefined && role !== 'ADMIN') {
+        return reply.code(400).send({ code: 'CANNOT_DEMOTE_SELF' })
+      }
+      if (isSelf && active === false) {
+        return reply.code(400).send({ code: 'CANNOT_DEACTIVATE_SELF' })
+      }
+
+      // Vérifier qu'il reste au moins un autre admin actif avant de rétrograder/désactiver
+      if (!isSelf && (role === 'USER' || active === false)) {
+        const target = await prisma.user.findUnique({ where: { id: req.params.id } })
+        if (target?.role === 'ADMIN') {
+          const otherActiveAdmins = await prisma.user.count({
+            where: { role: 'ADMIN', active: true, id: { not: req.params.id } }
+          })
+          if (otherActiveAdmins === 0) {
+            return reply.code(400).send({ code: 'LAST_ADMIN' })
+          }
+        }
+      }
+
       const data: any = {}
       if (name !== undefined) data.name = name
       if (email !== undefined) data.email = email

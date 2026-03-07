@@ -118,7 +118,13 @@ export default function UsersPage() {
       setUsers(prev => prev.map(u => u.id === id ? { ...u, ...res.data } : u))
       setEditId(null)
       toast.success(t('toast.edited'))
-    } catch { toast.error(t('common.error')) }
+    } catch (err: any) {
+      const code = err?.response?.data?.code
+      if (code === 'CANNOT_DEMOTE_SELF') toast.error(t('toast.cannotDemoteSelf'))
+      else if (code === 'CANNOT_DEACTIVATE_SELF') toast.error(t('toast.cannotDeactivateSelf'))
+      else if (code === 'LAST_ADMIN') toast.error(t('toast.lastAdmin'))
+      else toast.error(t('common.error'))
+    }
   }
 
   const handleDelete = async (id: string) => {
