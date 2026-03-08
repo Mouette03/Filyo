@@ -79,9 +79,11 @@ export async function settingsRoutes(app: FastifyInstance) {
         socket.on('error', reject)
         socket.on('timeout', () => { socket.destroy(); reject(new Error('Timeout')) })
       })
+      req.log.debug({ host, port }, 'SMTP test successful')
       return { success: true, code: 'SMTP_OK', host, port }
     } catch (err: any) {
-      return reply.code(502).send({ code: 'SMTP_FAILED', detail: err.message })
+      req.log.warn({ host, port, err: (err as any).message }, 'SMTP test failed')
+      return reply.code(502).send({ code: 'SMTP_FAILED', detail: (err as any).message })
     }
   })
 
@@ -152,6 +154,7 @@ export async function settingsRoutes(app: FastifyInstance) {
       update: { uploaderNameReq, uploaderEmailReq, uploaderMsgReq },
       create: { id: 'singleton', appName: 'Filyo', uploaderNameReq, uploaderEmailReq, uploaderMsgReq }
     })
+    req.log.debug({ uploaderNameReq, uploaderEmailReq, uploaderMsgReq }, 'Uploader fields updated')
     return {
       uploaderNameReq: updated.uploaderNameReq,
       uploaderEmailReq: updated.uploaderEmailReq,
@@ -170,6 +173,7 @@ export async function settingsRoutes(app: FastifyInstance) {
         update: { siteUrl: siteUrl?.trim() || null },
         create: { id: 'singleton', appName: 'Filyo', siteUrl: siteUrl?.trim() || null }
       })
+      req.log.info({ siteUrl: settings.siteUrl }, 'Site URL updated')
       return { siteUrl: settings.siteUrl ?? '' }
     }
   )
@@ -210,6 +214,7 @@ export async function settingsRoutes(app: FastifyInstance) {
         update: { logoUrl },
         create: { id: 'singleton', appName: 'Filyo', logoUrl }
       })
+      req.log.info({ logoUrl }, 'Logo uploaded')
       return settings
     }
   )
@@ -218,17 +223,19 @@ export async function settingsRoutes(app: FastifyInstance) {
   app.delete(
     '/logo',
     { onRequest: [app.authenticate, app.adminOnly] },
-    async () => {
+    async (req: any) => {
       const current = await getSettings()
       if (current.logoUrl) {
         const file = path.join(UPLOAD_DIR, current.logoUrl.replace('/uploads/', ''))
         await fs.remove(file).catch(() => {})
       }
-      return prisma.appSettings.upsert({
+      const result = await prisma.appSettings.upsert({
         where: { id: 'singleton' },
         update: { logoUrl: null },
         create: { id: 'singleton', appName: 'Filyo' }
       })
+      req.log.info('Logo deleted')
+      return result
     }
   )
 }

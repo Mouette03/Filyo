@@ -212,6 +212,7 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
       const fileExists = await fs.pathExists(file.path)
       if (!fileExists) return reply.code(404).send({ code: 'FILE_MISSING' })
 
+      req.log.debug({ id: req.params.id, fileId: req.params.fileId, userId: req.user.id }, 'Received file downloaded')
       const stream = fs.createReadStream(file.path)
       reply.header('Content-Type', file.mimeType)
       reply.header(
@@ -235,6 +236,7 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
       where: { id: req.params.id },
       data: { active: !request.active }
     })
+    req.log.debug({ id: req.params.id, active: updated.active }, 'Upload request toggled')
     return { active: updated.active }
   })
 
@@ -292,6 +294,7 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
         req.log.error({ err: err.message }, 'Upload request email failed')
         return reply.code(502).send({ code: 'EMAIL_SEND_FAILED', detail: err.message })
       }
+      req.log.info({ id: req.params.id, to: toField }, 'Upload request email sent')
       return { success: true }
     }
   )

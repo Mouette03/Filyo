@@ -247,6 +247,7 @@ export async function authRoutes(app: FastifyInstance) {
       return reply.code(502).send({ code: 'EMAIL_SEND_FAILED', detail: err.message })
     }
 
+    req.log.info({ userId: user.id }, 'Password reset email sent')
     return reply.send({ success: true })
   })
 
