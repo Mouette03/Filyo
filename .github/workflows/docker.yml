@@ -6,7 +6,7 @@ on:
     tags: ["v*.*.*"]
   pull_request:
     branches: [main]
-  workflow_dispatch:    # ← ajoute juste cette ligne  
+  workflow_dispatch:    # ← lancement manuel  
 
 env:
   REGISTRY: ghcr.io
