@@ -89,8 +89,8 @@ jobs:
           build-args: DB_PROVIDER=sqlite
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ github.workflow }}-sqlite
+          cache-to: type=gha,mode=max,scope=${{ github.workflow }}-sqlite
 
   # ----------------------------------------------------------------
   # Build & push image MariaDB
@@ -145,8 +145,8 @@ jobs:
           build-args: DB_PROVIDER=mariadb
           tags: ${{ steps.meta-mariadb.outputs.tags }}
           labels: ${{ steps.meta-mariadb.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ github.workflow }}-mariadb
+          cache-to: type=gha,mode=max,scope=${{ github.workflow }}-mariadb
 
   # ----------------------------------------------------------------
   # GitHub Release sur tag
