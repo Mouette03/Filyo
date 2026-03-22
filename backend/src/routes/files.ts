@@ -1,0 +1,151 @@
+﻿import { FastifyInstance } from 'fastify'
+import path from 'path'
+import fs from 'fs-extra'
+import { nanoid } from 'nanoid'
+import mime from 'mime-types'
+import bcrypt from 'bcryptjs'
+import { prisma } from '../lib/prisma'
+import { UPLOAD_DIR } from '../lib/config'
+
+export async function fileRoutes(app: FastifyInstance) {
+  const auth = { onRequest: [app.authenticate] }
+
+  // POST /api/files - Upload (authentifié)
+  app.post('/', auth, async (req: any, reply) => {
+    const userId: string = req.user.id
+    const parts = req.parts()
+    const uploadedFiles: any[] = []
+    let expiresIn: string | undefined
+    let maxDownloads: string | undefined
+    let rawPassword: string | undefined
+    let hideFilenames = false
+
+    for await (const part of parts) {
+      if (part.type === 'field') {
+        if (part.fieldname === 'expiresIn') expiresIn = part.value as string
+        if (part.fieldname === 'maxDownloads') maxDownloads = part.value as string
+        if (part.fieldname === 'password') rawPassword = part.value as string
+        if (part.fieldname === 'hideFilenames') hideFilenames = part.value === 'true'
+      } else {
+        const ext = path.extname(part.filename || '') || ''
+        const filename = `${nanoid(12)}${ext}`
+        const filePath = path.join(UPLOAD_DIR, filename)
+        await fs.ensureDir(UPLOAD_DIR)
+
+        let size = 0
+        const writeStream = fs.createWriteStream(filePath)
+        for await (const chunk of part.file) {
+          writeStream.write(chunk)
+          size += chunk.length
+        }
+        writeStream.end()
+
+        uploadedFiles.push({
+          filename,
+          originalName: part.filename || 'file',
+          mimeType: mime.lookup(part.filename || '') || 'application/octet-stream',
+          size: BigInt(size),
+          path: filePath
+        })
+      }
+    }
+
+    const expiresAt = expiresIn
+      ? new Date(Date.now() + parseInt(expiresIn) * 1000)
+      : null
+
+    const hashedPassword = rawPassword ? await bcrypt.hash(rawPassword, 10) : null
+
+    // Lot : batchToken uniquement si plusieurs fichiers
+    const batchToken = uploadedFiles.length > 1 ? nanoid(16) : null
+
+    const files = await Promise.all(
+      uploadedFiles.map(f =>
+        prisma.file.create({
+          data: {
+            ...f,
+            userId,
+            expiresAt,
+            maxDownloads: maxDownloads ? parseInt(maxDownloads) : null,
+            password: hashedPassword,
+            batchToken,
+            hideFilenames,
+            shares: {
+              create: {
+                token: nanoid(16),
+                expiresAt,
+                maxDownloads: maxDownloads ? parseInt(maxDownloads) : null,
+                password: hashedPassword
+              }
+            }
+          },
+          include: { shares: true }
+        })
+      )
+    )
+
+    req.log.info({ userId, count: files.length }, 'Files uploaded')
+    return reply.code(201).send(
+      files.map((f: any) => ({
+        id: f.id,
+        originalName: f.originalName,
+        mimeType: f.mimeType,
+        size: f.size.toString(),
+        expiresAt: f.expiresAt,
+        shareToken: f.shares[0]?.token,
+        batchToken: f.batchToken
+      }))
+    )
+  })
+
+  // GET /api/files - Fichiers de l utilisateur courant
+  app.get('/', auth, async (req: any) => {
+    const files = await prisma.file.findMany({
+      where: { userId: req.user.id },
+      orderBy: { uploadedAt: 'desc' },
+      include: { shares: true }
+    })
+    req.log.debug({ userId: req.user.id, count: files.length }, 'File list')
+    return files.map((f: any) => ({ ...f, size: f.size.toString() }))
+  })
+
+  // GET /api/files/:id - Infos d un fichier (proprietaire uniquement)
+  app.get<{ Params: { id: string } }>('/:id', auth, async (req: any, reply) => {
+    const file = await prisma.file.findFirst({
+      where: { id: req.params.id, userId: req.user.id },
+      include: { shares: true }
+    })
+    if (!file) return reply.code(404).send({ code: 'FILE_NOT_FOUND' })
+    return { ...file, size: file.size.toString() }
+  })
+
+  // DELETE /api/files/:id (proprietaire ou admin)
+  app.delete<{ Params: { id: string } }>('/:id', auth, async (req: any, reply) => {
+    const where =
+      req.user.role === 'ADMIN'
+        ? { id: req.params.id }
+        : { id: req.params.id, userId: req.user.id }
+    const file = await prisma.file.findFirst({ where })
+    if (!file) return reply.code(404).send({ code: 'FILE_NOT_FOUND' })
+    await fs.remove(file.path).catch(() => {})
+    await prisma.file.delete({ where: { id: req.params.id } })
+    req.log.info({ fileId: req.params.id, userId: req.user.id }, 'File deleted')
+    return { success: true }
+  })
+
+  // PATCH /api/files/:id/expiry - Modifier l'expiration (propriétaire uniquement)
+  app.patch<{ Params: { id: string }; Body: { expiresAt: string | null } }>(
+    '/:id/expiry',
+    auth,
+    async (req: any, reply) => {
+      const file = await prisma.file.findFirst({
+        where: { id: req.params.id, userId: req.user.id }
+      })
+      if (!file) return reply.code(404).send({ code: 'FILE_NOT_FOUND' })
+      const expiresAt = req.body.expiresAt ? new Date(req.body.expiresAt) : null
+      await prisma.file.update({ where: { id: req.params.id }, data: { expiresAt } })
+      await prisma.share.updateMany({ where: { fileId: req.params.id }, data: { expiresAt } })
+      return { expiresAt }
+    }
+  )
+}

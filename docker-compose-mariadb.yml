@@ -1,0 +1,43 @@
+services:
+  filyo:
+    image: ghcr.io/mouette03/filyo:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: filyo
+    restart: unless-stopped
+    depends_on:
+      db-filyo:
+        condition: service_healthy
+    ports:
+      - "${PORT:-3001}:3001"
+    environment:
+      NODE_ENV: production
+      JWT_SECRET: ${JWT_SECRET:-filyo-super-secret-change-me-in-production}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      DB_USER: ${DB_USER:-filyo}
+      DB_PASSWORD: ${DB_PASSWORD:-filyo}
+    volumes:
+      - ${DATA_PATH:-./data}/uploads:/data/uploads
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  db-filyo:
+    image: mariadb:11.8
+    container_name: db-filyo
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-filyo}
+      MYSQL_USER: ${DB_USER:-filyo}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-filyo}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpass}
+    volumes:
+      - ${DATA_PATH:-./data}/db:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      retries: 5

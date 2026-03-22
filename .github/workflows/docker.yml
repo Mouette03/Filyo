@@ -1,0 +1,270 @@
+name: Build & Publish Docker Image
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*.*.*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE: ghcr.io/${{ github.repository }}
+
+jobs:
+  # ----------------------------------------------------------------
+  # Lint & type-check
+  # ----------------------------------------------------------------
+  lint:
+    name: Lint & type-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install & type-check backend
+        working-directory: ./backend
+        run: |
+          npm install
+          npx tsc --noEmit
+
+      - name: Install & type-check frontend
+        working-directory: ./frontend
+        run: |
+          npm install
+          npx tsc --noEmit
+
+  # ----------------------------------------------------------------
+  # Build & push image SQLite
+  # ----------------------------------------------------------------
+  docker-sqlite:
+    name: Docker — SQLite
+    runs-on: ubuntu-latest
+    needs: lint
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU (multi-arch)
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata (SQLite)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          flavor: |
+            latest=false
+          tags: |
+            type=semver,pattern=v{{version}}
+            type=semver,pattern=v{{major}}.{{minor}}
+            type=semver,pattern=v{{major}}
+            type=ref,event=branch
+            type=sha,prefix=sha-,format=short
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') || github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+
+      - name: Build and push (SQLite)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          build-args: DB_PROVIDER=sqlite
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ----------------------------------------------------------------
+  # Build & push image MariaDB
+  # ----------------------------------------------------------------
+  docker-mariadb:
+    name: Docker — MariaDB
+    runs-on: ubuntu-latest
+    needs: lint
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU (multi-arch)
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata (MariaDB)
+        id: meta-mariadb
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          flavor: |
+            latest=false
+          tags: |
+            type=semver,pattern=v{{version}}-mariadb
+            type=semver,pattern=v{{major}}.{{minor}}-mariadb
+            type=semver,pattern=v{{major}}-mariadb
+            type=ref,event=branch,suffix=-mariadb
+            type=sha,prefix=sha-,suffix=-mariadb,format=short
+            type=raw,value=latest-mariadb,enable=${{ startsWith(github.ref, 'refs/tags/v') || github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+
+      - name: Build and push (MariaDB)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          build-args: DB_PROVIDER=mariadb
+          tags: ${{ steps.meta-mariadb.outputs.tags }}
+          labels: ${{ steps.meta-mariadb.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ----------------------------------------------------------------
+  # GitHub Release sur tag
+  # ----------------------------------------------------------------
+  release:
+    name: GitHub Release
+    runs-on: ubuntu-latest
+    needs: [docker-sqlite, docker-mariadb]
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Générer les docker-compose pour la release
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+
+          # ── SQLite (défaut) ──────────────────────────────────────
+          cat > docker-compose.release.yml <<EOF
+          services:
+            filyo:
+              image: ghcr.io/${REPO}:${VERSION}
+              container_name: filyo
+              restart: unless-stopped
+              ports:
+                - "\${PORT:-3001}:3001"
+              environment:
+                JWT_SECRET: \${JWT_SECRET:-changez-moi-en-production}
+              volumes:
+                - \${DATA_PATH:-./data}:/data
+              healthcheck:
+                test: ["CMD-SHELL", "wget -qO- http://localhost:3001/health || exit 1"]
+                interval: 30s
+                timeout: 10s
+                retries: 3
+                start_period: 40s
+          EOF
+
+          # ── MariaDB ──────────────────────────────────────────────
+          cat > docker-compose.mariadb.yml <<EOF
+          services:
+            filyo:
+              image: ghcr.io/${REPO}:${VERSION}-mariadb
+              container_name: filyo
+              restart: unless-stopped
+              ports:
+                - "\${PORT:-3001}:3001"
+              environment:
+                JWT_SECRET: \${JWT_SECRET:-changez-moi-en-production}
+                DB_HOST: db-filyo
+                DB_USER: \${DB_USER:-filyo}
+                DB_PASSWORD: \${DB_PASSWORD:-change_me}
+                DB_NAME: \${DB_NAME:-filyo}
+              volumes:
+                - \${DATA_PATH:-./data}:/data
+              depends_on:
+                db-filyo:
+                  condition: service_healthy
+              healthcheck:
+                test: ["CMD-SHELL", "wget -qO- http://localhost:3001/health || exit 1"]
+                interval: 30s
+                timeout: 10s
+                retries: 3
+                start_period: 40s
+
+            db-filyo:
+              image: mariadb:11
+              container_name: db-filyo
+              restart: unless-stopped
+              environment:
+                MYSQL_ROOT_PASSWORD: \${DB_ROOT_PASSWORD:-change_me_root}
+                MYSQL_DATABASE: \${DB_NAME:-filyo}
+                MYSQL_USER: \${DB_USER:-filyo}
+                MYSQL_PASSWORD: \${DB_PASSWORD:-change_me}
+              volumes:
+                - \${DATA_PATH:-./data}/mariadb:/var/lib/mysql
+              healthcheck:
+                test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+                interval: 10s
+                timeout: 5s
+                retries: 5
+                start_period: 30s
+          EOF
+
+      - name: Extraire le changelog
+        run: |
+          echo "## Nouveautés" > /tmp/release_notes.md
+          git log $(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || git rev-list --max-parents=0 HEAD)..HEAD \
+            --pretty=format:"- %s (%h)" >> /tmp/release_notes.md || true
+          cat >> /tmp/release_notes.md << EOF
+
+          ## Lancer avec Docker
+
+          **SQLite (défaut)**
+          \`\`\`bash
+          docker compose -f docker-compose.release.yml up -d
+          \`\`\`
+
+          **MariaDB**
+          \`\`\`bash
+          docker compose -f docker-compose.mariadb.yml up -d
+          \`\`\`
+
+          Accès : http://localhost:3001
+          EOF
+
+      - name: Créer la Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: /tmp/release_notes.md
+          files: |
+            docker-compose.release.yml
+            docker-compose.mariadb.yml
+          token: ${{ secrets.GITHUB_TOKEN }}

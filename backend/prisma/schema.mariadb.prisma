@@ -1,0 +1,109 @@
+// This is your Prisma schema file
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String          @id @default(cuid())
+  email          String          @unique
+  name           String
+  password       String
+  role           String          @default("USER") // USER | ADMIN
+  active         Boolean         @default(true)
+  avatarUrl      String?
+  createdAt      DateTime        @default(now())
+  lastLogin      DateTime?
+  cleanupAfterDays   Int?          // préférence perso : null=jamais, 0=à expiration, N=N jours après
+  resetToken         String?
+  resetTokenExpiry   DateTime?
+  files          File[]
+  uploadRequests UploadRequest[]
+}
+
+model AppSettings {
+  id                String   @id @default("singleton")
+  appName           String   @default("Filyo")
+  logoUrl           String?
+  siteUrl           String?
+  smtpHost          String?
+  smtpPort          Int?
+  smtpFrom          String?
+  smtpUser          String?
+  smtpPass          String?
+  smtpSecure        Boolean  @default(true)
+  uploaderNameReq   String   @default("optional")  // hidden | optional | required
+  uploaderEmailReq  String   @default("optional")
+  uploaderMsgReq    String   @default("optional")
+  allowRegistration Boolean  @default(false)
+  cleanupAfterDays  Int?     // max autorisé : null=désactivé, 0=dès expiration, N=N jours max après expiration
+  updatedAt         DateTime @updatedAt
+}
+
+model File {
+  id               String   @id @default(cuid())
+  filename         String
+  originalName     String
+  mimeType         String
+  size             BigInt
+  path             String
+  uploadedAt       DateTime @default(now())
+  expiresAt        DateTime?
+  downloads        Int      @default(0)
+  maxDownloads     Int?
+  password         String?
+  batchToken       String?
+  hideFilenames    Boolean  @default(false)
+  shares           Share[]
+  userId           String?
+  user             User?    @relation(fields: [userId], references: [id])
+}
+
+model Share {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  fileId    String
+  file      File     @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  expiresAt DateTime?
+  downloads Int      @default(0)
+  maxDownloads Int?
+  password  String?
+  label     String?
+}
+
+// Partage inversé : lien pour recevoir des fichiers d'un tiers
+model UploadRequest {
+  id            String         @id @default(cuid())
+  token         String         @unique
+  title         String
+  message       String?
+  password         String?
+  createdAt        DateTime       @default(now())
+  expiresAt        DateTime?
+  maxFiles         Int?
+  maxSizeBytes     BigInt?
+  active           Boolean        @default(true)
+  receivedFiles    ReceivedFile[]
+  userId           String?
+  user             User?          @relation(fields: [userId], references: [id])
+}
+
+model ReceivedFile {
+  id              String        @id @default(cuid())
+  uploadRequestId String
+  uploadRequest   UploadRequest @relation(fields: [uploadRequestId], references: [id], onDelete: Cascade)
+  filename        String
+  originalName    String
+  mimeType        String
+  size            BigInt
+  path            String
+  uploaderName    String?
+  uploaderEmail   String?
+  message         String?
+  uploadedAt      DateTime      @default(now())
+}

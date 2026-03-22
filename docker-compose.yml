@@ -1,0 +1,26 @@
+# Image unique : frontend + backend dans le même conteneur
+# Accès : http://localhost:3001 (ou PORT de votre choix)
+
+services:
+  filyo:
+    image: ghcr.io/mouette03/filyo:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: filyo
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3001}:3001"
+    environment:
+      NODE_ENV: production
+      JWT_SECRET: ${JWT_SECRET:-filyo-super-secret-change-me-in-production}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    volumes:
+      - ${DATA_PATH:-./data}:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
