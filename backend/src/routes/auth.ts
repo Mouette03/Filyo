@@ -123,9 +123,29 @@ export async function authRoutes(app: FastifyInstance) {
     }
     const filename = `avatar_${req.user.id}_${nanoid(6)}${ext}`
     const filePath = path.join(AVATAR_DIR, filename)
-    const chunks: Buffer[] = []
-    for await (const chunk of data.file) chunks.push(chunk)
-    await fs.writeFile(filePath, Buffer.concat(chunks))
+    
+    // Server-side protection: limit avatar to 3 MB and stream to disk
+    const MAX_BYTES = 3 * 1024 * 1024 // 3 MB
+    await fs.ensureFile(filePath)
+    const ws = fs.createWriteStream(filePath)
+    let received = 0
+    try {
+      for await (const chunk of data.file) {
+        received += chunk.length
+        if (received > MAX_BYTES) {
+          ws.destroy()
+          await fs.remove(filePath).catch(() => {})
+          return reply.code(413).send({ code: 'FILE_TOO_LARGE', maxBytes: MAX_BYTES })
+        }
+        if (!ws.write(chunk)) await new Promise<void>(r => ws.once('drain', r))
+      }
+      ws.end()
+    } catch (err) {
+      ws.destroy()
+      await fs.remove(filePath).catch(() => {})
+      throw err
+    }
+    
     const avatarUrl = `/uploads/avatars/${filename}`
     await prisma.user.update({ where: { id: req.user.id }, data: { avatarUrl } })
     req.log.debug({ userId: req.user.id }, 'Avatar updated')
