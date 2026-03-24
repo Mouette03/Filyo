@@ -2,7 +2,7 @@
   "name": "filyo-backend",
   "version": "1.0.0",
   "engines": {
-    "node": ">=20.0.0",
+    "node": ">=20.8.0",
     "npm": ">=10.0.0"
   },
   "description": "Filyo - File transfer backend",
