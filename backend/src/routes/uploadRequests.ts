@@ -9,6 +9,21 @@ import { UPLOAD_DIR } from '../lib/config'
 import { getAppSettings } from '../lib/appSettings'
 import { createSmtpTransport } from '../lib/smtp'
 
+/**
+ * Register HTTP routes under `/api/upload-requests` to create, manage and consume upload requests and their files.
+ *
+ * Registers endpoints for:
+ * - creating and listing a user's upload requests (authenticated),
+ * - retrieving public request info (public),
+ * - depositing files to a request (public, with optional password and size/quantity constraints),
+ * - listing and downloading received files (owner or admin),
+ * - toggling request active state (owner or admin),
+ * - sending deposit emails (owner or admin, via configured SMTP),
+ * - deleting a request and its stored files (owner or admin).
+ *
+ * Side effects: persists upload requests and received-file records in the database, stores uploaded files on disk,
+ * and may send email via SMTP.
+ */
 export async function uploadRequestRoutes(app: FastifyInstance) {
   const auth = { onRequest: [app.authenticate] }
 
