@@ -136,6 +136,7 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
             if (maxBytes && size > maxBytes) {
               writeStream.destroy()
               await fs.remove(filePath).catch(() => {})
+              await Promise.all(savedFiles.map((f: any) => fs.remove(f.path).catch(() => {})))
               return reply.code(413).send({ code: 'FILE_TOO_LARGE' })
             }
             if (!writeStream.write(chunk)) {
