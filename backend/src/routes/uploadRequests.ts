@@ -140,7 +140,10 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
               return reply.code(413).send({ code: 'FILE_TOO_LARGE' })
             }
             if (!writeStream.write(chunk)) {
-              await new Promise<void>(r => writeStream.once('drain', r))
+              await new Promise<void>((resolve, reject) => {
+                writeStream.once('drain', resolve)
+                writeStream.once('error', reject)
+              })
             }
           }
           await new Promise<void>((resolve, reject) => {
