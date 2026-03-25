@@ -1,4 +1,4 @@
-﻿import { FastifyInstance } from 'fastify'
+import { FastifyInstance } from 'fastify'
 import path from 'path'
 import fs from 'fs-extra'
 import { nanoid } from 'nanoid'
@@ -126,17 +126,31 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
         await fs.ensureDir(destDir)
         const filePath = path.join(destDir, filename)
 
-        let size = 0
         const writeStream = fs.createWriteStream(filePath)
-        for await (const chunk of part.file) {
-          writeStream.write(chunk)
-          size += chunk.length
-        }
-        writeStream.end()
+        let size = 0
+        const maxBytes = request.maxSizeBytes ? Number(request.maxSizeBytes) : null
 
-        if (request.maxSizeBytes && BigInt(size) > request.maxSizeBytes) {
-          await fs.remove(filePath)
-          return reply.code(413).send({ code: 'FILE_TOO_LARGE' })
+        try {
+          for await (const chunk of part.file) {
+            size += chunk.length
+            if (maxBytes && size > maxBytes) {
+              writeStream.destroy()
+              await fs.remove(filePath).catch(() => {})
+              return reply.code(413).send({ code: 'FILE_TOO_LARGE' })
+            }
+            if (!writeStream.write(chunk)) {
+              await new Promise<void>(r => writeStream.once('drain', r))
+            }
+          }
+          await new Promise<void>((resolve, reject) => {
+            writeStream.end()
+            writeStream.once('finish', resolve)
+            writeStream.once('error', reject)
+          })
+        } catch (err) {
+          writeStream.destroy()
+          await fs.remove(filePath).catch(() => {})
+          throw err
         }
 
         savedFiles.push({
@@ -312,7 +326,6 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
     for (const f of files) {
       await fs.remove(f.path).catch(() => {})
     }
-    // Supprimer le dossier du partage inversé (même s'il est vide)
     const requestDir = path.join(UPLOAD_DIR, 'received', request.id)
     await fs.remove(requestDir).catch(() => {})
     await prisma.uploadRequest.delete({ where: { id: req.params.id } })

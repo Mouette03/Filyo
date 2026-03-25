@@ -97,7 +97,15 @@ export default function SettingsPage() {
       setLogoUrl(newLogoUrl)
       setSettings({ appName, logoUrl: newLogoUrl })
       toast.success(t('toast.logoUpdated'))
-    } catch { toast.error(t('toast.uploadError')) }
+    } catch (err: any) {
+      const status = err?.response?.status
+      const code = err?.response?.data?.code
+      if (status === 413 || code === 'FILE_TOO_LARGE') {
+        toast.error(t('toast.imageTooLarge2'))
+      } else {
+        toast.error(t('toast.uploadError'))
+      }
+    }
     setUploading(false)
     if (fileInput.current) fileInput.current.value = ''
   }
