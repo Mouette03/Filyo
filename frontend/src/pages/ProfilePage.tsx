@@ -5,6 +5,14 @@ import { uploadAvatar, deleteAvatar, changePassword, updateProfile, updateCleanu
 import { useAuthStore } from '../stores/useAuthStore'
 import { useT } from '../i18n'
 
+/**
+ * Render the user profile UI with controls to view and update avatar, display name, password, and automatic cleanup preference.
+ *
+ * The component manages local UI state for edit modes and loading indicators, calls authentication/profile APIs for updates,
+ * and displays localized success/error toasts based on operation outcomes.
+ *
+ * @returns A React element representing the profile page.
+ */
 export default function ProfilePage() {
   const { user, updateAvatar, updateName, updateCleanupPref } = useAuthStore()
   const { t } = useT()

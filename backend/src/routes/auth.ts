@@ -22,6 +22,13 @@ const registerSchema = z.object({
   password: z.string().min(8)
 })
 
+/**
+ * Registers authentication-related HTTP endpoints under /api/auth on the provided Fastify instance.
+ *
+ * The registered routes cover setup, login, registration, profile and avatar management, password change,
+ * password reset (forgot/reset), and user cleanup preferences. Handlers perform validation and interact with
+ * persistence, authentication, file storage, and email delivery as appropriate.
+ */
 export async function authRoutes(app: FastifyInstance) {
   // GET /api/auth/setup — vérifie si le premier utilisateur doit être créé
   app.get('/setup', async (_req, reply) => {

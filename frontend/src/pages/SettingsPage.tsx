@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Settings, Upload, Trash2, Check, Type, Image, RefreshCw, Mail, Eye, EyeOff, Wifi, Globe, Users, Palette, Moon, Sun, Monitor, Clock } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { updateAppName, uploadLogo, deleteLogo, getSmtpSettings, updateSmtpSettings, testSmtp, updateSiteUrl, updateUploaderFields, updateAllowRegistration, updateCleanupSetting } from '../api/client'
@@ -7,6 +7,12 @@ import { usePreferencesStore, ACCENT_PRESETS, BG_PRESETS, type ThemeMode, type A
 import { useT } from '../i18n'
 import type { FieldReq } from '../types/common'
 
+/**
+ * Render the application settings page with controls for app name, logo, appearance (theme/accent/background),
+ * site URL, registration toggle, cleanup automation, uploader form field requirements, and SMTP configuration.
+ *
+ * @returns The settings page React element
+ */
 export default function SettingsPage() {
   const { settings, setSettings } = useAppSettingsStore()
   const { theme, accentColor, bgColorKey, setTheme, setAccentColor, setBgColor } = usePreferencesStore()
