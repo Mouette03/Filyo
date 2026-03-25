@@ -127,13 +127,13 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
         const filePath = path.join(destDir, filename)
 
         const writeStream = fs.createWriteStream(filePath)
-        let size = 0
-        const maxBytes = request.maxSizeBytes ? Number(request.maxSizeBytes) : null
+        let size = 0n
+        const maxBytes = request.maxSizeBytes !== null ? request.maxSizeBytes : null
 
         try {
           for await (const chunk of part.file) {
-            size += chunk.length
-            if (maxBytes && size > maxBytes) {
+            size += BigInt(chunk.length)
+            if (maxBytes !== null && size > maxBytes) {
               writeStream.destroy()
               await fs.remove(filePath).catch(() => {})
               await Promise.all(savedFiles.map((f: any) => fs.remove(f.path).catch(() => {})))
@@ -159,7 +159,7 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
           filename,
           originalName: part.filename || 'file',
           mimeType: mime.lookup(part.filename || '') || 'application/octet-stream',
-          size: BigInt(size),
+          size: size,
           path: filePath,
           uploaderName: uploaderName || null,
           uploaderEmail: uploaderEmail || null,
