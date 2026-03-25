@@ -219,7 +219,11 @@ export async function settingsRoutes(app: FastifyInstance) {
           }
           if (!ws.write(chunk)) await new Promise<void>(r => ws.once('drain', r))
         }
-        ws.end()
+        await new Promise<void>((resolve, reject) => {
+          ws.end()
+          ws.once('finish', resolve)
+          ws.once('error', reject)
+        })
       } catch (err) {
         ws.destroy()
         await fs.remove(filePath).catch(() => {})
