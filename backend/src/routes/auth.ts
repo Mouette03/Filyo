@@ -137,7 +137,10 @@ export async function authRoutes(app: FastifyInstance) {
           await fs.remove(filePath).catch(() => {})
           return reply.code(413).send({ code: 'FILE_TOO_LARGE', maxBytes: MAX_BYTES })
         }
-        if (!ws.write(chunk)) await new Promise<void>(r => ws.once('drain', r))
+        if (!ws.write(chunk)) await new Promise<void>((resolve, reject) => {
+          ws.once('drain', resolve)
+          ws.once('error', reject)
+        })
       }
       await new Promise<void>((resolve, reject) => {
         ws.end()
