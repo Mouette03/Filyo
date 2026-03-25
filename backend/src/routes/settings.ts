@@ -8,6 +8,19 @@ import { getAppSettings as getSettings } from '../lib/appSettings'
 
 const LOGO_DIR = path.join(UPLOAD_DIR, 'logos')
 
+/**
+ * Register settings-related HTTP routes on the given Fastify instance.
+ *
+ * Exposes public and admin endpoints for reading and updating application settings,
+ * including SMTP configuration, registration/cleanup/name/uploader-field/site-url updates,
+ * and uploading/deleting the application logo. Admin routes are protected using the
+ * instance's authentication and admin-only hooks.
+ *
+ * Notes:
+ * - The logo upload endpoint streams files to disk and enforces a 2 MB maximum size.
+ * - Settings are persisted to a singleton database record and read via the application's
+ *   settings accessor.
+ */
 export async function settingsRoutes(app: FastifyInstance) {
   // GET /api/settings — public (pour charger le nom/logo au démarrage), sans données SMTP
   app.get('/', async () => {
