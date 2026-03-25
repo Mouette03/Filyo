@@ -204,9 +204,31 @@ export async function settingsRoutes(app: FastifyInstance) {
       const filename = `logo_${nanoid(8)}${ext}`
       const filePath = path.join(LOGO_DIR, filename)
 
-      const chunks: Buffer[] = []
-      for await (const chunk of data.file) chunks.push(chunk)
-      await fs.writeFile(filePath, Buffer.concat(chunks))
+      // Server-side protection: limit logo to 2 MB and stream to disk
+      const MAX_BYTES = 2 * 1024 * 1024 // 2 MB
+      await fs.ensureFile(filePath)
+      const ws = fs.createWriteStream(filePath)
+      let received = 0
+      try {
+        for await (const chunk of data.file) {
+          received += chunk.length
+          if (received > MAX_BYTES) {
+            ws.destroy()
+            await fs.remove(filePath).catch(() => {})
+            return reply.code(413).send({ code: 'FILE_TOO_LARGE', maxBytes: MAX_BYTES })
+          }
+          if (!ws.write(chunk)) await new Promise<void>(r => ws.once('drain', r))
+        }
+        await new Promise<void>((resolve, reject) => {
+          ws.end()
+          ws.once('finish', resolve)
+          ws.once('error', reject)
+        })
+      } catch (err) {
+        ws.destroy()
+        await fs.remove(filePath).catch(() => {})
+        throw err
+      }
 
       const logoUrl = `/uploads/logos/${filename}`
       const settings = await prisma.appSettings.upsert({

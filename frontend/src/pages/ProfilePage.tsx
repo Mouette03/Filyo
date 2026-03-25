@@ -46,8 +46,14 @@ export default function ProfilePage() {
       const res = await uploadAvatar(form)
       updateAvatar(res.data.avatarUrl)
       toast.success(t('toast.avatarUpdated'))
-    } catch {
-      toast.error(t('toast.uploadError'))
+    } catch (err: any) {
+      const status = err?.response?.status
+      const code = err?.response?.data?.code
+      if (status === 413 || code === 'FILE_TOO_LARGE') {
+        toast.error(t('toast.imageTooLarge3'))
+      } else {
+        toast.error(t('toast.uploadError'))
+      }
     }
     setUploadingAvatar(false)
     if (avatarInput.current) avatarInput.current.value = ''
