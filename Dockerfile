@@ -7,7 +7,7 @@
 ARG BUILDPLATFORM
 
 # ── Stage 1 : Build du frontend React/Vite ──────────────────────
-FROM --platform=$BUILDPLATFORM node:20-alpine AS frontend-builder
+FROM --platform=$BUILDPLATFORM node:24-alpine AS frontend-builder
 
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
@@ -16,7 +16,7 @@ COPY frontend/ ./
 RUN npm run build
 
 # ── Stage 2 : Build du backend TypeScript ───────────────────────
-FROM --platform=$BUILDPLATFORM node:20-alpine AS backend-builder
+FROM --platform=$BUILDPLATFORM node:24-alpine AS backend-builder
 
 RUN apk add --no-cache openssl
 
@@ -34,7 +34,7 @@ RUN if [ "$DB_PROVIDER" = "mariadb" ]; then \
 RUN npm run build
 
 # ── Stage 3 : Image de production ───────────────────────────────
-FROM node:20-slim AS runner
+FROM node:24-slim AS runner
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         dumb-init openssl gosu wget \
