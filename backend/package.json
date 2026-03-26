@@ -15,7 +15,7 @@
     "db:migrate": "prisma migrate deploy",
     "db:studio": "prisma studio"
     },
-  "resolutions": {
+  "overrides": {
     "glob": "^11"
   },
   "dependencies": {
