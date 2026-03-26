@@ -15,8 +15,8 @@
     "db:migrate": "prisma migrate deploy",
     "db:studio": "prisma studio"
     },
-  "overrides": {
-    "glob": "^11.2.0"
+  "resolutions": {
+    "glob": "^11"
   },
   "dependencies": {
     "@fastify/cors": "^11.0.0",
