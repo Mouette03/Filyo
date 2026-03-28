@@ -1,0 +1,21 @@
+name: Update licenses
+on: [push]
+jobs:
+  licenses:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with: { node-version: 24 }
+    - run: |
+        # Backend
+        cd backend && npm ci && npx license-checker --summary --csv > licenses.csv
+        
+        # Frontend
+        cd ../frontend && npm ci && npx license-checker --summary --csv > licenses.csv
+        
+        git config user.name "GitHub Actions"
+        git config user.email "actions@github.com"
+        git add backend/licenses.csv frontend/licenses.csv
+        git commit -m "Update licenses [skip ci]" || true
+        git push
