@@ -127,7 +127,6 @@ docker pull ghcr.io/mouette03/filyo:v1.0.3
 
 ### Filyo License
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPLv3-blue.svg)](LICENSE)
-**Free for personal use. Modifications must be published if network access is provided (anti-resale protection).**
 
 ### Main dependencies
 
@@ -279,7 +278,6 @@ docker pull ghcr.io/mouette03/filyo:v1.0.3
 
 ### Licence Filyo
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPLv3-blue.svg)](LICENSE)
-**Usage libre pour particuliers. Modifications publiées obligatoirement si accès réseau (anti-revente entreprise).**
 
 ### Dépendances principales
 
