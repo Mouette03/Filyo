@@ -1,6 +1,6 @@
 # Filyo — Transfert de fichiers local & privé
 
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPLv3-blue.svg)](LICENSE)
 [![Version](https://img.shields.io/github/v/release/Mouette03/Filyo?include_prereleases)](https://github.com/Mouette03/Filyo/releases)
 [![Docker](https://img.shields.io/badge/Docker-multi--arch-2496ED?logo=docker&logoColor=white)](https://ghcr.io/mouette03/filyo)
 [![Node.js](https://img.shields.io/badge/Node.js-24-339933?logo=node.js&logoColor=white)](https://nodejs.org)
@@ -8,12 +8,11 @@
 [![Self-hosted](https://img.shields.io/badge/self--hosted-✓-success)](https://github.com/Mouette03/Filyo)
 ![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/Mouette03/Filyo?utm_source=oss&utm_medium=github&utm_campaign=Mouette03%2FFilyo&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
 
-
 Application de partage de fichiers **auto-hébergée**, sans stockage S3. Design glassmorphism sombre, interface bilingue (FR/EN), et fonctionnalité de **partage inversé**.
 
 ---
 
-## Captures d'écran
+## 📸 Captures d'écran
 
 | Page d'envoi | Tableau de bord |
 |:---:|:---:|
@@ -25,7 +24,7 @@ Application de partage de fichiers **auto-hébergée**, sans stockage S3. Design
 
 ---
 
-## Fonctionnalités
+## ✨ Fonctionnalités
 
 | Fonctionnalité | Description |
 |---|---|
@@ -35,125 +34,111 @@ Application de partage de fichiers **auto-hébergée**, sans stockage S3. Design
 | **Max téléchargements** | Limite configurable par lien |
 | **Envoi par email** | Envoi du lien de partage par email |
 | **Partage inversé** | Créer un lien pour recevoir des fichiers d'un tiers |
-| **Email partage inversé** | Envoi du lien de dépôt par email à un ou plusieurs destinataires (adresses séparées par des virgules) |
+| **Email partage inversé** | Envoi du lien de dépôt par email à un ou plusieurs destinataires |
 | **Info déposant** | Nom, email, message joint au dépôt |
-| **Dashboard** | Statistiques, fichiers envoyés & reçus, demandes de dépôt (groupes repliés par défaut) |
-| **Multi-utilisateurs** | Rôles Administrateur / Utilisateur, gestion depuis le panneau admin |
-| **Inscription libre** | Activation optionnelle de l'inscription publique depuis les réglages |
-| **Profil** | Avatar, nom affiché, changement de mot de passe |
-| **Réglages** | Nom de l'app, logo, SMTP, inscription, apparence |
-| **Thèmes** | Sombre / Clair / Automatique avec couleurs d'accent personnalisables |
-| **i18n** | Interface entièrement traduite en français et anglais |
-| **Docker** | Images multi-arch (amd64 + arm64), variantes SQLite et MariaDB |
+| **Dashboard** | Statistiques, fichiers envoyés & reçus, demandes de dépôt |
+| **Multi-utilisateurs** | Rôles Admin/Utilisateur, gestion panneau admin |
+| **Inscription libre** | Activation optionnelle depuis réglages |
+| **Profil** | Avatar, nom, changement mot de passe |
+| **Réglages** | Nom app, logo, SMTP, inscription, apparence |
+| **Thèmes** | Sombre/Clair/Auto + couleurs personnalisables |
+| **i18n** | Français + Anglais |
+| **Docker** | Multi-arch (amd64/arm64), SQLite + MariaDB |
 
 ---
 
-## Lancement rapide
+## 🚀 Lancement rapide
 
-### SQLite (défaut — recommandé)
+### SQLite (recommandé)
 
-Aucune dépendance externe, la base de données est un simple fichier dans /data.
-
-\`\`\`bash
+```bash
 cp .env.example .env
 docker compose up -d
-\`\`\`
+```
 
-### MariaDB
+### MariaDB (prod/multi-users)
 
-Pour les installations avec plusieurs utilisateurs simultanés ou en environnement de production chargé.
-
-\`\`\`bash
+```bash
 cp .env.example .env
 docker compose -f docker-compose.mariadb.yml up -d
-\`\`\`
+```
 
-L'application est disponible sur http://localhost:3001.
-
-Au premier lancement, créez votre compte administrateur directement depuis la page de connexion.
+**http://localhost:3001** → Crée ton compte admin au 1er lancement.
 
 ---
 
-## Derrière un reverse proxy (Traefik, Nginx…)
+## 🌐 Reverse proxy (Traefik/Nginx)
 
-Filyo utilise des chemins relatifs pour l'API (/api/…), ce qui le rend compatible sans configuration particulière derrière un reverse proxy.
+Chemins relatifs → **zéro config** !
 
-Exemple avec **Traefik** :
-
-\`\`\`yaml
+**Traefik** :
+```yaml
 labels:
   - "traefik.enable=true"
-  - "traefik.http.routers.filyo.rule=Host(\`filyo.mondomaine.fr\`)"
+  - "traefik.http.routers.filyo.rule=Host(`filyo.mondomaine.fr`)"
   - "traefik.http.services.filyo.loadbalancer.server.port=3001"
-\`\`\`
-
-> Pensez à configurer l'**Adresse du site** dans Réglages → SMTP pour que les liens de partage par email soient corrects.
+```
 
 ---
 
-## Partage inversé
+## 🔧 Variables d'environnement
 
-1. Allez sur **"Partage inversé"** → configurez titre, message, expiration, limite de fichiers
-2. Copiez le lien /r/<token> ou envoyez-le directement par email à un ou plusieurs destinataires
-3. Le destinataire dépose ses fichiers (avec son nom, email, message optionnel)
-4. Vous les retrouvez dans le **Dashboard** → onglet "Partages inversés"
+| Variable | Défaut | Description |
+|---|---|---|
+| `JWT_SECRET` | *requis prod* | **À changer en prod !** |
+| `LOG_LEVEL` | `info` | `silent|error|warn|info|debug` |
+| `PORT` | `3001` | Port serveur |
+| `DATA_PATH` | `./data` | Dossier données |
+
+**SQLite** : `DATABASE_URL=file:/data/filyo.db`  
+**MariaDB** : `DB_HOST`, `DB_USER`, `DB_PASSWORD`, etc.
 
 ---
 
-## Variables d'environnement
-
-### Communes (SQLite & MariaDB)
-
-| Variable | Défaut | Description |
-|---|---|---|
-| JWT_SECRET | *(requis en prod)* | Clé secrète JWT — **à changer absolument en production** |
-| LOG_LEVEL | info | Niveau de log (silent, error, warn, info, debug) |
-| PORT | 3001 | Port d'écoute du serveur |
-| DATA_PATH | ./data | Dossier données sur l'hôte |
-
-### SQLite uniquement
-
-| Variable | Défaut | Description |
-|---|---|---|
-| DATABASE_URL | file:/data/filyo.db | Chemin vers la base SQLite — modifiable pour un chemin personnalisé |
-
-### MariaDB uniquement
-
-| Variable | Défaut | Description |
-|---|---|---|
-| DB_HOST | *(requis)* | Hostname du serveur MariaDB (ex: db-filyo) |
-| DB_PORT | 3306 | Port MariaDB |
-| DB_NAME | filyo | Nom de la base de données |
-| DB_USER | filyo | Utilisateur MariaDB |
-| DB_PASSWORD | *(requis)* | Mot de passe MariaDB — **à changer en production** |
-| DB_ROOT_PASSWORD | *(requis)* | Mot de passe root MariaDB — **à changer en production** |
-
-> DATABASE_URL n'est pas nécessaire pour MariaDB — il est reconstruit automatiquement depuis DB_HOST, DB_PORT, DB_USER, DB_PASSWORD et DB_NAME.
-
----
-
-## Choisir entre SQLite et MariaDB
+## 🗄️ SQLite vs MariaDB
 
 | | SQLite | MariaDB |
 |---|---|---|
-| Installation | ✅ Zéro dépendance | ⚠️ Conteneur séparé |
-| Usage recommandé | Usage personnel / familial | Multi-utilisateurs / production |
-| Image Docker | ghcr.io/mouette03/filyo:latest | ghcr.io/mouette03/filyo:latest-mariadb |
-| Backup | Copier filyo.db | mysqldump |
+| **Setup** | ✅ Zéro dépendance | ⚠️ Conteneur DB |
+| **Usage** | Personnel/familial | Prod/multi-users |
+| **Image** | `:latest` | `:latest-mariadb` |
+| **Backup** | Copier `filyo.db` | `mysqldump` |
 
 ---
 
-## CI/CD — GitHub Actions
+## 📦 CI/CD GitHub Actions
 
-Le workflow .github/workflows/docker.yml :
-- **Lint + type-check** sur chaque push/PR
-- **Build multi-arch** (amd64 + arm64) et push sur ghcr.io
-- Deux images publiées : variante **SQLite** et variante **MariaDB**
-- Tags automatiques : latest, latest-mariadb, sha-xxxx, versions sémantiques (v1.2.3, v1.2.3-mariadb)
-- **Release GitHub** avec docker-compose.release.yml et docker-compose.mariadb.yml joints sur chaque tag v*
+- **Lint + type-check** (push/PR)
+- **Build multi-arch** → `ghcr.io/mouette03/filyo`
+- Tags : `latest`, `sha-xxxx`, `v1.0.3(-mariadb)`
 
-\`\`\`bash
-docker pull ghcr.io/mouette03/filyo:v1.0.0
-docker pull ghcr.io/mouette03/filyo:v1.0.0-mariadb
-\`\`\`
-ENDOFFILE
+```bash
+docker pull ghcr.io/mouette03/filyo:v1.0.3
+```
+
+---
+
+## 📜 Licences & Remerciements
+
+### Licence Filyo
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPLv3-blue.svg)](LICENSE)
+**Usage libre pour particuliers. Modifications publiées obligatoirement (anti-revente entreprise).**
+
+### Dépendances principales
+| Projet | Licence | Rôle |
+|--------|---------|------|
+| [Fastify](https://github.com/fastify/fastify) | MIT | API |
+| [Prisma](https://github.com/prisma/prisma) | Apache-2.0 | DB |
+| [TypeScript](https://github.com/microsoft/TypeScript) | Apache-2.0 | Code |
+| [tsx](https://github.com/esbuild-kit/tsx) | MIT | Dev |
+| [zod](https://github.com/colinhacks/zod) | MIT | Validation |
+
+**100% permissif** — [Liste complète](backend/licenses.csv)
+
+### 🙏 Merci à
+- **Fastify Team** (perf ⚡)
+- **Prisma** (ORM magique)
+- **Microsoft** (TypeScript)
+- 100+ mainteneurs open source !
+
+*Généré 28/03/2026*
