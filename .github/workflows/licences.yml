@@ -10,7 +10,7 @@ on:
       - '**/package-lock.json'
   schedule:
     - cron: '0 2 1 * *'  # 1er du mois
-
+  workflow_dispatch:
 jobs:
   licenses:
     runs-on: ubuntu-latest
