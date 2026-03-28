@@ -1,22 +1,24 @@
 name: Update licenses
 on:
-  workflow_dispatch:        # Bouton manuel
-  schedule:
-    - cron: '0 2 1 * *'     # 1er du mois
   push:
     paths: 
       - '**/package.json'
       - '**/package-lock.json'
+  schedule:
+    - cron: '0 2 1 * *'
+  workflow_dispatch:
 
 permissions:
-  contents: write           # ← PUSH AUTORISÉ !
+  contents: write
 
 jobs:
   licenses:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    
+      with:
+        ref: ${{ github.ref_name }}  # ← FIX ICI !
+
     - uses: actions/setup-node@v4
       with: 
         node-version: 24
