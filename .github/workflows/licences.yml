@@ -1,13 +1,9 @@
 name: Update licenses
 on:
   push:
-    paths: 
-      - '**/package.json'
-      - '**/package-lock.json'
+    paths: ['**/package.json', '**/package-lock.json']
   pull_request:
-    paths: 
-      - '**/package.json'
-      - '**/package-lock.json'
+    paths: ['**/package.json', '**/package-lock.json']
   schedule:
     - cron: '0 2 1 * *'
   workflow_dispatch:
@@ -19,8 +15,7 @@ jobs:
     - uses: actions/checkout@v4
     
     - uses: actions/setup-node@v4
-      with: 
-        node-version: 24
+      with: { node-version: 24 }
     
     - name: Backend licenses
       run: |
@@ -35,9 +30,7 @@ jobs:
         npx license-checker-rseidelsohn --summary --csv > licenses.csv
     
     - name: Commit & push
-      run: |
-        git config user.name "GitHub Actions"
-        git config user.email "actions@github.com"
-        git add backend/licenses.csv frontend/licenses.csv
-        git diff --staged --quiet || git commit -m "Update licenses [skip ci]"
-        git push
+      uses: stefanzweifel/git-auto-commit-action@v5
+      with:
+        commit_message: Update licenses [skip ci]
+        file_pattern: backend/licenses.csv frontend/licenses.csv
