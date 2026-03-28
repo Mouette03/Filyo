@@ -139,5 +139,3 @@ docker pull ghcr.io/mouette03/filyo:v1.0.3
 - **Prisma** (ORM magique)
 - **Microsoft** (TypeScript)
 - 100+ mainteneurs open source !
-
-*Généré 28/03/2026*
