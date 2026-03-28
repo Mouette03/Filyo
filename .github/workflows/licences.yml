@@ -1,12 +1,15 @@
 name: Update licenses
 on:
-  push:
-    paths: ['**/package.json', '**/package-lock.json']
-  pull_request:
-    paths: ['**/package.json', '**/package-lock.json']
+  workflow_dispatch:        # Bouton manuel
   schedule:
-    - cron: '0 2 1 * *'
-  workflow_dispatch:
+    - cron: '0 2 1 * *'     # 1er du mois
+  push:
+    paths: 
+      - '**/package.json'
+      - '**/package-lock.json'
+
+permissions:
+  contents: write           # ← PUSH AUTORISÉ !
 
 jobs:
   licenses:
@@ -15,8 +18,9 @@ jobs:
     - uses: actions/checkout@v4
     
     - uses: actions/setup-node@v4
-      with: { node-version: 24 }
-    
+      with: 
+        node-version: 24
+        
     - name: Backend licenses
       run: |
         cd backend
@@ -31,10 +35,8 @@ jobs:
     
     - name: Commit & push licenses
       run: |
-        git config --global user.name "github-actions[bot]"
-        git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-        git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
         git add backend/licenses.csv frontend/licenses.csv
-        git diff --staged --quiet || git commit -m "Update licenses [skip ci]" && git push origin HEAD:${{ github.ref_name }}
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        git diff --staged --quiet || git commit -m "Update licenses [skip ci]"
+        git push
