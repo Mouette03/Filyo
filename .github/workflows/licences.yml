@@ -1,21 +1,43 @@
 name: Update licenses
-on: [push]
+on:
+  push:
+    paths: 
+      - '**/package.json'
+      - '**/package-lock.json'
+  pull_request:
+    paths: 
+      - '**/package.json'
+      - '**/package-lock.json'
+  schedule:
+    - cron: '0 2 1 * *'  # 1er du mois
+
 jobs:
   licenses:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+    
     - uses: actions/setup-node@v4
-      with: { node-version: 24 }
-    - run: |
-        # Backend
-        cd backend && npm ci && npx license-checker --summary --csv > licenses.csv
+      with: 
+        node-version: 24
+        cache: 'npm'
+    
+    - name: Backend licenses
+      run: |
+        cd backend
+        npm ci || npm install
+        npx license-checker-rseidelsohn --summary --csv > licenses.csv
         
-        # Frontend
-        cd ../frontend && npm ci && npx license-checker --summary --csv > licenses.csv
-        
+    - name: Frontend licenses
+      run: |
+        cd frontend
+        npm ci || npm install
+        npx license-checker-rseidelsohn --summary --csv > licenses.csv
+    
+    - name: Commit & push
+      run: |
         git config user.name "GitHub Actions"
         git config user.email "actions@github.com"
         git add backend/licenses.csv frontend/licenses.csv
-        git commit -m "Update licenses [skip ci]" || true
+        git diff --staged --quiet || git commit -m "Update licenses [skip ci]"
         git push
