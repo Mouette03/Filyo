@@ -67,7 +67,7 @@
 "autoprefixer@10.4.27","MIT","https://github.com/postcss/autoprefixer"
 "axios@1.14.0","MIT","https://github.com/axios/axios"
 "balanced-match@1.0.2","MIT","https://github.com/juliangruber/balanced-match"
-"baseline-browser-mapping@2.10.11","Apache-2.0","https://github.com/web-platform-dx/baseline-browser-mapping"
+"baseline-browser-mapping@2.10.12","Apache-2.0","https://github.com/web-platform-dx/baseline-browser-mapping"
 "binary-extensions@2.3.0","MIT","https://github.com/sindresorhus/binary-extensions"
 "brace-expansion@1.1.13","MIT","https://github.com/juliangruber/brace-expansion"
 "braces@3.0.3","MIT","https://github.com/micromatch/braces"
