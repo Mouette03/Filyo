@@ -121,21 +121,34 @@ docker pull ghcr.io/mouette03/filyo:v1.0.3
 ## 📜 Licences & Remerciements
 
 ### Licence Filyo
-[![License: AGPL v3](https://img.shields.io/badge/License-AGPLv3-blue.svg)](LICENSE)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPLv3-blue.svg)](LICENSE)  
+**Usage libre pour particuliers. Modifications publiées obligatoirement si accès réseau (anti-revente entreprise).**
 
 ### Dépendances principales
+
 | Projet | Licence | Rôle |
 |--------|---------|------|
-| [Fastify](https://github.com/fastify/fastify) | MIT | API |
-| [Prisma](https://github.com/prisma/prisma) | Apache-2.0 | DB |
-| [TypeScript](https://github.com/microsoft/TypeScript) | Apache-2.0 | Code |
-| [tsx](https://github.com/esbuild-kit/tsx) | MIT | Dev |
-| [zod](https://github.com/colinhacks/zod) | MIT | Validation |
+| **Backend** | | |
+| [Fastify](https://github.com/fastify/fastify) | MIT | API Framework |
+| [Prisma](https://github.com/prisma/prisma) | Apache-2.0 | Base de données |
+| [bcryptjs](https://github.com/dcodeIO/bcrypt.js) | MIT | Authentification |
+| **Frontend** | | |
+| [React](https://github.com/facebook/react) | MIT | Interface |
+| [TailwindCSS](https://github.com/tailwindlabs/tailwindcss) | MIT | Design |
+| [Vite](https://github.com/vitejs/vite) | MIT | Build tool |
+| [Zustand](https://github.com/pmndrs/zustand) | MIT | State |
 
-**100% permissif** — [Liste complète](backend/licenses.csv)
+**Inventaire complet** :  
+- [Backend](backend/licenses.csv) — API (100+ dépendances)  
+- [Frontend](frontend/licenses.csv) — UI (150+ dépendances)
 
-### 🙏 Merci à
-- **Fastify Team** (perf ⚡)
-- **Prisma** (ORM magique)
-- **Microsoft** (TypeScript)
-- 100+ mainteneurs open source !
+**100% MIT/Apache/ISC** — licences permissives et compatibles AGPL.
+
+### 🙏 Remerciements
+- **Fastify Team** — API ultra-performante ⚡
+- **Prisma Team** — ORM magique ✨
+- **React Team** — Interface moderne
+- **Tailwind Labs** — Design glassmorphism
+- **100+ mainteneurs** open source !
+
+*licenses.csv auto-mis à jour via GitHub Actions*
