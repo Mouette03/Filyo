@@ -13,7 +13,7 @@
 <details open>
 <summary>🇬🇧 English</summary>
 
-**Self-hosted** file sharing app, no S3 storage. Dark glassmorphism design, bilingual interface (FR/EN), and **reverse sharing** feature.
+**Self-hosted** file-sharing app, no S3 storage. Dark glassmorphism design, bilingual interface (FR/EN), and **reverse sharing** feature.
 
 ---
 
@@ -154,7 +154,7 @@ docker pull ghcr.io/mouette03/filyo:v1.0.3
 - **Prisma Team** — Magic ORM ✨
 - **React Team** — Modern UI
 - **Tailwind Labs** — Glassmorphism design
-- **100+ open source maintainers** !
+- **100+ open-source maintainers** !
 
 *licenses.csv auto-updated via GitHub Actions*
 
