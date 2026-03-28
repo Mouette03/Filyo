@@ -9,8 +9,9 @@ on:
       - '**/package.json'
       - '**/package-lock.json'
   schedule:
-    - cron: '0 2 1 * *'  # 1er du mois
+    - cron: '0 2 1 * *'
   workflow_dispatch:
+
 jobs:
   licenses:
     runs-on: ubuntu-latest
@@ -20,18 +21,17 @@ jobs:
     - uses: actions/setup-node@v4
       with: 
         node-version: 24
-        cache: 'npm'
     
     - name: Backend licenses
       run: |
         cd backend
-        npm ci || npm install
+        npm install
         npx license-checker-rseidelsohn --summary --csv > licenses.csv
         
     - name: Frontend licenses
       run: |
         cd frontend
-        npm ci || npm install
+        npm install
         npx license-checker-rseidelsohn --summary --csv > licenses.csv
     
     - name: Commit & push
