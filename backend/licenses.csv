@@ -68,7 +68,7 @@
 "fastparallel@2.4.1","ISC","https://github.com/mcollina/fastparallel"
 "fastq@1.20.1","ISC","https://github.com/mcollina/fastq"
 "fastseries@1.7.2","ISC","https://github.com/mcollina/fastseries"
-"filyo-backend@1.0.5","UNKNOWN",""
+"filyo-backend@1.0.2","UNKNOWN",""
 "find-my-way@9.5.0","MIT","https://github.com/delvedor/find-my-way"
 "foreground-child@3.3.1","ISC","https://github.com/tapjs/foreground-child"
 "fs-extra@11.3.4","MIT","https://github.com/jprichardson/node-fs-extra"
