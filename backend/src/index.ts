@@ -16,7 +16,14 @@ import { settingsRoutes } from './routes/settings'
 import { runScheduledCleanup } from './lib/cleanup'
 import { UPLOAD_DIR } from './lib/config'
 
-const UPLOAD_TIMEOUT_MS = parseInt(process.env.UPLOAD_TIMEOUT_MS || '1800000') // 30 min par défaut
+const UPLOAD_TIMEOUT_MIN_MS = 60_000        // 1 min
+const UPLOAD_TIMEOUT_MAX_MS = 7_200_000     // 2 h
+const UPLOAD_TIMEOUT_DEFAULT_MS = 1_800_000 // 30 min
+
+const _parsedTimeout = parseInt(process.env.UPLOAD_TIMEOUT_MS ?? '', 10)
+const UPLOAD_TIMEOUT_MS = Number.isFinite(_parsedTimeout) && _parsedTimeout >= UPLOAD_TIMEOUT_MIN_MS && _parsedTimeout <= UPLOAD_TIMEOUT_MAX_MS
+  ? _parsedTimeout
+  : UPLOAD_TIMEOUT_DEFAULT_MS
 
 const app = Fastify({
   logger: {

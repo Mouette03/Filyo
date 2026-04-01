@@ -10,6 +10,22 @@ type Translations = typeof fr
 const translations: Record<string, Translations> = { en, fr }
 
 /**
+ * Escapes special HTML characters in a string to prevent injection in email bodies.
+ * Covers `&`, `<`, `>`, `"`, and `'`.
+ *
+ * @example
+ * escapeHtml('<script>alert(1)</script>') // => '&lt;script&gt;alert(1)&lt;/script&gt;'
+ */
+export function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+/**
  * Translate an email string by key with optional variable interpolation.
  * Falls back to French if the requested language is not available.
  *

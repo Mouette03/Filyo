@@ -67,7 +67,7 @@ export function downloadBlob(blob: Blob, filename: string) {
 
 /** Returns true if the string matches a basic email format. */
 export function isValidEmail(email: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
 }
 
 /** Copie du texte dans le presse-papier avec fallback execCommand pour HTTP */

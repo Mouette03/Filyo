@@ -4,7 +4,7 @@ import fs from 'fs-extra'
 import { prisma } from '../lib/prisma'
 import { getAppSettings } from '../lib/appSettings'
 import { createSmtpTransport } from '../lib/smtp'
-import { t } from '../lib/i18n'
+import { t, escapeHtml } from '../lib/i18n'
 
 /** Retourne le nom d'affichage d'un fichier en tenant compte de hideFilenames. */
 function getDisplayName(originalName: string, hideFilenames: boolean): string {
@@ -179,6 +179,7 @@ export async function shareRoutes(app: FastifyInstance) {
     const isSingleBatch = batchTokens.size === 1 && shares.length > 1
 
     const appName = settings.appName || 'Filyo'
+    const safeAppName = escapeHtml(appName)
 
     let filesHtml: string
     let filesText: string
@@ -187,7 +188,7 @@ export async function shareRoutes(app: FastifyInstance) {
       // Un seul lien pour tout le lot, affiche la liste des noms dans l'email
       const batchUrl = `${baseUrl}/s/${shares[0].token}`
       const fileListHtml = shares.map((s: any) => {
-        return `<li style="color:#ccc;font-size:13px;padding:2px 0">${getDisplayName(s.file.originalName, s.file.hideFilenames)}</li>`
+        return `<li style="color:#ccc;font-size:13px;padding:2px 0">${escapeHtml(getDisplayName(s.file.originalName, s.file.hideFilenames))}</li>`
       }).join('')
       const fileListText = shares.map((s: any) => {
         return s.file.hideFilenames ? `- ${t(lang, 'email.share.hiddenName')}` : `- ${s.file.originalName}`
@@ -200,8 +201,8 @@ export async function shareRoutes(app: FastifyInstance) {
         <tr>
           <td style="padding:10px 12px;border-bottom:1px solid #2a2d4a">
             <ul style="margin:0 0 8px;padding-left:16px">${fileListHtml}</ul>
-            <a href="${batchUrl}" style="color:#7a8dff;font-weight:600;text-decoration:none">${t(lang, 'email.share.downloadAll')}</a><br>
-            <span style="font-size:12px;color:#666;font-family:monospace">${batchUrl}</span><br>
+            <a href="${escapeHtml(encodeURI(batchUrl))}" style="color:#7a8dff;font-weight:600;text-decoration:none">${t(lang, 'email.share.downloadAll')}</a><br>
+            <span style="font-size:12px;color:#666;font-family:monospace">${escapeHtml(encodeURI(batchUrl))}</span><br>
             <span style="font-size:11px;color:#888">${expiry}</span>
           </td>
         </tr>`
@@ -216,8 +217,8 @@ export async function shareRoutes(app: FastifyInstance) {
         return `
           <tr>
             <td style="padding:10px 12px;border-bottom:1px solid #2a2d4a">
-              <a href="${url}" style="color:#7a8dff;font-weight:600;text-decoration:none">${displayName}</a><br>
-              <span style="font-size:12px;color:#666;font-family:monospace">${url}</span><br>
+              <a href="${escapeHtml(encodeURI(url))}" style="color:#7a8dff;font-weight:600;text-decoration:none">${escapeHtml(displayName)}</a><br>
+              <span style="font-size:12px;color:#666;font-family:monospace">${escapeHtml(encodeURI(url))}</span><br>
               <span style="font-size:11px;color:#888">${expiry}</span>
             </td>
           </tr>`
@@ -252,14 +253,14 @@ export async function shareRoutes(app: FastifyInstance) {
         text: greetingText,
         html: `
           <div style="font-family:system-ui,sans-serif;max-width:520px;margin:0 auto;background:#0d0e1a;color:#e8eaf6;padding:32px 24px;border-radius:16px">
-            <h2 style="margin:0 0 6px;color:#7a8dff;font-size:20px">${appName}</h2>
+            <h2 style="margin:0 0 6px;color:#7a8dff;font-size:20px">${safeAppName}</h2>
             <p style="color:#aaa;font-size:13px;margin:0 0 24px">
               ${intro}
             </p>
             <table style="width:100%;border-collapse:collapse;background:#13152a;border-radius:12px;overflow:hidden">
               ${filesHtml}
             </table>
-            <p style="font-size:11px;color:#555;margin-top:24px;text-align:center">${t(lang, 'email.share.footer', { appName })}</p>
+            <p style="font-size:11px;color:#555;margin-top:24px;text-align:center">${t(lang, 'email.share.footer', { appName: safeAppName })}</p>
           </div>`
       })
     } catch (err: any) {

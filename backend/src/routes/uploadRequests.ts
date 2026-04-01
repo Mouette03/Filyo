@@ -8,7 +8,7 @@ import { prisma } from '../lib/prisma'
 import { UPLOAD_DIR } from '../lib/config'
 import { getAppSettings } from '../lib/appSettings'
 import { createSmtpTransport } from '../lib/smtp'
-import { t } from '../lib/i18n'
+import { t, escapeHtml } from '../lib/i18n'
 
 /**
  * Register HTTP routes under `/api/upload-requests` to create, manage and consume upload requests and their files.
@@ -310,6 +310,10 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
       const messageBlock = request.message ? request.message + '\n\n' : ''
       const subject = t(lang, 'email.uploadRequest.subject', { appName, title: request.title })
       const bodyText = t(lang, 'email.uploadRequest.text', { title: request.title, message: messageBlock, depositUrl, appName })
+      const safeTitle = escapeHtml(request.title)
+      const safeMessage = request.message ? escapeHtml(request.message) : null
+      const safeAppName = escapeHtml(appName)
+      const safeDepositUrl = escapeHtml(encodeURI(depositUrl))
       try {
         await transporter.sendMail({
           from: `"${appName}" <${settings.smtpFrom}>`,
@@ -317,13 +321,13 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
           subject,
           text: bodyText,
           html: `<div style="font-family:system-ui,sans-serif;max-width:520px;margin:0 auto;background:#0d0e1a;color:#e8eaf6;padding:32px 24px;border-radius:16px">
-          <h2 style="margin:0 0 6px;color:#7a8dff;font-size:20px">${appName}</h2>
+          <h2 style="margin:0 0 6px;color:#7a8dff;font-size:20px">${safeAppName}</h2>
           <p style="color:#aaa;font-size:13px;margin:0 0 24px">${t(lang, 'email.uploadRequest.htmlSubtitle')}</p>
-          <p style="margin:0 0 8px">${t(lang, 'email.uploadRequest.htmlBody')} <strong>${request.title}</strong></p>
-          ${request.message ? `<p style="margin:0 0 16px;color:#ccc;font-style:italic">"${request.message}"</p>` : ''}
-          <a href="${depositUrl}" style="display:inline-block;background:#5c6bfa;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px">${t(lang, 'email.uploadRequest.htmlButton')}</a>
-          <p style="margin:12px 0 0;font-size:12px;color:#666;font-family:monospace">${depositUrl}</p>
-          <p style="margin:24px 0 0;font-size:11px;color:#444">${appName}</p>
+          <p style="margin:0 0 8px">${t(lang, 'email.uploadRequest.htmlBody')} <strong>${safeTitle}</strong></p>
+          ${safeMessage ? `<p style="margin:0 0 16px;color:#ccc;font-style:italic">"${safeMessage}"</p>` : ''}
+          <a href="${safeDepositUrl}" style="display:inline-block;background:#5c6bfa;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px">${t(lang, 'email.uploadRequest.htmlButton')}</a>
+          <p style="margin:12px 0 0;font-size:12px;color:#666;font-family:monospace">${safeDepositUrl}</p>
+          <p style="margin:24px 0 0;font-size:11px;color:#444">${safeAppName}</p>
         </div>`
         })
       } catch (err: any) {
