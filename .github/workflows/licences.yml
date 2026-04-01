@@ -17,7 +17,8 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       with:
-        ref: ${{ github.ref_name }}  # ← FIX ICI !
+        ref: ${{ github.head_ref || github.ref_name }}
+        fetch-depth: 0
 
     - uses: actions/setup-node@v4
       with: 
@@ -41,4 +42,4 @@ jobs:
         git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
         git add backend/licenses.csv frontend/licenses.csv
         git diff --staged --quiet || git commit -m "Update licenses [skip ci]"
-        git push
+        git push origin HEAD:${{ github.head_ref || github.ref_name }}
