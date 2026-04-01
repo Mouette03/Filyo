@@ -3,7 +3,7 @@ import { useDropzone } from 'react-dropzone'
 import { Upload, X, Copy, Check, Lock, Clock, Download, Plus, Trash2, Share2, Mail, Send, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { uploadFiles, sendShareByEmail } from '../api/client'
-import { formatBytes, getFileIcon, copyToClipboard } from '../lib/utils'
+import { formatBytes, getFileIcon, copyToClipboard, isValidEmail } from '../lib/utils'
 import { useT } from '../i18n'
 import { useAppSettingsStore } from '../stores/useAppSettingsStore'
 
@@ -88,7 +88,7 @@ export default function HomePage() {
 
   const handleSendEmail = async () => {
     if (!emailTo.trim()) return toast.error(t('toast.emailRequired'))
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTo)) return toast.error(t('toast.emailInvalid'))
+    if (!isValidEmail(emailTo)) return toast.error(t('toast.emailInvalid'))
     setEmailSending(true)
     try {
       // Si lot : envoyer un seul token (le backend renvoie tous les fichiers)

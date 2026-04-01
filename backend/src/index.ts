@@ -16,6 +16,15 @@ import { settingsRoutes } from './routes/settings'
 import { runScheduledCleanup } from './lib/cleanup'
 import { UPLOAD_DIR } from './lib/config'
 
+const UPLOAD_TIMEOUT_MIN_MS = 60_000        // 1 min
+const UPLOAD_TIMEOUT_MAX_MS = 7_200_000     // 2 h
+const UPLOAD_TIMEOUT_DEFAULT_MS = 1_800_000 // 30 min
+
+const _parsedTimeout = parseInt(process.env.UPLOAD_TIMEOUT_MS ?? '', 10)
+const UPLOAD_TIMEOUT_MS = Number.isFinite(_parsedTimeout) && _parsedTimeout >= UPLOAD_TIMEOUT_MIN_MS && _parsedTimeout <= UPLOAD_TIMEOUT_MAX_MS
+  ? _parsedTimeout
+  : UPLOAD_TIMEOUT_DEFAULT_MS
+
 const app = Fastify({
   logger: {
     level: process.env.LOG_LEVEL || 'info',
@@ -26,7 +35,8 @@ const app = Fastify({
     }
   },
   disableRequestLogging: true,
-  bodyLimit: 10 * 1024 * 1024 * 1024 // 10 GB
+  bodyLimit: 10 * 1024 * 1024 * 1024, // 10 GB
+  connectionTimeout: UPLOAD_TIMEOUT_MS,
 })
 
 // ── Décorateurs d'authentification ──────────────────────────────────────────
@@ -46,9 +56,15 @@ app.decorate('adminOnly', async function (req: FastifyRequest, reply: FastifyRep
 })
 
 async function bootstrap() {
-  // CORS
+  // CORS — en production (NODE_ENV=production), le frontend est servi par ce même serveur
+  // (même origine), donc CORS n'est pas nécessaire.
+  // En développement, on autorise explicitement l'origine du dev server Vite.
+  const isProduction = process.env.NODE_ENV === 'production'
+  const corsOrigin = isProduction
+    ? false
+    : (process.env.FRONTEND_URL || 'http://localhost:5173')
   await app.register(cors, {
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: corsOrigin,
     credentials: true
   })
 

@@ -57,13 +57,13 @@ export default function RequestUploadPage() {
       .catch(err => {
         const code = err.response?.data?.code
         if (code === 'REQUEST_EXPIRED') {
-          setError(t('request.expiredDesc'))
+          setError('request.expiredDesc')
           setStatus('expired')
         } else if (code === 'REQUEST_LIMIT_REACHED') {
-          setError(t('request.limitReachedDesc'))
+          setError('request.limitReachedDesc')
           setStatus('expired')
         } else {
-          setError(t('request.invalidDesc'))
+          setError('request.invalidDesc')
           setStatus('error')
         }
       })
@@ -165,7 +165,7 @@ export default function RequestUploadPage() {
               <AlertTriangle size={28} className="text-red-400" />
             </div>
             <h2 className="text-xl font-bold mb-2">{status === 'expired' ? t('request.expired') : t('request.invalid')}</h2>
-            <p className="[color:var(--text-50)] text-sm">{error}</p>
+            <p className="[color:var(--text-50)] text-sm">{t(error)}</p>
           </div>
         )}
 

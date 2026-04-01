@@ -46,12 +46,21 @@ export async function fileRoutes(app: FastifyInstance) {
               await Promise.all(uploadedFiles.map((f: any) => fs.remove(f.path).catch(() => {})))
               return reply.code(413).send({ code: 'FILE_TOO_LARGE', maxBytes: globalMaxBytes.toString() })
             }
-            writeStream.write(chunk)
+            if (!writeStream.write(chunk)) {
+              await new Promise<void>((resolve, reject) => {
+                const onDrain = () => { writeStream.off('error', onError); resolve() }
+                const onError = (err: Error) => { writeStream.off('drain', onDrain); reject(err) }
+                writeStream.once('drain', onDrain)
+                writeStream.once('error', onError)
+              })
+            }
           }
           await new Promise<void>((resolve, reject) => {
+            const onFinish = () => { writeStream.off('error', onError); resolve() }
+            const onError = (err: Error) => { writeStream.off('finish', onFinish); reject(err) }
+            writeStream.once('finish', onFinish)
+            writeStream.once('error', onError)
             writeStream.end()
-            writeStream.once('finish', resolve)
-            writeStream.once('error', reject)
           })
         } catch (err) {
           writeStream.destroy()
