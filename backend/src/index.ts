@@ -16,6 +16,8 @@ import { settingsRoutes } from './routes/settings'
 import { runScheduledCleanup } from './lib/cleanup'
 import { UPLOAD_DIR } from './lib/config'
 
+const UPLOAD_TIMEOUT_MS = parseInt(process.env.UPLOAD_TIMEOUT_MS || '1800000') // 30 min par défaut
+
 const app = Fastify({
   logger: {
     level: process.env.LOG_LEVEL || 'info',
@@ -26,7 +28,8 @@ const app = Fastify({
     }
   },
   disableRequestLogging: true,
-  bodyLimit: 10 * 1024 * 1024 * 1024 // 10 GB
+  bodyLimit: 10 * 1024 * 1024 * 1024, // 10 GB
+  connectionTimeout: UPLOAD_TIMEOUT_MS,
 })
 
 // ── Décorateurs d'authentification ──────────────────────────────────────────

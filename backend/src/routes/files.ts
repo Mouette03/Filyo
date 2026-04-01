@@ -48,15 +48,19 @@ export async function fileRoutes(app: FastifyInstance) {
             }
             if (!writeStream.write(chunk)) {
               await new Promise<void>((resolve, reject) => {
-                writeStream.once('drain', resolve)
-                writeStream.once('error', reject)
+                const onDrain = () => { writeStream.off('error', onError); resolve() }
+                const onError = (err: Error) => { writeStream.off('drain', onDrain); reject(err) }
+                writeStream.once('drain', onDrain)
+                writeStream.once('error', onError)
               })
             }
           }
           await new Promise<void>((resolve, reject) => {
+            const onFinish = () => { writeStream.off('error', onError); resolve() }
+            const onError = (err: Error) => { writeStream.off('finish', onFinish); reject(err) }
+            writeStream.once('finish', onFinish)
+            writeStream.once('error', onError)
             writeStream.end()
-            writeStream.once('finish', resolve)
-            writeStream.once('error', reject)
           })
         } catch (err) {
           writeStream.destroy()
