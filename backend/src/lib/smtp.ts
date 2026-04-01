@@ -5,22 +5,24 @@ interface SmtpConfig {
   smtpPort?: number | null
   smtpUser?: string | null
   smtpPass?: string | null
+  smtpSecure?: boolean | null
 }
 
 /**
  * Crée un transporter nodemailer à partir de la configuration SMTP.
- * - Port 465  → SSL/TLS direct (secure: true)
- * - Port 587  → STARTTLS (requireTLS: true)
- * - Autres    → non sécurisé
+ * - smtpSecure=true  → STARTTLS activé (requireTLS: true)
+ * - smtpSecure=false → connexion non sécurisée
+ * - Port 465         → SSL/TLS direct (secure: true, ignore smtpSecure)
  */
 export function createSmtpTransport(cfg: SmtpConfig) {
   const port = cfg.smtpPort ?? 587
-  const secure = port === 465
+  const isSsl = port === 465
+  const starttls = !isSsl && (cfg.smtpSecure ?? true)
   return nodemailer.createTransport({
     host: cfg.smtpHost ?? undefined,
     port,
-    secure,
-    requireTLS: port === 587,
+    secure: isSsl,
+    requireTLS: starttls,
     connectionTimeout: 10_000,
     greetingTimeout: 10_000,
     socketTimeout: 15_000,

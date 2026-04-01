@@ -156,7 +156,7 @@ export const getAllUploadRequestsAdmin = () => api.get('/admin/upload-requests')
 export const getSmtpSettings = () => api.get('/settings/smtp')
 export const updateSmtpSettings = (data: {
   smtpHost?: string; smtpPort?: number; smtpFrom?: string
-  smtpUser?: string; smtpPass?: string
+  smtpUser?: string; smtpPass?: string; smtpSecure?: boolean
 }) => api.patch('/settings/smtp', data)
 export const testSmtp = (data: { smtpHost: string; smtpPort: number; smtpFrom: string; smtpUser?: string; smtpPass?: string }) =>
   api.post('/settings/smtp/test', data)

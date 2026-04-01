@@ -226,8 +226,11 @@
 [data-theme="light"] .text-white\/50         { color: var(--text-50) !important; }
 [data-theme="light"] .text-white\/40         { color: var(--text-40) !important; }
 [data-theme="light"] .text-white\/30         { color: var(--text-30) !important; }
+[data-theme="light"] .text-white\/25         { color: var(--text-30) !important; }
 [data-theme="light"] .text-white\/20         { color: var(--text-20) !important; }
 [data-theme="light"] .placeholder-white\/30::placeholder { color: var(--text-30) !important; }
+[data-theme="light"] .hover\:text-white:hover           { color: var(--text-base) !important; }
+[data-theme="light"] .hover\:text-white\/60:hover       { color: var(--text-60) !important; }
 
 /* Arrière-plans blancs semi-transparents → teinte sombre en light */
 [data-theme="light"] .bg-white\/\[0\.02\]   { background: var(--bg-dot-line) !important; }
