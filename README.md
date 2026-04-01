@@ -10,6 +10,13 @@
 
 ---
 
+> [!WARNING]
+> **🇬🇧 Pre-release software** — This project is currently in pre-release. The database schema may change between versions without a migration path. If you encounter database errors or startup failures after updating, **a clean reinstall is required**: stop the containers, delete the data volume, and restart.
+>
+> **🇫🇷 Logiciel en pré-version** — Ce projet est actuellement en pré-release. Le schéma de base de données peut changer entre les versions sans chemin de migration. Si vous rencontrez des erreurs de base de données ou des échecs au démarrage après une mise à jour, **une réinstallation propre est nécessaire** : arrêtez les conteneurs, supprimez le volume de données et redémarrez.
+
+---
+
 <details open>
 <summary>🇬🇧 English</summary>
 
