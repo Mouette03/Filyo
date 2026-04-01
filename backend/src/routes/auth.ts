@@ -233,7 +233,9 @@ export async function authRoutes(app: FastifyInstance) {
 
   // POST /api/auth/forgot-password — demander un lien de réinitialisation
   app.post('/forgot-password', async (req, reply) => {
-    const { email, lang = 'fr' } = req.body as { email?: string; lang?: string }
+    const body = req.body as Record<string, unknown>
+    const email = typeof body?.email === 'string' ? body.email.trim() : null
+    const lang = typeof body?.lang === 'string' ? body.lang : 'fr'
     // Toujours répondre 200 pour ne pas révéler l'existence d'un compte
     if (!email) return reply.send({ success: true })
 
