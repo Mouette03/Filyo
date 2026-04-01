@@ -1,6 +1,5 @@
 {
   "name": "filyo-backend",
-  "version": "1.0.2",
   "engines": {
     "node": ">=24.0.0",
     "npm": ">=11.0.0"
