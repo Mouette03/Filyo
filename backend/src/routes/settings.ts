@@ -151,7 +151,7 @@ export async function settingsRoutes(app: FastifyInstance) {
         create: { id: 'singleton', appName: appName.trim() }
       })
       req.log.info({ appName }, 'Application name updated')
-      return settings
+      return { appName: settings.appName, logoUrl: settings.logoUrl }
     }
   )
 
@@ -276,7 +276,7 @@ export async function settingsRoutes(app: FastifyInstance) {
         create: { id: 'singleton', appName: 'Filyo', logoUrl }
       })
       req.log.info({ logoUrl }, 'Logo uploaded')
-      return settings
+      return { appName: settings.appName, logoUrl: settings.logoUrl }
     }
   )
 
@@ -296,7 +296,7 @@ export async function settingsRoutes(app: FastifyInstance) {
         create: { id: 'singleton', appName: 'Filyo' }
       })
       req.log.info('Logo deleted')
-      return result
+      return { appName: result.appName, logoUrl: result.logoUrl }
     }
   )
 }
