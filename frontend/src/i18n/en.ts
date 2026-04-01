@@ -7,6 +7,7 @@ export const en = {
   'nav.settings': 'Settings',
   'nav.logout': 'Log out',
   'nav.footer': 'Local & private file transfer',
+  'nav.updateAvailable': 'Update available:',
 
   // ── Roles ────────────────────────────────────────────────────
   'role.admin': 'Administrator',
