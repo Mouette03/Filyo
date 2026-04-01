@@ -274,7 +274,6 @@ export default function SettingsPage() {
           onChange={handleLogoUpload}
           className="hidden"
         />
-        <p className="text-xs text-white/30 mt-3">{t('settings.logoRecommended')}</p>
       </div>
 
       {/* Section : Apparence */}

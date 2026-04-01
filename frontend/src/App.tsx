@@ -22,8 +22,11 @@ export default function App() {
 
   // Favicon dynamique : utilise le logo personnalisé si défini, sinon /favicon.svg
   useEffect(() => {
-    const link = document.querySelector<HTMLLinkElement>('link[rel="icon"]')
-    if (link) link.href = settings.logoUrl ?? '/favicon.svg'
+    const href = settings.logoUrl ?? '/favicon.svg'
+    const icon = document.querySelector<HTMLLinkElement>('link[rel="icon"]')
+    if (icon) icon.href = href
+    const apple = document.querySelector<HTMLLinkElement>('link[rel="apple-touch-icon"]')
+    if (apple) apple.href = href
   }, [settings.logoUrl])
 
   useEffect(() => {
