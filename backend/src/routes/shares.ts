@@ -7,10 +7,11 @@ import { createSmtpTransport } from '../lib/smtp'
 import { t, escapeHtml } from '../lib/i18n'
 
 /** Retourne le nom d'affichage d'un fichier en tenant compte de hideFilenames. */
-function getDisplayName(originalName: string, hideFilenames: boolean): string {
+function getDisplayName(originalName: string, hideFilenames: boolean, lang = 'fr'): string {
   if (!hideFilenames) return originalName
   const ext = originalName.includes('.') ? originalName.split('.').pop() : ''
-  return ext ? `fichier.${ext}` : 'fichier'
+  const base = t(lang, 'email.share.hiddenFile')
+  return ext ? `${base}.${ext}` : base
 }
 
 /**
@@ -188,7 +189,7 @@ export async function shareRoutes(app: FastifyInstance) {
       // Un seul lien pour tout le lot, affiche la liste des noms dans l'email
       const batchUrl = `${baseUrl}/s/${shares[0].token}`
       const fileListHtml = shares.map((s: any) => {
-        return `<li style="color:#ccc;font-size:13px;padding:2px 0">${escapeHtml(getDisplayName(s.file.originalName, s.file.hideFilenames))}</li>`
+        return `<li style="color:#ccc;font-size:13px;padding:2px 0">${escapeHtml(getDisplayName(s.file.originalName, s.file.hideFilenames, lang))}</li>`
       }).join('')
       const fileListText = shares.map((s: any) => {
         return s.file.hideFilenames ? `- ${t(lang, 'email.share.hiddenName')}` : `- ${s.file.originalName}`
@@ -210,7 +211,7 @@ export async function shareRoutes(app: FastifyInstance) {
     } else {
       filesHtml = shares.map((s: any) => {
         const url = `${baseUrl}/s/${s.token}`
-        const displayName = getDisplayName(s.file.originalName, s.file.hideFilenames)
+        const displayName = getDisplayName(s.file.originalName, s.file.hideFilenames, lang)
         const expiry = s.expiresAt
           ? t(lang, 'email.share.expiresOn', { date: new Date(s.expiresAt).toLocaleDateString(lang === 'en' ? 'en-GB' : 'fr-FR') })
           : t(lang, 'email.share.noExpiry')

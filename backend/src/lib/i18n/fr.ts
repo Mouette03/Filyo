@@ -25,6 +25,7 @@ export const fr = {
       noExpiry: 'Sans expiration',
       hiddenName: '[nom masqué]',
       hiddenNameShort: 'un fichier',
+      hiddenFile: 'fichier',
       downloadAll: 'Télécharger tous les fichiers',
       filesLabel: 'Fichiers :',
       footer: 'Envoyé via {{appName}}',
