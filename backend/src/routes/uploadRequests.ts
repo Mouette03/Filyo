@@ -128,6 +128,9 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
     let message: string | undefined
     let rawPassword: string | undefined
 
+    const appSettings = await getAppSettings()
+    const globalMaxBytes = appSettings.maxFileSizeBytes ?? null
+
     for await (const part of parts) {
       if (part.type === 'field') {
         if (part.fieldname === 'uploaderName') uploaderName = part.value as string
@@ -143,7 +146,10 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
 
         const writeStream = fs.createWriteStream(filePath)
         let size = 0n
-        const maxBytes = request.maxSizeBytes !== null ? request.maxSizeBytes : null
+        const perRequestMax = request.maxSizeBytes ?? null
+        const maxBytes = perRequestMax !== null && globalMaxBytes !== null
+          ? (perRequestMax < globalMaxBytes ? perRequestMax : globalMaxBytes)
+          : (perRequestMax ?? globalMaxBytes)
 
         try {
           for await (const chunk of part.file) {

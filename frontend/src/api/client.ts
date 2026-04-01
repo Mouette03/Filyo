@@ -160,6 +160,8 @@ export const updateSmtpSettings = (data: {
 }) => api.patch('/settings/smtp', data)
 export const testSmtp = (data: { smtpHost: string; smtpPort: number; smtpFrom: string; smtpUser?: string; smtpPass?: string }) =>
   api.post('/settings/smtp/test', data)
+export const updateMaxFileSize = (maxFileSizeBytes: number | null) =>
+  api.patch('/settings/max-file-size', { maxFileSizeBytes })
 
 export default api
 

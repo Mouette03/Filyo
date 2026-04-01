@@ -91,6 +91,21 @@ export default function RequestUploadPage() {
     if (msgReq === 'required' && !message.trim()) {
       return toast.error(t('toast.messageRequired'))
     }
+
+    // Validation taille max (limite par requête + limite globale)
+    const maxPerRequest = info?.maxSizeBytes ? parseInt(info.maxSizeBytes) : null
+    const maxGlobal = settings.maxFileSizeBytes ? parseInt(settings.maxFileSizeBytes) : null
+    const maxBytes = maxPerRequest !== null && maxGlobal !== null
+      ? Math.min(maxPerRequest, maxGlobal)
+      : (maxPerRequest ?? maxGlobal)
+    if (maxBytes !== null) {
+      const tooBig = files.filter(f => f.size > maxBytes)
+      if (tooBig.length > 0) {
+        toast.error(t('error.fileTooLargeGlobal', { name: tooBig[0].name, max: formatBytes(maxBytes) }))
+        return
+      }
+    }
+
     setStatus('uploading')
     setProgress(0)
 

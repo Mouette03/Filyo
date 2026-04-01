@@ -35,6 +35,7 @@ export async function settingsRoutes(app: FastifyInstance) {
       uploaderMsgReq: s.uploaderMsgReq ?? 'optional',
       allowRegistration: s.allowRegistration ?? false,
       cleanupAfterDays: s.cleanupAfterDays ?? null,
+      maxFileSizeBytes: s.maxFileSizeBytes ? s.maxFileSizeBytes.toString() : null,
       updatedAt: s.updatedAt
     }
   })
@@ -174,6 +175,25 @@ export async function settingsRoutes(app: FastifyInstance) {
       uploaderMsgReq: updated.uploaderMsgReq
     }
   })
+
+  // PATCH /api/settings/max-file-size — taille max par fichier (admin)
+  app.patch<{ Body: { maxFileSizeBytes: number | null } }>(
+    '/max-file-size',
+    { onRequest: [app.authenticate, app.adminOnly] },
+    async (req, reply) => {
+      const { maxFileSizeBytes } = req.body
+      if (maxFileSizeBytes !== null && (typeof maxFileSizeBytes !== 'number' || maxFileSizeBytes <= 0)) {
+        return reply.code(400).send({ code: 'INVALID_VALUE' })
+      }
+      const s = await prisma.appSettings.upsert({
+        where: { id: 'singleton' },
+        update: { maxFileSizeBytes: maxFileSizeBytes ? BigInt(maxFileSizeBytes) : null },
+        create: { id: 'singleton', appName: 'Filyo', maxFileSizeBytes: maxFileSizeBytes ? BigInt(maxFileSizeBytes) : null }
+      })
+      req.log.info({ maxFileSizeBytes }, 'Max file size updated')
+      return { maxFileSizeBytes: s.maxFileSizeBytes ? s.maxFileSizeBytes.toString() : null }
+    }
+  )
 
   // PATCH /api/settings/site-url — changer l'URL publique du site
   app.patch<{ Body: { siteUrl: string } }>(
