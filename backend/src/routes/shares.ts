@@ -4,6 +4,7 @@ import fs from 'fs-extra'
 import { prisma } from '../lib/prisma'
 import { getAppSettings } from '../lib/appSettings'
 import { createSmtpTransport } from '../lib/smtp'
+import { t } from '../lib/i18n'
 
 /** Retourne le nom d'affichage d'un fichier en tenant compte de hideFilenames. */
 function getDisplayName(originalName: string, hideFilenames: boolean): string {
@@ -128,7 +129,6 @@ export async function shareRoutes(app: FastifyInstance) {
     Body: { to: string; tokens: string[]; lang?: string }
   }>('/send-email', { onRequest: [app.authenticate] }, async (req: any, reply) => {
     const { to, tokens, lang = 'fr' } = req.body
-    const isEn = lang === 'en'
     if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
       return reply.code(400).send({ code: 'EMAIL_INVALID' })
     }
@@ -186,33 +186,29 @@ export async function shareRoutes(app: FastifyInstance) {
         return `<li style="color:#ccc;font-size:13px;padding:2px 0">${getDisplayName(s.file.originalName, s.file.hideFilenames)}</li>`
       }).join('')
       const fileListText = shares.map((s: any) => {
-        return s.file.hideFilenames ? '- [nom masqué]' : `- ${s.file.originalName}`
+        return s.file.hideFilenames ? `- ${t(lang, 'email.share.hiddenName')}` : `- ${s.file.originalName}`
       }).join('\n')
       const expiry = shares[0].expiresAt
-        ? (isEn
-            ? `Expires ${new Date(shares[0].expiresAt).toLocaleDateString('en-GB')}`
-            : `Expire le ${new Date(shares[0].expiresAt).toLocaleDateString('fr-FR')}`)
-        : (isEn ? 'No expiry' : 'Sans expiration')
+        ? t(lang, 'email.share.expiresOn', { date: new Date(shares[0].expiresAt).toLocaleDateString(lang === 'en' ? 'en-GB' : 'fr-FR') })
+        : t(lang, 'email.share.noExpiry')
 
       filesHtml = `
         <tr>
           <td style="padding:10px 12px;border-bottom:1px solid #2a2d4a">
             <ul style="margin:0 0 8px;padding-left:16px">${fileListHtml}</ul>
-            <a href="${batchUrl}" style="color:#7a8dff;font-weight:600;text-decoration:none">${isEn ? 'Download all files' : 'Télécharger tous les fichiers'}</a><br>
+            <a href="${batchUrl}" style="color:#7a8dff;font-weight:600;text-decoration:none">${t(lang, 'email.share.downloadAll')}</a><br>
             <span style="font-size:12px;color:#666;font-family:monospace">${batchUrl}</span><br>
             <span style="font-size:11px;color:#888">${expiry}</span>
           </td>
         </tr>`
-      filesText = (isEn ? 'Files:\n' : 'Fichiers :\n') + fileListText + `\n\n${batchUrl}`
+      filesText = t(lang, 'email.share.filesLabel') + '\n' + fileListText + `\n\n${batchUrl}`
     } else {
       filesHtml = shares.map((s: any) => {
         const url = `${baseUrl}/s/${s.token}`
         const displayName = getDisplayName(s.file.originalName, s.file.hideFilenames)
         const expiry = s.expiresAt
-          ? (isEn
-              ? `Expires ${new Date(s.expiresAt).toLocaleDateString('en-GB')}`
-              : `Expire le ${new Date(s.expiresAt).toLocaleDateString('fr-FR')}`)
-          : (isEn ? 'No expiry' : 'Sans expiration')
+          ? t(lang, 'email.share.expiresOn', { date: new Date(s.expiresAt).toLocaleDateString(lang === 'en' ? 'en-GB' : 'fr-FR') })
+          : t(lang, 'email.share.noExpiry')
         return `
           <tr>
             <td style="padding:10px 12px;border-bottom:1px solid #2a2d4a">
@@ -223,28 +219,23 @@ export async function shareRoutes(app: FastifyInstance) {
           </tr>`
       }).join('')
       filesText = shares.map((s: any) => {
-        const displayName = s.file.hideFilenames ? '[nom masqué]' : s.file.originalName
+        const displayName = s.file.hideFilenames ? t(lang, 'email.share.hiddenName') : s.file.originalName
         return `- ${displayName}\n  ${baseUrl}/s/${s.token}`
       }).join('\n')
     }
 
     const firstDisplayName = shares[0].file.hideFilenames
-      ? (isEn ? 'a file' : 'un fichier')
+      ? t(lang, 'email.share.hiddenNameShort')
       : shares[0].file.originalName
 
-    const subjectSingle = isEn
-      ? `Share: ${firstDisplayName}`
-      : `Partage\u00a0: ${firstDisplayName}`
-    const subjectMulti = isEn
-      ? `${shares.length} files shared with you`
-      : `${shares.length} fichiers partagés avec vous`
-    const introSingle = isEn ? 'A file has been shared with you.' : 'Un fichier a été partagé avec vous.'
-    const introMulti = isEn
-      ? `${shares.length} files have been shared with you.`
-      : `${shares.length} fichiers ont été partagés avec vous.`
-    const greetingText = isEn
-      ? `Hello,\n\nHere ${shares.length === 1 ? 'is your share link' : 'are your share links'}:\n\n${filesText}\n\nSent via ${appName}.`
-      : `Bonjour,\n\nVoici ${shares.length === 1 ? 'votre lien de partage' : 'vos liens de partage'}\u00a0:\n\n${filesText}\n\nEnvoyé via ${appName}.`
+    const subject = shares.length === 1
+      ? t(lang, 'email.share.subjectSingle', { name: firstDisplayName })
+      : t(lang, 'email.share.subjectMulti', { count: shares.length })
+    const intro = shares.length === 1
+      ? t(lang, 'email.share.introSingle')
+      : t(lang, 'email.share.introMulti', { count: shares.length })
+    const linkLabel = t(lang, shares.length === 1 ? 'email.share.linkLabelSingle' : 'email.share.linkLabelMulti')
+    const greetingText = t(lang, 'email.share.textBody', { linkLabel, files: filesText, appName })
 
     req.log.info({ host: settings.smtpHost, port: settings.smtpPort ?? 587, secure: (settings.smtpPort ?? 587) === 465 }, 'SMTP: tentative envoi')
     const transporter = createSmtpTransport(settings)
@@ -253,18 +244,18 @@ export async function shareRoutes(app: FastifyInstance) {
       await transporter.sendMail({
         from: `"${appName}" <${settings.smtpFrom}>`,
         to,
-        subject: `[${appName}] ${shares.length === 1 ? subjectSingle : subjectMulti}`,
+        subject: `[${appName}] ${subject}`,
         text: greetingText,
         html: `
           <div style="font-family:system-ui,sans-serif;max-width:520px;margin:0 auto;background:#0d0e1a;color:#e8eaf6;padding:32px 24px;border-radius:16px">
             <h2 style="margin:0 0 6px;color:#7a8dff;font-size:20px">${appName}</h2>
             <p style="color:#aaa;font-size:13px;margin:0 0 24px">
-              ${shares.length === 1 ? introSingle : introMulti}
+              ${intro}
             </p>
             <table style="width:100%;border-collapse:collapse;background:#13152a;border-radius:12px;overflow:hidden">
               ${filesHtml}
             </table>
-            <p style="font-size:11px;color:#555;margin-top:24px;text-align:center">${isEn ? `Sent via ${appName}` : `Envoyé via ${appName}`}</p>
+            <p style="font-size:11px;color:#555;margin-top:24px;text-align:center">${t(lang, 'email.share.footer', { appName })}</p>
           </div>`
       })
     } catch (err: any) {

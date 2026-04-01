@@ -8,6 +8,7 @@ import { z } from 'zod'
 import { UPLOAD_DIR } from '../lib/config'
 import { getAppSettings } from '../lib/appSettings'
 import { createSmtpTransport } from '../lib/smtp'
+import { t } from '../lib/i18n'
 
 const AVATAR_DIR = path.join(UPLOAD_DIR, 'avatars')
 
@@ -232,7 +233,7 @@ export async function authRoutes(app: FastifyInstance) {
 
   // POST /api/auth/forgot-password — demander un lien de réinitialisation
   app.post('/forgot-password', async (req, reply) => {
-    const { email } = req.body as { email?: string }
+    const { email, lang = 'fr' } = req.body as { email?: string; lang?: string }
     // Toujours répondre 200 pour ne pas révéler l'existence d'un compte
     if (!email) return reply.send({ success: true })
 
@@ -262,16 +263,16 @@ export async function authRoutes(app: FastifyInstance) {
       await transporter.sendMail({
         from: `"${appName}" <${settings.smtpFrom}>`,
         to: user.email,
-        subject: `[${appName}] Réinitialisation de votre mot de passe`,
-        text: `Bonjour ${user.name},\n\nVous avez demandé la réinitialisation de votre mot de passe.\n\nCliquez sur ce lien (valide 1h) :\n${resetUrl}\n\nSi vous n'avez pas fait cette demande, ignorez cet email.\n\nEnvoyé via ${appName}.`,
+        subject: t(lang, 'email.forgotPassword.subject', { appName }),
+        text: t(lang, 'email.forgotPassword.text', { name: user.name, resetUrl, appName }),
         html: `
           <div style="font-family:system-ui,sans-serif;max-width:520px;margin:0 auto;background:#0d0e1a;color:#e8eaf6;padding:32px 24px;border-radius:16px">
             <h2 style="margin:0 0 6px;color:#7a8dff;font-size:20px">${appName}</h2>
-            <p style="color:#aaa;font-size:13px;margin:0 0 24px">Réinitialisation de mot de passe</p>
-            <p style="margin:0 0 12px">Bonjour <strong>${user.name}</strong>,</p>
-            <p style="margin:0 0 24px;color:#ccc">Vous avez demandé la réinitialisation de votre mot de passe. Cliquez sur le bouton ci-dessous (lien valide <strong>1 heure</strong>).</p>
-            <a href="${resetUrl}" style="display:inline-block;background:#5c6bfa;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px">Réinitialiser mon mot de passe</a>
-            <p style="margin:24px 0 0;font-size:12px;color:#666">Si vous n'avez pas demandé cette réinitialisation, ignorez cet email. Votre mot de passe ne changera pas.</p>
+            <p style="color:#aaa;font-size:13px;margin:0 0 24px">${t(lang, 'email.forgotPassword.htmlSubtitle')}</p>
+            <p style="margin:0 0 12px">${t(lang, 'email.forgotPassword.htmlGreeting')} <strong>${user.name}</strong>,</p>
+            <p style="margin:0 0 24px;color:#ccc">${t(lang, 'email.forgotPassword.htmlBody')}</p>
+            <a href="${resetUrl}" style="display:inline-block;background:#5c6bfa;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px">${t(lang, 'email.forgotPassword.htmlButton')}</a>
+            <p style="margin:24px 0 0;font-size:12px;color:#666">${t(lang, 'email.forgotPassword.htmlDisclaimer')}</p>
             <p style="margin:16px 0 0;font-size:11px;color:#444">${appName}</p>
           </div>`
       })

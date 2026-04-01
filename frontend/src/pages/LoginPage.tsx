@@ -25,7 +25,7 @@ export default function LoginPage() {
   const { setAuth, isAuthenticated } = useAuthStore()
   const { setSettings, settings } = useAppSettingsStore()
   const navigate = useNavigate()
-  const { t } = useT()
+  const { t, lang } = useT()
 
   useEffect(() => {
     if (isAuthenticated) navigate('/')
@@ -103,7 +103,7 @@ export default function LoginPage() {
     e.preventDefault()
     setLoadingForgot(true)
     try {
-      await forgotPassword(forgotEmail)
+      await forgotPassword(forgotEmail, lang)
       setForgotSent(true)
     } catch (err: any) {
       const code = err.response?.data?.code

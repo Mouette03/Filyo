@@ -1,0 +1,36 @@
+export const en = {
+  email: {
+    forgotPassword: {
+      subject: '[{{appName}}] Reset your password',
+      text: 'Hello {{name}},\n\nYou requested a password reset.\n\nClick this link (valid 1 hour):\n{{resetUrl}}\n\nIf you did not request this, ignore this email.\n\nSent via {{appName}}.',
+      htmlSubtitle: 'Password reset',
+      htmlGreeting: 'Hello',
+      htmlBody: 'You requested a password reset. Click the button below (link valid <strong>1 hour</strong>).',
+      htmlButton: 'Reset my password',
+      htmlDisclaimer: 'If you did not request this reset, ignore this email. Your password will not change.',
+    },
+    share: {
+      subjectSingle: 'Share: {{name}}',
+      subjectMulti: '{{count}} files shared with you',
+      introSingle: 'A file has been shared with you.',
+      introMulti: '{{count}} files have been shared with you.',
+      textBody: 'Hello,\n\nHere {{linkLabel}}:\n\n{{files}}\n\nSent via {{appName}}.',
+      linkLabelSingle: 'is your share link',
+      linkLabelMulti: 'are your share links',
+      expiresOn: 'Expires {{date}}',
+      noExpiry: 'No expiry',
+      hiddenName: '[hidden name]',
+      hiddenNameShort: 'a file',
+      downloadAll: 'Download all files',
+      filesLabel: 'Files:',
+      footer: 'Sent via {{appName}}',
+    },
+    uploadRequest: {
+      subject: '[{{appName}}] File deposit request: {{title}}',
+      text: 'Hello,\n\nYou have been invited to deposit files: "{{title}}".\n\n{{message}}Deposit link:\n{{depositUrl}}\n\nSent via {{appName}}.',
+      htmlSubtitle: 'File deposit request',
+      htmlBody: 'You have been invited to deposit files:',
+      htmlButton: 'Deposit files',
+    },
+  },
+}
