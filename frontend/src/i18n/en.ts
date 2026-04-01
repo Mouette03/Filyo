@@ -125,6 +125,8 @@ export const en = {
   'create.maxFilesPlaceholder': 'Unlimited',
   'create.maxSizeLabel': 'Max size / file (MB)',
   'create.maxSizePlaceholder': 'Unlimited',
+  'create.maxSizeAdminCap': 'admin cap: {{max}} MB',
+  'create.maxSizeCapExceeded': 'Capped at {{max}} MB by administrator',
   'create.passwordLabel': 'Password (optional)',
   'create.passwordPlaceholder': 'None',
   'create.createBtn': 'Create deposit link',

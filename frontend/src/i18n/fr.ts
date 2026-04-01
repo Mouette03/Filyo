@@ -125,6 +125,8 @@ export const fr = {
   'create.maxFilesPlaceholder': 'Illimité',
   'create.maxSizeLabel': 'Taille max / fichier (MB)',
   'create.maxSizePlaceholder': 'Illimitée',
+  'create.maxSizeAdminCap': 'max admin : {{max}} Mo',
+  'create.maxSizeCapExceeded': 'Limité à {{max}} Mo par l\'administrateur',
   'create.passwordLabel': 'Mot de passe (optionnel)',
   'create.passwordPlaceholder': 'Aucun',
   'create.createBtn': 'Créer le lien de dépôt',

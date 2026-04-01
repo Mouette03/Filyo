@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 import { createUploadRequest, sendRequestByEmail } from '../api/client'
 import { copyToClipboard } from '../lib/utils'
 import { useT } from '../i18n'
+import { useAppSettingsStore } from '../stores/useAppSettingsStore'
 
 interface CreatedRequest {
   id: string
@@ -26,6 +27,11 @@ export default function CreateRequestPage() {
   const [emailSending, setEmailSending] = useState(false)
   const [emailSent, setEmailSent] = useState(false)
   const { t, lang } = useT()
+  const { settings } = useAppSettingsStore()
+
+  const globalMaxMb = settings.maxFileSizeBytes
+    ? Math.floor(parseInt(settings.maxFileSizeBytes) / (1024 * 1024))
+    : null
 
   const handleCreate = async () => {
     if (!title.trim()) {
@@ -161,9 +167,20 @@ export default function CreateRequestPage() {
             <div>
               <label className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
                 <FileUp size={11} /> {t('create.maxSizeLabel')}
+                {globalMaxMb && (
+                  <span className="ml-1 text-white/30">({t('create.maxSizeAdminCap', { max: String(globalMaxMb) })})</span>
+                )}
               </label>
-              <input type="number" min="1" value={maxSizeMb}
-                onChange={e => setMaxSizeMb(e.target.value)}
+              <input type="number" min="1" max={globalMaxMb ?? undefined} value={maxSizeMb}
+                onChange={e => {
+                  const val = e.target.value
+                  if (globalMaxMb && Number(val) > globalMaxMb) {
+                    setMaxSizeMb(String(globalMaxMb))
+                    toast.error(t('create.maxSizeCapExceeded', { max: String(globalMaxMb) }))
+                  } else {
+                    setMaxSizeMb(val)
+                  }
+                }}
                 placeholder={t('create.maxSizePlaceholder')} className="input" />
             </div>
 
