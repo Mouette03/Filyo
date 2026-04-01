@@ -51,14 +51,21 @@ export default function SettingsPage() {
   const [uploaderEmailReq, setUploaderEmailReq] = useState<FieldReq>(settings.uploaderEmailReq)
   const [uploaderMsgReq, setUploaderMsgReq] = useState<FieldReq>(settings.uploaderMsgReq)
   const [savingFields, setSavingFields] = useState(false)
+  useEffect(() => {
+    setUploaderNameReq(settings.uploaderNameReq)
+    setUploaderEmailReq(settings.uploaderEmailReq)
+    setUploaderMsgReq(settings.uploaderMsgReq)
+  }, [settings.uploaderNameReq, settings.uploaderEmailReq, settings.uploaderMsgReq])
 
   // Inscription
   const [allowRegistration, setAllowRegistration] = useState(settings.allowRegistration)
   const [savingRegistration, setSavingRegistration] = useState(false)
+  useEffect(() => { setAllowRegistration(settings.allowRegistration) }, [settings.allowRegistration])
 
   // Nettoyage automatique
   const [cleanupAfterDays, setCleanupAfterDays] = useState<number | null>(settings.cleanupAfterDays)
   const [savingCleanup, setSavingCleanup] = useState(false)
+  useEffect(() => { setCleanupAfterDays(settings.cleanupAfterDays) }, [settings.cleanupAfterDays])
 
   // Taille max fichier
   const [maxFileSizeMb, setMaxFileSizeMb] = useState(
@@ -160,6 +167,7 @@ export default function SettingsPage() {
     setSavingFields(true)
     try {
       await updateUploaderFields({ uploaderNameReq, uploaderEmailReq, uploaderMsgReq })
+      setSettings({ uploaderNameReq, uploaderEmailReq, uploaderMsgReq })
       toast.success(t('toast.fieldsSaved'))
     } catch { toast.error(t('toast.saveError')) }
     setSavingFields(false)
@@ -427,6 +435,7 @@ export default function SettingsPage() {
                 try {
                   await updateAllowRegistration(next)
                   setAllowRegistration(next)
+                  setSettings({ allowRegistration: next })
                   toast.success(next ? t('settings.freeRegEnabled') : t('settings.freeRegDisabled'))
                 } catch { toast.error(t('toast.saveError')) }
                 setSavingRegistration(false)
@@ -458,6 +467,7 @@ export default function SettingsPage() {
                 try {
                   await updateCleanupSetting(val)
                   setCleanupAfterDays(val)
+                  setSettings({ cleanupAfterDays: val })
                   toast.success(t('settings.cleanupSaved'))
                 } catch { toast.error(t('toast.saveError')) }
                 setSavingCleanup(false)
