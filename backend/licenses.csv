@@ -87,7 +87,7 @@
 "mime-types@2.1.35","MIT","https://github.com/jshttp/mime-types"
 "mime@3.0.0","MIT","https://github.com/broofa/mime"
 "minimalistic-assert@1.0.1","ISC","https://github.com/calvinmetcalf/minimalistic-assert"
-"minimatch@10.2.4","BlueOak-1.0.0","https://github.com/isaacs/minimatch"
+"minimatch@10.2.5","BlueOak-1.0.0","https://github.com/isaacs/minimatch"
 "minimist@1.2.8","MIT","https://github.com/minimistjs/minimist"
 "minipass@7.1.3","BlueOak-1.0.0","https://github.com/isaacs/minipass"
 "mnemonist@0.40.3","MIT","https://github.com/yomguithereal/mnemonist"
