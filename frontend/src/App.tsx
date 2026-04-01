@@ -29,6 +29,11 @@ export default function App() {
     if (apple) apple.href = href
   }, [settings.logoUrl])
 
+  // Titre de l'onglet dynamique
+  useEffect(() => {
+    document.title = settings.appName || 'Filyo'
+  }, [settings.appName])
+
   useEffect(() => {
     applyAccent(accentColor)
     applyTheme(theme)
