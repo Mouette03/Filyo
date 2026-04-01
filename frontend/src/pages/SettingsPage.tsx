@@ -29,6 +29,7 @@ export default function SettingsPage() {
   const [logoUrl, setLogoUrl] = useState(settings.logoUrl || '')
   const [saving, setSaving] = useState(false)
   const [siteUrl, setSiteUrl] = useState(settings.siteUrl || '')
+  useEffect(() => { setSiteUrl(settings.siteUrl || '') }, [settings.siteUrl])
   const [savingUrl, setSavingUrl] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -85,6 +86,7 @@ export default function SettingsPage() {
     setSavingUrl(true)
     try {
       await updateSiteUrl(siteUrl.trim())
+      setSettings({ siteUrl: siteUrl.trim() })
       toast.success(t('toast.siteUrlSaved'))
     } catch { toast.error(t('toast.saveError')) }
     setSavingUrl(false)
