@@ -28,7 +28,13 @@ export default function Layout() {
     // Vérification de la dernière version GitHub (silencieux si réseau indisponible)
     fetch('https://api.github.com/repos/Mouette03/Filyo/releases/latest')
       .then(r => r.ok ? r.json() : null)
-      .then(data => { if (data?.tag_name) setLatestVersion(data.tag_name) })
+      .then(data => {
+        if (data?.tag_name) { setLatestVersion(data.tag_name); return }
+        // Fallback : API tags si aucune Release publiée
+        return fetch('https://api.github.com/repos/Mouette03/Filyo/tags?per_page=1')
+          .then(r => r.ok ? r.json() : null)
+          .then(tags => { if (tags?.[0]?.name) setLatestVersion(tags[0].name) })
+      })
       .catch(() => {})
 
     const handler = (e: MouseEvent) => {
