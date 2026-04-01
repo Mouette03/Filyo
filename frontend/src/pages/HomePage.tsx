@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import { uploadFiles, sendShareByEmail } from '../api/client'
 import { formatBytes, getFileIcon, copyToClipboard } from '../lib/utils'
 import { useT } from '../i18n'
+import { useAppSettingsStore } from '../stores/useAppSettingsStore'
 
 interface UploadedResult {
   id: string
@@ -18,6 +19,7 @@ interface UploadedResult {
 
 export default function HomePage() {
   const { t, lang } = useT()
+  const { settings } = useAppSettingsStore()
   const [files, setFiles] = useState<File[]>([])
   const [password, setPassword] = useState('')
   const [expiresIn, setExpiresIn] = useState('86400') // 24h par défaut
@@ -50,6 +52,17 @@ export default function HomePage() {
 
   const handleUpload = async () => {
     if (!files.length) return
+
+    // Validation taille max globale
+    if (settings.maxFileSizeBytes) {
+      const maxBytes = parseInt(settings.maxFileSizeBytes)
+      const tooBig = files.filter(f => f.size > maxBytes)
+      if (tooBig.length > 0) {
+        toast.error(t('error.fileTooLargeGlobal', { name: tooBig[0].name, max: formatBytes(maxBytes) }))
+        return
+      }
+    }
+
     setUploading(true)
     setProgress(0)
 

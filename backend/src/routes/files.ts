@@ -6,6 +6,7 @@ import mime from 'mime-types'
 import bcrypt from 'bcryptjs'
 import { prisma } from '../lib/prisma'
 import { UPLOAD_DIR } from '../lib/config'
+import { getAppSettings } from '../lib/appSettings'
 
 export async function fileRoutes(app: FastifyInstance) {
   const auth = { onRequest: [app.authenticate] }
@@ -13,6 +14,8 @@ export async function fileRoutes(app: FastifyInstance) {
   // POST /api/files - Upload (authentifié)
   app.post('/', auth, async (req: any, reply) => {
     const userId: string = req.user.id
+    const appSettings = await getAppSettings()
+    const globalMaxBytes = appSettings.maxFileSizeBytes ?? null
     const parts = req.parts()
     const uploadedFiles: any[] = []
     let expiresIn: string | undefined
@@ -34,11 +37,27 @@ export async function fileRoutes(app: FastifyInstance) {
 
         let size = 0
         const writeStream = fs.createWriteStream(filePath)
-        for await (const chunk of part.file) {
-          writeStream.write(chunk)
-          size += chunk.length
+        try {
+          for await (const chunk of part.file) {
+            size += chunk.length
+            if (globalMaxBytes !== null && BigInt(size) > globalMaxBytes) {
+              writeStream.destroy()
+              await fs.remove(filePath).catch(() => {})
+              await Promise.all(uploadedFiles.map((f: any) => fs.remove(f.path).catch(() => {})))
+              return reply.code(413).send({ code: 'FILE_TOO_LARGE', maxBytes: globalMaxBytes.toString() })
+            }
+            writeStream.write(chunk)
+          }
+          await new Promise<void>((resolve, reject) => {
+            writeStream.end()
+            writeStream.once('finish', resolve)
+            writeStream.once('error', reject)
+          })
+        } catch (err) {
+          writeStream.destroy()
+          await fs.remove(filePath).catch(() => {})
+          throw err
         }
-        writeStream.end()
 
         uploadedFiles.push({
           filename,

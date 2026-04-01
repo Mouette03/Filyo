@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 import type { FieldReq } from '../types/common'
 
 interface AppSettings {
@@ -10,6 +11,7 @@ interface AppSettings {
   uploaderEmailReq: FieldReq
   uploaderMsgReq: FieldReq
   cleanupAfterDays: number | null
+  maxFileSizeBytes: string | null
 }
 
 interface AppSettingsStore {
@@ -17,16 +19,24 @@ interface AppSettingsStore {
   setSettings: (s: Partial<AppSettings>) => void
 }
 
-export const useAppSettingsStore = create<AppSettingsStore>()(set => ({
-  settings: {
-    appName: 'Filyo',
-    logoUrl: null,
-    allowRegistration: false,
-    siteUrl: '',
-    uploaderNameReq: 'optional',
-    uploaderEmailReq: 'optional',
-    uploaderMsgReq: 'optional',
-    cleanupAfterDays: null
-  },
-  setSettings: (s) => set(prev => ({ settings: { ...prev.settings, ...s } }))
-}))
+export const useAppSettingsStore = create<AppSettingsStore>()(
+  persist(
+    (set) => ({
+      settings: {
+        appName: 'Filyo',
+        logoUrl: null,
+        allowRegistration: false,
+        siteUrl: '',
+        uploaderNameReq: 'optional',
+        uploaderEmailReq: 'optional',
+        uploaderMsgReq: 'optional',
+        cleanupAfterDays: null,
+        maxFileSizeBytes: null
+      },
+      setSettings: (s) => set(prev => ({ settings: { ...prev.settings, ...s } }))
+    }),
+    {
+      name: 'filyo-app-settings'
+    }
+  )
+)

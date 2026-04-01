@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { useEffect } from 'react'
 import { usePreferencesStore, applyTheme, applyAccent, applyBgColor } from './stores/usePreferencesStore'
+import { useAppSettingsStore } from './stores/useAppSettingsStore'
 import HomePage from './pages/HomePage'
 import SharePage from './pages/SharePage'
 import RequestUploadPage from './pages/RequestUploadPage'
@@ -17,6 +18,21 @@ import ProtectedRoute from './components/ProtectedRoute'
 
 export default function App() {
   const { theme, accentColor, bgColorKey } = usePreferencesStore()
+  const { settings } = useAppSettingsStore()
+
+  // Favicon dynamique : utilise le logo personnalisé si défini, sinon /favicon.svg
+  useEffect(() => {
+    const href = settings.logoUrl ?? '/favicon.svg'
+    const icon = document.querySelector<HTMLLinkElement>('link[rel="icon"]')
+    if (icon) icon.href = href
+    const apple = document.querySelector<HTMLLinkElement>('link[rel="apple-touch-icon"]')
+    if (apple) apple.href = href
+  }, [settings.logoUrl])
+
+  // Titre de l'onglet dynamique
+  useEffect(() => {
+    document.title = settings.appName || 'Filyo'
+  }, [settings.appName])
 
   useEffect(() => {
     applyAccent(accentColor)

@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify'
 import path from 'path'
 import fs from 'fs-extra'
 import { nanoid } from 'nanoid'
+import sharp from 'sharp'
 import { prisma } from '../lib/prisma'
 import { UPLOAD_DIR } from '../lib/config'
 import { getAppSettings as getSettings } from '../lib/appSettings'
@@ -35,6 +36,7 @@ export async function settingsRoutes(app: FastifyInstance) {
       uploaderMsgReq: s.uploaderMsgReq ?? 'optional',
       allowRegistration: s.allowRegistration ?? false,
       cleanupAfterDays: s.cleanupAfterDays ?? null,
+      maxFileSizeBytes: s.maxFileSizeBytes ? s.maxFileSizeBytes.toString() : null,
       updatedAt: s.updatedAt
     }
   })
@@ -149,7 +151,7 @@ export async function settingsRoutes(app: FastifyInstance) {
         create: { id: 'singleton', appName: appName.trim() }
       })
       req.log.info({ appName }, 'Application name updated')
-      return settings
+      return { appName: settings.appName, logoUrl: settings.logoUrl }
     }
   )
 
@@ -174,6 +176,25 @@ export async function settingsRoutes(app: FastifyInstance) {
       uploaderMsgReq: updated.uploaderMsgReq
     }
   })
+
+  // PATCH /api/settings/max-file-size — taille max par fichier (admin)
+  app.patch<{ Body: { maxFileSizeBytes: number | null } }>(
+    '/max-file-size',
+    { onRequest: [app.authenticate, app.adminOnly] },
+    async (req, reply) => {
+      const { maxFileSizeBytes } = req.body
+      if (maxFileSizeBytes !== null && (typeof maxFileSizeBytes !== 'number' || maxFileSizeBytes <= 0)) {
+        return reply.code(400).send({ code: 'INVALID_VALUE' })
+      }
+      const s = await prisma.appSettings.upsert({
+        where: { id: 'singleton' },
+        update: { maxFileSizeBytes: maxFileSizeBytes ? BigInt(maxFileSizeBytes) : null },
+        create: { id: 'singleton', appName: 'Filyo', maxFileSizeBytes: maxFileSizeBytes ? BigInt(maxFileSizeBytes) : null }
+      })
+      req.log.info({ maxFileSizeBytes }, 'Max file size updated')
+      return { maxFileSizeBytes: s.maxFileSizeBytes ? s.maxFileSizeBytes.toString() : null }
+    }
+  )
 
   // PATCH /api/settings/site-url — changer l'URL publique du site
   app.patch<{ Body: { siteUrl: string } }>(
@@ -208,42 +229,44 @@ export async function settingsRoutes(app: FastifyInstance) {
       const data = await req.file()
       if (!data) return reply.code(400).send({ code: 'NO_FILE' })
 
-      const ext = path.extname(data.filename || '.png')
+      const ext = path.extname(data.filename || '.png').toLowerCase()
       const allowed = ['.png', '.jpg', '.jpeg', '.svg', '.webp', '.gif']
-      if (!allowed.includes(ext.toLowerCase())) {
+      if (!allowed.includes(ext)) {
         return reply.code(400).send({ code: 'INVALID_FORMAT' })
       }
 
-      const filename = `logo_${nanoid(8)}${ext}`
-      const filePath = path.join(LOGO_DIR, filename)
-
-      // Server-side protection: limit logo to 2 MB and stream to disk
-      const MAX_BYTES = 2 * 1024 * 1024 // 2 MB
-      await fs.ensureFile(filePath)
-      const ws = fs.createWriteStream(filePath)
+      // Lire les chunks en mémoire (max 2 MB)
+      const MAX_BYTES = 2 * 1024 * 1024
+      const chunks: Buffer[] = []
       let received = 0
-      try {
-        for await (const chunk of data.file) {
-          received += chunk.length
-          if (received > MAX_BYTES) {
-            ws.destroy()
-            await fs.remove(filePath).catch(() => {})
-            return reply.code(413).send({ code: 'FILE_TOO_LARGE', maxBytes: MAX_BYTES })
-          }
-          if (!ws.write(chunk)) await new Promise<void>((resolve, reject) => {
-            ws.once('drain', resolve)
-            ws.once('error', reject)
-          })
+      for await (const chunk of data.file) {
+        received += chunk.length
+        if (received > MAX_BYTES) {
+          // vider le stream
+          data.file.resume()
+          return reply.code(413).send({ code: 'FILE_TOO_LARGE', maxBytes: MAX_BYTES })
         }
-        await new Promise<void>((resolve, reject) => {
-          ws.end()
-          ws.once('finish', resolve)
-          ws.once('error', reject)
-        })
-      } catch (err) {
-        ws.destroy()
-        await fs.remove(filePath).catch(() => {})
-        throw err
+        chunks.push(chunk)
+      }
+      const inputBuffer = Buffer.concat(chunks)
+
+      // Convertir en PNG 180×180 — compatible favicon + apple-touch-icon
+      // Fallback : si sharp échoue (ex. SVG sans librsvg), sauvegarder tel quel
+      let filename: string
+      let filePath: string
+      try {
+        filename = `logo_${nanoid(8)}.png`
+        filePath = path.join(LOGO_DIR, filename)
+        await sharp(inputBuffer)
+          .resize(180, 180, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+          .png()
+          .toFile(filePath)
+        req.log.debug({ filename }, 'Logo converted to PNG 180x180')
+      } catch (convErr) {
+        req.log.warn({ err: (convErr as Error).message }, 'sharp conversion failed, saving original file')
+        filename = `logo_${nanoid(8)}${ext}`
+        filePath = path.join(LOGO_DIR, filename)
+        await fs.writeFile(filePath, inputBuffer)
       }
 
       const logoUrl = `/uploads/logos/${filename}`
@@ -253,7 +276,7 @@ export async function settingsRoutes(app: FastifyInstance) {
         create: { id: 'singleton', appName: 'Filyo', logoUrl }
       })
       req.log.info({ logoUrl }, 'Logo uploaded')
-      return settings
+      return { appName: settings.appName, logoUrl: settings.logoUrl }
     }
   )
 
@@ -273,7 +296,7 @@ export async function settingsRoutes(app: FastifyInstance) {
         create: { id: 'singleton', appName: 'Filyo' }
       })
       req.log.info('Logo deleted')
-      return result
+      return { appName: result.appName, logoUrl: result.logoUrl }
     }
   )
 }

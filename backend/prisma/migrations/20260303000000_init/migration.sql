@@ -31,6 +31,7 @@ CREATE TABLE "AppSettings" (
     "uploaderMsgReq" TEXT NOT NULL DEFAULT 'optional',
     "allowRegistration" BOOLEAN NOT NULL DEFAULT false,
     "cleanupAfterDays" INTEGER,
+    "maxFileSizeBytes" BIGINT,
     "updatedAt" DATETIME NOT NULL
 );
 

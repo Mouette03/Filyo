@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
-import { Upload, LayoutDashboard, ArrowDownUp, Plus, Settings, Users, LogOut, ChevronDown, User, Github } from 'lucide-react'
+import { Upload, LayoutDashboard, ArrowDownUp, Plus, Settings, Users, LogOut, ChevronDown, User, Github, ArrowUpCircle } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { useAuthStore } from '../stores/useAuthStore'
 import { useAppSettingsStore } from '../stores/useAppSettingsStore'
@@ -8,6 +8,8 @@ import toast from 'react-hot-toast'
 import { useT } from '../i18n'
 import LanguageSwitcher from './LanguageSwitcher'
 
+declare const __APP_VERSION__: string
+
 export default function Layout() {
   const { user, isAdmin, logout } = useAuthStore()
   const { settings, setSettings } = useAppSettingsStore()
@@ -15,9 +17,25 @@ export default function Layout() {
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const { t } = useT()
+  const [latestVersion, setLatestVersion] = useState<string | null>(null)
+
+  const currentVersion = __APP_VERSION__
+  const hasUpdate = latestVersion && latestVersion !== `v${currentVersion}` && latestVersion !== currentVersion
 
   useEffect(() => {
     getSettings().then(r => setSettings(r.data)).catch(() => {})
+
+    // Vérification de la dernière version GitHub (silencieux si réseau indisponible)
+    fetch('https://api.github.com/repos/Mouette03/Filyo/releases/latest')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.tag_name) { setLatestVersion(data.tag_name); return }
+        // Fallback : API tags si aucune Release publiée
+        return fetch('https://api.github.com/repos/Mouette03/Filyo/tags?per_page=1')
+          .then(r => r.ok ? r.json() : null)
+          .then(tags => { if (tags?.[0]?.name) setLatestVersion(tags[0].name) })
+      })
+      .catch(() => {})
 
     const handler = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
@@ -146,6 +164,23 @@ export default function Layout() {
       </main>
 
       <footer className="border-t border-white/5 py-4 px-6 text-white/25 text-xs relative flex items-center justify-center">
+        {/* Version actuelle + alerte mise à jour */}
+        <div className="absolute left-6 flex items-center gap-2">
+          <span>v{currentVersion}</span>
+          {hasUpdate && (
+            <a
+              href="https://github.com/Mouette03/Filyo/releases/latest"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 text-brand-400 hover:text-brand-300 transition-colors"
+              title={`${t('nav.updateAvailable')} ${latestVersion}`}
+            >
+              <ArrowUpCircle size={13} />
+              <span>{latestVersion}</span>
+            </a>
+          )}
+        </div>
+
         <span>{settings.appName} — {t('nav.footer')}</span>
         <a
           href="https://github.com/Mouette03/Filyo"

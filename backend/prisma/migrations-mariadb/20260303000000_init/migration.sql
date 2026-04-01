@@ -30,6 +30,7 @@ CREATE TABLE `AppSettings` (
     `uploaderMsgReq` VARCHAR(191) NOT NULL DEFAULT 'optional',
     `allowRegistration` BOOLEAN NOT NULL DEFAULT false,
     `cleanupAfterDays` INTEGER NULL,
+    `maxFileSizeBytes` BIGINT NULL,
     `updatedAt` DATETIME(3) NOT NULL,
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
