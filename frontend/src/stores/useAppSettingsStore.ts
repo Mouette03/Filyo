@@ -36,14 +36,7 @@ export const useAppSettingsStore = create<AppSettingsStore>()(
       setSettings: (s) => set(prev => ({ settings: { ...prev.settings, ...s } }))
     }),
     {
-      name: 'filyo-app-settings',
-      // Seuls appName et logoUrl sont persistés — le reste est rechargé depuis l'API
-      partialize: (state) => ({
-        settings: {
-          appName: state.settings.appName,
-          logoUrl: state.settings.logoUrl
-        }
-      })
+      name: 'filyo-app-settings'
     }
   )
 )
