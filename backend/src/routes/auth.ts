@@ -8,7 +8,7 @@ import { z } from 'zod'
 import { UPLOAD_DIR } from '../lib/config'
 import { getAppSettings } from '../lib/appSettings'
 import { createSmtpTransport } from '../lib/smtp'
-import { t } from '../lib/i18n'
+import { t, escapeHtml } from '../lib/i18n'
 
 const AVATAR_DIR = path.join(UPLOAD_DIR, 'avatars')
 
@@ -256,6 +256,9 @@ export async function authRoutes(app: FastifyInstance) {
     const siteUrl = settings.siteUrl || `${req.protocol}://${req.hostname}`
     const resetUrl = `${siteUrl}/reset-password?token=${token}`
     const appName = settings.appName || 'Filyo'
+    const safeAppName = escapeHtml(appName)
+    const safeUserName = escapeHtml(user.name)
+    const safeResetUrl = escapeHtml(encodeURI(resetUrl))
 
     const transporter = createSmtpTransport(settings)
 
@@ -267,13 +270,13 @@ export async function authRoutes(app: FastifyInstance) {
         text: t(lang, 'email.forgotPassword.text', { name: user.name, resetUrl, appName }),
         html: `
           <div style="font-family:system-ui,sans-serif;max-width:520px;margin:0 auto;background:#0d0e1a;color:#e8eaf6;padding:32px 24px;border-radius:16px">
-            <h2 style="margin:0 0 6px;color:#7a8dff;font-size:20px">${appName}</h2>
+            <h2 style="margin:0 0 6px;color:#7a8dff;font-size:20px">${safeAppName}</h2>
             <p style="color:#aaa;font-size:13px;margin:0 0 24px">${t(lang, 'email.forgotPassword.htmlSubtitle')}</p>
-            <p style="margin:0 0 12px">${t(lang, 'email.forgotPassword.htmlGreeting')} <strong>${user.name}</strong>,</p>
+            <p style="margin:0 0 12px">${t(lang, 'email.forgotPassword.htmlGreeting')} <strong>${safeUserName}</strong>,</p>
             <p style="margin:0 0 24px;color:#ccc">${t(lang, 'email.forgotPassword.htmlBody')}</p>
-            <a href="${resetUrl}" style="display:inline-block;background:#5c6bfa;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px">${t(lang, 'email.forgotPassword.htmlButton')}</a>
+            <a href="${safeResetUrl}" style="display:inline-block;background:#5c6bfa;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px">${t(lang, 'email.forgotPassword.htmlButton')}</a>
             <p style="margin:24px 0 0;font-size:12px;color:#666">${t(lang, 'email.forgotPassword.htmlDisclaimer')}</p>
-            <p style="margin:16px 0 0;font-size:11px;color:#444">${appName}</p>
+            <p style="margin:16px 0 0;font-size:11px;color:#444">${safeAppName}</p>
           </div>`
       })
     } catch (err: any) {
