@@ -40,6 +40,7 @@ export default function SettingsPage() {
   const [smtpFrom, setSmtpFrom] = useState('')
   const [smtpUser, setSmtpUser] = useState('')
   const [smtpPass, setSmtpPass] = useState('')
+  const [smtpSecure, setSmtpSecure] = useState(true)
   const [showSmtpPass, setShowSmtpPass] = useState(false)
   const [savingSmtp, setSavingSmtp] = useState(false)
   const [testingSmtp, setTestingSmtp] = useState(false)
@@ -65,6 +66,7 @@ export default function SettingsPage() {
       setSmtpFrom(res.data.smtpFrom || '')
       setSmtpUser(res.data.smtpUser || '')
       setSmtpPass(res.data.smtpPass || '')
+      setSmtpSecure(res.data.smtpSecure ?? true)
     }).catch(() => {})
   }, [])
 
@@ -136,6 +138,7 @@ export default function SettingsPage() {
         smtpFrom: smtpFrom.trim() || undefined,
         smtpUser: smtpUser.trim() || undefined,
         smtpPass: smtpPass || undefined,
+        smtpSecure,
       })
       toast.success(t('toast.smtpSaved'))
     } catch { toast.error(t('toast.saveError')) }
@@ -532,6 +535,25 @@ export default function SettingsPage() {
               type="number"
               className="input"
             />
+          </div>
+          <div className="col-span-2 flex items-center justify-between py-2 px-3 rounded-xl border border-white/10 bg-white/5">
+            <div>
+              <p className="text-sm font-medium">{t('settings.smtpStarttls')}</p>
+              <p className="text-xs text-white/40 mt-0.5">{t('settings.smtpStarttlsHint')}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSmtpSecure(v => !v)}
+              className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none ${
+                smtpSecure ? 'bg-brand-500' : 'bg-white/20'
+              }`}
+              role="switch"
+              aria-checked={smtpSecure}
+            >
+              <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ${
+                smtpSecure ? 'translate-x-5' : 'translate-x-0'
+              }`} />
+            </button>
           </div>
           <div className="col-span-2">
             <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('settings.smtpFrom')}</label>

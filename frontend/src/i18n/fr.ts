@@ -243,6 +243,8 @@ export const fr = {
   'settings.smtpUser': 'Identifiant',
   'settings.smtpUserPlaceholder': 'votre@email.fr',
   'settings.smtpPassword': 'Mot de passe',
+  'settings.smtpStarttls': 'STARTTLS (chiffrement)',
+  'settings.smtpStarttlsHint': 'Exiger TLS lors de la connexion (recommandé sur le port 587). Désactiver uniquement si votre serveur ne le supporte pas.',
   'settings.smtpTest': 'Tester',
   'settings.smtpSave': 'Enregistrer',
   'settings.smtpTestHint': "Le test vérifie uniquement l'accessibilité réseau du serveur SMTP. La fonctionnalité d'envoi d'emails sera disponible dans une prochaine version.",

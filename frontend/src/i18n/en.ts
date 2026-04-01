@@ -243,6 +243,8 @@ export const en = {
   'settings.smtpUser': 'Username',
   'settings.smtpUserPlaceholder': 'your@email.com',
   'settings.smtpPassword': 'Password',
+  'settings.smtpStarttls': 'STARTTLS (encryption)',
+  'settings.smtpStarttlsHint': 'Require TLS when connecting (recommended on port 587). Disable only if your server does not support it.',
   'settings.smtpTest': 'Test',
   'settings.smtpSave': 'Save',
   'settings.smtpTestHint': 'The test only verifies network accessibility of the SMTP server. Email sending functionality will be available in a future version.',
