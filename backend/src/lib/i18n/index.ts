@@ -1,8 +1,12 @@
 import { en } from './en'
 import { fr } from './fr'
 
+/** Union type of all supported locale codes. */
+export type SupportedLang = 'fr' | 'en'
+
 type Translations = typeof fr
 
+/** Registry mapping locale codes to their translation dictionaries. */
 const translations: Record<string, Translations> = { en, fr }
 
 /**

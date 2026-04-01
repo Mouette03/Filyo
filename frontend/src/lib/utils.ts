@@ -1,3 +1,4 @@
+/** Formats a byte count into a human-readable string (e.g. 1.4 MB). */
 export function formatBytes(bytes: number | string | bigint): string {
   const n = Number(bytes)
   if (n === 0) return '0 B'
@@ -7,6 +8,7 @@ export function formatBytes(bytes: number | string | bigint): string {
   return `${parseFloat((n / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`
 }
 
+/** Formats a date value into a localized short date+time string. Returns '—' for null/undefined. */
 export function formatDate(date: string | Date | null | undefined): string {
   if (!date) return '—'
   return new Intl.DateTimeFormat(navigator.language, {
@@ -15,6 +17,7 @@ export function formatDate(date: string | Date | null | undefined): string {
   }).format(new Date(date))
 }
 
+/** Returns an emoji icon for a given MIME type or file extension. */
 export function getFileIcon(mimeTypeOrExt: string): string {
   const v = (mimeTypeOrExt || '').toLowerCase()
   const isMime = v.includes('/')
@@ -52,6 +55,7 @@ export function getFileIcon(mimeTypeOrExt: string): string {
   return '📁'
 }
 
+/** Triggers a browser download for a Blob with the given filename. */
 export function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
@@ -61,6 +65,7 @@ export function downloadBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(url)
 }
 
+/** Returns true if the string matches a basic email format. */
 export function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 }

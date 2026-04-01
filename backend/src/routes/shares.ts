@@ -13,6 +13,10 @@ function getDisplayName(originalName: string, hideFilenames: boolean): string {
   return ext ? `fichier.${ext}` : 'fichier'
 }
 
+/**
+ * Registers share-related routes: public share info, password-protected download,
+ * and authenticated email sending with optional batch support.
+ */
 export async function shareRoutes(app: FastifyInstance) {
   // GET /api/shares/:token/info - Info publique (sans téléchargement)
   app.get<{ Params: { token: string } }>('/:token/info', async (req, reply) => {

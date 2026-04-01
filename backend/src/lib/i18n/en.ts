@@ -1,3 +1,7 @@
+/**
+ * English email translation strings.
+ * Each key supports `{{variable}}` interpolation via the `t()` helper.
+ */
 export const en = {
   email: {
     forgotPassword: {
