@@ -46,9 +46,13 @@ app.decorate('adminOnly', async function (req: FastifyRequest, reply: FastifyRep
 })
 
 async function bootstrap() {
-  // CORS
+  // CORS — en production, le frontend est servi par ce même serveur (même origine),
+  // donc on restreint à FRONTEND_URL uniquement en développement.
+  const corsOrigin = process.env.FRONTEND_DIST
+    ? false
+    : (process.env.FRONTEND_URL || 'http://localhost:5173')
   await app.register(cors, {
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: corsOrigin,
     credentials: true
   })
 

@@ -8,7 +8,7 @@ import {
   runCleanup, getReceivedFiles, downloadReceivedFile,
   sendShareByEmail, updateFileExpiry
 } from '../api/client'
-import { formatBytes, formatDate, getFileIcon, downloadBlob, copyToClipboard } from '../lib/utils'
+import { formatBytes, formatDate, getFileIcon, downloadBlob, copyToClipboard, isValidEmail } from '../lib/utils'
 import { useT } from '../i18n'
 
 interface FileItem {
@@ -63,14 +63,11 @@ export default function DashboardPage() {
 
   const displayItems: DisplayItem[] = (() => {
     const batchMap = new Map<string, FileItem[]>()
-    const singles: FileItem[] = []
     for (const f of files) {
       if (f.batchToken) {
         const arr = batchMap.get(f.batchToken) ?? []
         arr.push(f)
         batchMap.set(f.batchToken, arr)
-      } else {
-        singles.push(f)
       }
     }
     const result: DisplayItem[] = []
@@ -163,7 +160,7 @@ export default function DashboardPage() {
 
   const handleSendFileEmail = async (token: string) => {
     if (!emailToFile.trim()) return toast.error(t('toast.emailRequired'))
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailToFile)) return toast.error(t('toast.emailInvalid'))
+    if (!isValidEmail(emailToFile)) return toast.error(t('toast.emailInvalid'))
     setEmailSendingToken(token)
     try {
       await sendShareByEmail(emailToFile.trim(), [token], lang)

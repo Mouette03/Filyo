@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Copy, Check, Plus, ArrowDownUp, Clock, FileUp, Lock, Hash, Mail, Send } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { createUploadRequest, sendRequestByEmail } from '../api/client'
-import { copyToClipboard } from '../lib/utils'
+import { copyToClipboard, isValidEmail } from '../lib/utils'
 import { useT } from '../i18n'
 import { useAppSettingsStore } from '../stores/useAppSettingsStore'
 
@@ -60,8 +60,7 @@ export default function CreateRequestPage() {
   const handleSendEmail = async () => {
     const addresses = emailTo.split(',').map(s => s.trim()).filter(Boolean)
     if (addresses.length === 0) return toast.error(t('toast.emailRequired'))
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (addresses.some(a => !emailRegex.test(a))) return toast.error(t('toast.emailInvalid'))
+    if (addresses.some(a => !isValidEmail(a))) return toast.error(t('toast.emailInvalid'))
     setEmailSending(true)
     try {
       await sendRequestByEmail(result!.id, addresses.join(','), lang)

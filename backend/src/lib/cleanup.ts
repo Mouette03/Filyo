@@ -2,6 +2,7 @@ import fs from 'fs-extra'
 import path from 'path'
 import { prisma } from './prisma'
 import { UPLOAD_DIR } from './config'
+import { getAppSettings } from './appSettings'
 
 /**
  * Nettoyage planifié automatique.
@@ -14,8 +15,8 @@ import { UPLOAD_DIR } from './config'
  *      - 0…N  → N jours après expiration (capé au max admin)
  */
 export async function runScheduledCleanup(): Promise<{ deletedFiles: number; deletedRequests: number }> {
-  const settings = await prisma.appSettings.findUnique({ where: { id: 'singleton' } })
-  const adminMax = settings?.cleanupAfterDays ?? null
+  const settings = await getAppSettings()
+  const adminMax = settings.cleanupAfterDays ?? null
 
   // Si l'admin n'a pas activé le nettoyage → rien à faire
   if (adminMax == null) return { deletedFiles: 0, deletedRequests: 0 }

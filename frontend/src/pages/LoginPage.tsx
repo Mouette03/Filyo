@@ -31,7 +31,7 @@ export default function LoginPage() {
     if (isAuthenticated) navigate('/')
     getSettings().then(r => setSettings(r.data)).catch(() => {})
     checkSetup().then(r => setSetupNeeded(r.data.setupNeeded)).catch(() => setSetupNeeded(false))
-  }, [])
+  }, [isAuthenticated, navigate])
 
   const resetForm = () => {
     setEmail(''); setPassword(''); setConfirmPwd(''); setName(''); setShowPwd(false)

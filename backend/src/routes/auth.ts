@@ -133,7 +133,6 @@ export async function authRoutes(app: FastifyInstance) {
     
     // Server-side protection: limit avatar to 3 MB and stream to disk
     const MAX_BYTES = 3 * 1024 * 1024 // 3 MB
-    await fs.ensureFile(filePath)
     const ws = fs.createWriteStream(filePath)
     let received = 0
     try {
