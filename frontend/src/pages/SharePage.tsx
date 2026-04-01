@@ -65,13 +65,13 @@ export default function SharePage() {
       .catch(err => {
         const code = err.response?.data?.code
         if (code === 'SHARE_EXPIRED') {
-          setError(t('share.expiredDesc'))
+          setError('share.expiredDesc')
           setStatus('expired')
         } else if (code === 'SHARE_LIMIT_REACHED') {
-          setError(t('share.limitReachedDesc'))
+          setError('share.limitReachedDesc')
           setStatus('expired')
         } else {
-          setError(t('share.invalidDesc'))
+          setError('share.invalidDesc')
           setStatus('error')
         }
       })
@@ -184,7 +184,7 @@ export default function SharePage() {
               <AlertTriangle size={28} className="text-red-400" />
             </div>
             <h2 className="text-xl font-bold mb-2">{status === 'expired' ? t('share.expired') : t('share.invalid')}</h2>
-            <p className="[color:var(--text-50)] text-sm">{error}</p>
+            <p className="[color:var(--text-50)] text-sm">{t(error)}</p>
           </div>
         )}
 

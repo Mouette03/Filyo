@@ -8,6 +8,7 @@ import { prisma } from '../lib/prisma'
 import { UPLOAD_DIR } from '../lib/config'
 import { getAppSettings } from '../lib/appSettings'
 import { createSmtpTransport } from '../lib/smtp'
+import { t, escapeHtml } from '../lib/i18n'
 
 /**
  * Register HTTP routes under `/api/upload-requests` to create, manage and consume upload requests and their files.
@@ -285,7 +286,6 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
     auth,
     async (req: any, reply) => {
       const { to, lang = 'fr' } = req.body
-      const isEn = lang === 'en'
       const addresses: string[] = (to || '').split(',').map((s: string) => s.trim()).filter(Boolean)
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
       if (addresses.length === 0 || addresses.some(a => !emailRegex.test(a))) {
@@ -307,12 +307,13 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
       const depositUrl = `${baseUrl}/r/${request.token}`
       const appName = settings.appName || 'Filyo'
       const transporter = createSmtpTransport(settings)
-      const subject = isEn
-        ? `[${appName}] File deposit request: ${request.title}`
-        : `[${appName}] Demande de dépôt : ${request.title}`
-      const bodyText = isEn
-        ? `Hello,\n\nYou have been invited to deposit files: "${request.title}".\n\n${request.message ? request.message + '\n\n' : ''}Deposit link:\n${depositUrl}\n\nSent via ${appName}.`
-        : `Bonjour,\n\nVous êtes invité(e) à déposer des fichiers : "${request.title}".\n\n${request.message ? request.message + '\n\n' : ''}Lien de dépôt :\n${depositUrl}\n\nEnvoyé via ${appName}.`
+      const messageBlock = request.message ? request.message + '\n\n' : ''
+      const subject = t(lang, 'email.uploadRequest.subject', { appName, title: request.title })
+      const bodyText = t(lang, 'email.uploadRequest.text', { title: request.title, message: messageBlock, depositUrl, appName })
+      const safeTitle = escapeHtml(request.title)
+      const safeMessage = request.message ? escapeHtml(request.message) : null
+      const safeAppName = escapeHtml(appName)
+      const safeDepositUrl = escapeHtml(encodeURI(depositUrl))
       try {
         await transporter.sendMail({
           from: `"${appName}" <${settings.smtpFrom}>`,
@@ -320,13 +321,13 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
           subject,
           text: bodyText,
           html: `<div style="font-family:system-ui,sans-serif;max-width:520px;margin:0 auto;background:#0d0e1a;color:#e8eaf6;padding:32px 24px;border-radius:16px">
-          <h2 style="margin:0 0 6px;color:#7a8dff;font-size:20px">${appName}</h2>
-          <p style="color:#aaa;font-size:13px;margin:0 0 24px">${isEn ? 'File deposit request' : 'Demande de dépôt de fichiers'}</p>
-          <p style="margin:0 0 8px">${isEn ? 'You have been invited to deposit files:' : 'Vous êtes invité(e) à déposer des fichiers :'} <strong>${request.title}</strong></p>
-          ${request.message ? `<p style="margin:0 0 16px;color:#ccc;font-style:italic">"${request.message}"</p>` : ''}
-          <a href="${depositUrl}" style="display:inline-block;background:#5c6bfa;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px">${isEn ? 'Deposit files' : 'Déposer des fichiers'}</a>
-          <p style="margin:12px 0 0;font-size:12px;color:#666;font-family:monospace">${depositUrl}</p>
-          <p style="margin:24px 0 0;font-size:11px;color:#444">${appName}</p>
+          <h2 style="margin:0 0 6px;color:#7a8dff;font-size:20px">${safeAppName}</h2>
+          <p style="color:#aaa;font-size:13px;margin:0 0 24px">${t(lang, 'email.uploadRequest.htmlSubtitle')}</p>
+          <p style="margin:0 0 8px">${t(lang, 'email.uploadRequest.htmlBody')} <strong>${safeTitle}</strong></p>
+          ${safeMessage ? `<p style="margin:0 0 16px;color:#ccc;font-style:italic">"${safeMessage}"</p>` : ''}
+          <a href="${safeDepositUrl}" style="display:inline-block;background:#5c6bfa;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px">${t(lang, 'email.uploadRequest.htmlButton')}</a>
+          <p style="margin:12px 0 0;font-size:12px;color:#666;font-family:monospace">${safeDepositUrl}</p>
+          <p style="margin:24px 0 0;font-size:11px;color:#444">${safeAppName}</p>
         </div>`
         })
       } catch (err: any) {

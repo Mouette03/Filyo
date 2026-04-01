@@ -142,8 +142,8 @@ export const updateCleanupSetting = (cleanupAfterDays: number | null) =>
 export const updateCleanupPreference = (cleanupAfterDays: number | null) =>
   api.patch('/auth/cleanup-preference', { cleanupAfterDays })
 
-export const forgotPassword = (email: string) =>
-  api.post('/auth/forgot-password', { email })
+export const forgotPassword = (email: string, lang: string = 'fr') =>
+  api.post('/auth/forgot-password', { email, lang })
 
 export const resetPassword = (token: string, password: string) =>
   api.post('/auth/reset-password', { token, password })
