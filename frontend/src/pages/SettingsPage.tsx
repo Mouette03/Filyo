@@ -610,7 +610,7 @@ export default function SettingsPage() {
             <button
               type="button"
               onClick={() => setSmtpSecure(v => !v)}
-              className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none ${
+              className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent ${
                 smtpSecure ? 'bg-brand-500' : 'bg-white/20'
               }`}
               role="switch"
