@@ -17,7 +17,9 @@ api.interceptors.request.use(config => {
 api.interceptors.response.use(
   r => r,
   err => {
-    if (err.response?.status === 401 && useAuthStore.getState().isAuthenticated) {
+    const code = err.response?.data?.code
+    // Ne déconnecter que si le token JWT est invalide/expiré — pas sur un mauvais mot de passe applicatif
+    if (err.response?.status === 401 && code === 'INVALID_TOKEN' && useAuthStore.getState().isAuthenticated) {
       useAuthStore.getState().logout()
       window.location.href = '/login'
     }
