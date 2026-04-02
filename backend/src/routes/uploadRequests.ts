@@ -134,7 +134,9 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
 
     // Vérification anticipée du mot de passe via header (avant toute écriture sur disque)
     if (request.password) {
-      const provided = (req.headers['x-upload-password'] as string) ?? ''
+      const rawHeader = (req.headers['x-upload-password'] as string) ?? ''
+      let provided = ''
+      try { provided = Buffer.from(rawHeader, 'base64').toString('utf8') } catch { provided = rawHeader }
       const ok = await bcrypt.compare(provided, request.password)
       if (!ok) return reply.code(401).send({ code: 'WRONG_PASSWORD' })
     }
