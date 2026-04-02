@@ -87,17 +87,22 @@ export default function HomePage() {
   }
 
   const handleSendEmail = async () => {
-    if (!emailTo.trim()) return toast.error(t('toast.emailRequired'))
-    if (!isValidEmail(emailTo)) return toast.error(t('toast.emailInvalid'))
+    const addresses = emailTo.split(',').map((s: string) => s.trim()).filter(Boolean)
+    if (addresses.length === 0) return toast.error(t('toast.emailRequired'))
+    if (addresses.some(a => !isValidEmail(a))) return toast.error(t('toast.emailInvalid'))
     setEmailSending(true)
     try {
       // Si lot : envoyer un seul token (le backend renvoie tous les fichiers)
       const batchToken = results.length > 1 && results.every(r => r.batchToken && r.batchToken === results[0].batchToken)
         ? results[0].batchToken : null
       const tokens = batchToken ? [results[0].shareToken] : results.map(r => r.shareToken)
-      await sendShareByEmail(emailTo.trim(), tokens, lang)
+      await sendShareByEmail(addresses.join(','), tokens, lang)
       setEmailSent(true)
-      toast.success(t('toast.linkEmailSent', { email: emailTo }))
+      if (addresses.length === 1) {
+        toast.success(t('toast.linkEmailSent', { email: addresses[0] }))
+      } else {
+        toast.success(t('toast.requestEmailsSent', { count: String(addresses.length) }))
+      }
       setTimeout(() => setEmailSent(false), 3000)
     } catch (err: any) {
       const code = err.response?.data?.code
