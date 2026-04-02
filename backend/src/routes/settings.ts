@@ -75,7 +75,10 @@ export async function settingsRoutes(app: FastifyInstance) {
   })
 
   // POST /api/settings/smtp/test — tester la connexion SMTP (admin uniquement)
-  app.post('/smtp/test', { onRequest: [app.authenticate, app.adminOnly] }, async (req, reply) => {
+  app.post<{ Body: { smtpHost?: string; smtpFrom?: string; smtpPort?: number } }>(
+    '/smtp/test',
+    { onRequest: [app.authenticate, app.adminOnly] },
+    async (req, reply) => {
     // Priorité aux valeurs envoyées dans le body (formulaire non encore sauvegardé)
     const body = req.body ?? {}
     const s = await getAppSettings()
