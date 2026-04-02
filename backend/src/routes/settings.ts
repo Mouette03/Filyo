@@ -222,12 +222,11 @@ export async function settingsRoutes(app: FastifyInstance) {
     async (req, reply) => {
       await fs.ensureDir(LOGO_DIR)
 
-      // Supprimer l'ancien logo
+      // Mémoriser l'ancien chemin avant tout traitement
       const current = await getAppSettings()
-      if (current.logoUrl) {
-        const oldFile = path.join(UPLOAD_DIR, current.logoUrl.replace('/uploads/', ''))
-        await fs.remove(oldFile).catch(() => {})
-      }
+      const oldFile = current.logoUrl
+        ? path.join(UPLOAD_DIR, current.logoUrl.replace('/uploads/', ''))
+        : null
 
       const data = await req.file()
       if (!data) return reply.code(400).send({ code: 'NO_FILE' })
@@ -278,6 +277,10 @@ export async function settingsRoutes(app: FastifyInstance) {
         update: { logoUrl },
         create: { id: 'singleton', appName: 'Filyo', logoUrl }
       })
+
+      // Supprimer l'ancien logo seulement après que le nouveau est persisté
+      if (oldFile) await fs.remove(oldFile).catch(() => {})
+
       req.log.info({ logoUrl }, 'Logo uploaded')
       return { appName: settings.appName, logoUrl: settings.logoUrl }
     }

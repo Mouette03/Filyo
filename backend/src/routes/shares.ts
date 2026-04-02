@@ -132,7 +132,17 @@ export async function shareRoutes(app: FastifyInstance) {
   // POST /api/shares/send-email — envoyer un ou plusieurs liens par email (authentifié)
   app.post<{
     Body: { to: string; tokens: string[]; lang?: string }
-  }>('/send-email', { onRequest: [app.authenticate] }, async (req, reply) => {
+  }>('/send-email', {
+    onRequest: [app.authenticate],
+    config: {
+      rateLimit: {
+        hook: 'preHandler',
+        max: 10,
+        timeWindow: '10 minutes',
+        keyGenerator: (req) => req.user?.id ?? req.ip,
+      },
+    },
+  }, async (req, reply) => {
     const { to, tokens, lang = 'fr' } = req.body
     if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
       return reply.code(400).send({ code: 'EMAIL_INVALID' })

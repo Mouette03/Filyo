@@ -154,6 +154,14 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
         if (part.fieldname === 'uploaderEmail') uploaderEmail = part.value as string
         if (part.fieldname === 'message') message = part.value as string
       } else {
+        // Vérifier le quota restant en tenant compte des fichiers déjà sauvés dans cette requête
+        if (request.maxFiles) {
+          const total = request._count.receivedFiles + savedFiles.length
+          if (total >= request.maxFiles) {
+            await Promise.all(savedFiles.map((f: any) => fs.remove(f.path).catch(() => {})))
+            return reply.code(429).send({ code: 'REQUEST_LIMIT_REACHED' })
+          }
+        }
         const ext = path.extname(part.filename || '') || ''
         const filename = `recv_${nanoid(12)}${ext}`
         const destDir = path.join(UPLOAD_DIR, 'received', request.id)
