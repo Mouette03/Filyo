@@ -4,7 +4,7 @@ import multipart from '@fastify/multipart'
 import jwt from '@fastify/jwt'
 import staticFiles from '@fastify/static'
 import path from 'path'
-import { existsSync } from 'fs'
+import { existsSync, readFileSync } from 'fs'
 import { readFile } from 'fs/promises'
 import { fileRoutes } from './routes/files'
 import { shareRoutes } from './routes/shares'
@@ -15,6 +15,8 @@ import { userRoutes } from './routes/users'
 import { settingsRoutes } from './routes/settings'
 import { runScheduledCleanup } from './lib/cleanup'
 import { UPLOAD_DIR } from './lib/config'
+
+const appVersion: string = (JSON.parse(readFileSync(path.join(__dirname, '../package.json'), 'utf-8')) as { version: string }).version
 
 const UPLOAD_TIMEOUT_MIN_MS = 60_000        // 1 min
 const UPLOAD_TIMEOUT_MAX_MS = 7_200_000     // 2 h
@@ -91,7 +93,7 @@ async function bootstrap() {
   await app.register(adminRoutes,         { prefix: '/api/admin' })
 
   // Health check
-  app.get('/health', async () => ({ status: 'ok', version: '1.0.0' }))
+  app.get('/health', async () => ({ status: 'ok', version: appVersion }))
 
   // ── Servir le frontend React (production) ─────────────────────
   const FRONTEND_DIST = process.env.FRONTEND_DIST

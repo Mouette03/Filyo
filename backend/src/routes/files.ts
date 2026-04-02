@@ -12,7 +12,7 @@ export async function fileRoutes(app: FastifyInstance) {
   const auth = { onRequest: [app.authenticate] }
 
   // POST /api/files - Upload (authentifié)
-  app.post('/', auth, async (req: any, reply) => {
+  app.post('/', auth, async (req, reply) => {
     const userId: string = req.user.id
     const appSettings = await getAppSettings()
     const globalMaxBytes = appSettings.maxFileSizeBytes ?? null
@@ -127,7 +127,7 @@ export async function fileRoutes(app: FastifyInstance) {
   })
 
   // GET /api/files - Fichiers de l utilisateur courant
-  app.get('/', auth, async (req: any) => {
+  app.get('/', auth, async (req) => {
     const files = await prisma.file.findMany({
       where: { userId: req.user.id },
       orderBy: { uploadedAt: 'desc' },
@@ -138,7 +138,7 @@ export async function fileRoutes(app: FastifyInstance) {
   })
 
   // GET /api/files/:id - Infos d un fichier (proprietaire uniquement)
-  app.get<{ Params: { id: string } }>('/:id', auth, async (req: any, reply) => {
+  app.get<{ Params: { id: string } }>('/:id', auth, async (req, reply) => {
     const file = await prisma.file.findFirst({
       where: { id: req.params.id, userId: req.user.id },
       include: { shares: true }
@@ -148,7 +148,7 @@ export async function fileRoutes(app: FastifyInstance) {
   })
 
   // DELETE /api/files/:id (proprietaire ou admin)
-  app.delete<{ Params: { id: string } }>('/:id', auth, async (req: any, reply) => {
+  app.delete<{ Params: { id: string } }>('/:id', auth, async (req, reply) => {
     const where =
       req.user.role === 'ADMIN'
         ? { id: req.params.id }
@@ -165,7 +165,7 @@ export async function fileRoutes(app: FastifyInstance) {
   app.patch<{ Params: { id: string }; Body: { expiresAt: string | null } }>(
     '/:id/expiry',
     auth,
-    async (req: any, reply) => {
+    async (req, reply) => {
       const file = await prisma.file.findFirst({
         where: { id: req.params.id, userId: req.user.id }
       })

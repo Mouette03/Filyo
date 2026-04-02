@@ -41,7 +41,7 @@ export async function userRoutes(app: FastifyInstance) {
     '/:id',
     adminOnly,
     async (req, reply) => {
-      const caller = (req as any).user
+      const caller = req.user
       const { name, email, role, active, password } = req.body
       const isSelf = caller.id === req.params.id
 

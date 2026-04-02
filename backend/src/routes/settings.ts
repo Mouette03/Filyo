@@ -5,7 +5,7 @@ import { nanoid } from 'nanoid'
 import sharp from 'sharp'
 import { prisma } from '../lib/prisma'
 import { UPLOAD_DIR } from '../lib/config'
-import { getAppSettings as getSettings } from '../lib/appSettings'
+import { getAppSettings } from '../lib/appSettings'
 
 const LOGO_DIR = path.join(UPLOAD_DIR, 'logos')
 
@@ -25,7 +25,7 @@ const LOGO_DIR = path.join(UPLOAD_DIR, 'logos')
 export async function settingsRoutes(app: FastifyInstance) {
   // GET /api/settings — public (pour charger le nom/logo au démarrage), sans données SMTP
   app.get('/', async () => {
-    const s = await getSettings()
+    const s = await getAppSettings()
     return {
       id: s.id,
       appName: s.appName,
@@ -43,7 +43,7 @@ export async function settingsRoutes(app: FastifyInstance) {
 
   // GET /api/settings/smtp — config SMTP (admin uniquement)
   app.get('/smtp', { onRequest: [app.authenticate, app.adminOnly] }, async () => {
-    const s = await getSettings()
+    const s = await getAppSettings()
     return {
       smtpHost: s.smtpHost ?? '',
       smtpPort: s.smtpPort ?? 587,
@@ -75,10 +75,10 @@ export async function settingsRoutes(app: FastifyInstance) {
   })
 
   // POST /api/settings/smtp/test — tester la connexion SMTP (admin uniquement)
-  app.post('/smtp/test', { onRequest: [app.authenticate, app.adminOnly] }, async (req: any, reply) => {
+  app.post('/smtp/test', { onRequest: [app.authenticate, app.adminOnly] }, async (req, reply) => {
     // Priorité aux valeurs envoyées dans le body (formulaire non encore sauvegardé)
     const body = req.body ?? {}
-    const s = await getSettings()
+    const s = await getAppSettings()
     const host = body.smtpHost || s.smtpHost
     const from = body.smtpFrom || s.smtpFrom
     const port: number = body.smtpPort ?? s.smtpPort ?? 587
@@ -220,7 +220,7 @@ export async function settingsRoutes(app: FastifyInstance) {
       await fs.ensureDir(LOGO_DIR)
 
       // Supprimer l'ancien logo
-      const current = await getSettings()
+      const current = await getAppSettings()
       if (current.logoUrl) {
         const oldFile = path.join(UPLOAD_DIR, current.logoUrl.replace('/uploads/', ''))
         await fs.remove(oldFile).catch(() => {})
@@ -284,8 +284,8 @@ export async function settingsRoutes(app: FastifyInstance) {
   app.delete(
     '/logo',
     { onRequest: [app.authenticate, app.adminOnly] },
-    async (req: any) => {
-      const current = await getSettings()
+    async (req) => {
+      const current = await getAppSettings()
       if (current.logoUrl) {
         const file = path.join(UPLOAD_DIR, current.logoUrl.replace('/uploads/', ''))
         await fs.remove(file).catch(() => {})

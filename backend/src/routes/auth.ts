@@ -66,7 +66,7 @@ export async function authRoutes(app: FastifyInstance) {
   })
 
   // GET /api/auth/me — vérifier le token
-  app.get('/me', { onRequest: [app.authenticate] }, async (req: any) => {
+  app.get('/me', { onRequest: [app.authenticate] }, async (req) => {
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
       select: { id: true, email: true, name: true, role: true, avatarUrl: true, createdAt: true, lastLogin: true, cleanupAfterDays: true }
@@ -89,7 +89,7 @@ export async function authRoutes(app: FastifyInstance) {
       let isAdmin = false
       try {
         await req.jwtVerify()
-        const caller = (req as any).user
+        const caller = req.user
         if (caller.role === 'ADMIN') isAdmin = true
       } catch { /* non authentifié */ }
 
@@ -115,7 +115,7 @@ export async function authRoutes(app: FastifyInstance) {
   })
 
   // POST /api/auth/avatar — uploader son avatar
-  app.post('/avatar', { onRequest: [app.authenticate] }, async (req: any, reply) => {
+  app.post('/avatar', { onRequest: [app.authenticate] }, async (req, reply) => {
     await fs.ensureDir(AVATAR_DIR)
     const current = await prisma.user.findUnique({ where: { id: req.user.id }, select: { avatarUrl: true } })
     if (current?.avatarUrl) {
@@ -167,7 +167,7 @@ export async function authRoutes(app: FastifyInstance) {
   })
 
   // DELETE /api/auth/avatar — supprimer son avatar
-  app.delete('/avatar', { onRequest: [app.authenticate] }, async (req: any, reply) => {
+  app.delete('/avatar', { onRequest: [app.authenticate] }, async (req, reply) => {
     const user = await prisma.user.findUnique({ where: { id: req.user.id }, select: { avatarUrl: true } })
     if (user?.avatarUrl) {
       const file = path.join(UPLOAD_DIR, user.avatarUrl.replace('/uploads/', ''))
@@ -179,7 +179,7 @@ export async function authRoutes(app: FastifyInstance) {
   })
 
   // PATCH /api/auth/profile — mettre à jour son nom
-  app.patch('/profile', { onRequest: [app.authenticate] }, async (req: any, reply) => {
+  app.patch('/profile', { onRequest: [app.authenticate] }, async (req, reply) => {
     const { name } = req.body as { name?: string }
     if (!name?.trim()) return reply.code(400).send({ code: 'INVALID_NAME' })
     const updated = await prisma.user.update({
@@ -192,7 +192,7 @@ export async function authRoutes(app: FastifyInstance) {
   })
 
   // POST /api/auth/change-password
-  app.post('/change-password', { onRequest: [app.authenticate] }, async (req: any, reply) => {
+  app.post('/change-password', { onRequest: [app.authenticate] }, async (req, reply) => {
     const { currentPassword, newPassword } = req.body as any
     if (!currentPassword || !newPassword || newPassword.length < 8) {
       return reply.code(400).send({ code: 'INVALID_DATA' })
@@ -208,7 +208,7 @@ export async function authRoutes(app: FastifyInstance) {
   })
 
   // PATCH /api/auth/cleanup-preference — préférence de nettoyage automatique
-  app.patch('/cleanup-preference', { onRequest: [app.authenticate] }, async (req: any, reply) => {
+  app.patch('/cleanup-preference', { onRequest: [app.authenticate] }, async (req, reply) => {
     const { cleanupAfterDays } = req.body as { cleanupAfterDays: number | null }
 
     // Valider contre le maximum admin

@@ -1,8 +1,9 @@
-import { FastifyInstance } from 'fastify'
+import { FastifyInstance, FastifyRequest } from 'fastify'
 import path from 'path'
 import fs from 'fs-extra'
 import { nanoid } from 'nanoid'
 import mime from 'mime-types'
+import { isValidEmail } from '../lib/utils'
 import bcrypt from 'bcryptjs'
 import { prisma } from '../lib/prisma'
 import { UPLOAD_DIR } from '../lib/config'
@@ -28,6 +29,13 @@ import { t, escapeHtml } from '../lib/i18n'
 export async function uploadRequestRoutes(app: FastifyInstance) {
   const auth = { onRequest: [app.authenticate] }
 
+  /** Construit le filtre Prisma pour un upload request : admin voit tout, owner voit le sien. */
+  function ownerWhere(req: FastifyRequest, id: string) {
+    return req.user.role === 'ADMIN'
+      ? { id }
+      : { id, userId: req.user.id }
+  }
+
   // POST /api/upload-requests - Creer une demande (authentifie)
   app.post<{
     Body: {
@@ -38,7 +46,7 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
       maxFiles?: string
       maxSizeMb?: string
     }
-  }>('/', auth, async (req: any, reply) => {
+  }>('/', auth, async (req, reply) => {
     const { title, message, password, expiresIn, maxFiles, maxSizeMb } = req.body
     const userId: string = req.user.id
 
@@ -70,7 +78,7 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
   })
 
   // GET /api/upload-requests - Lister les demandes de l utilisateur courant
-  app.get('/', auth, async (req: any) => {
+  app.get('/', auth, async (req) => {
     const requests = await prisma.uploadRequest.findMany({
       where: { userId: req.user.id },
       orderBy: { createdAt: 'desc' },
@@ -163,15 +171,19 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
             }
             if (!writeStream.write(chunk)) {
               await new Promise<void>((resolve, reject) => {
-                writeStream.once('drain', resolve)
-                writeStream.once('error', reject)
+                const onDrain = () => { writeStream.off('error', onError); resolve() }
+                const onError = (err: Error) => { writeStream.off('drain', onDrain); reject(err) }
+                writeStream.once('drain', onDrain)
+                writeStream.once('error', onError)
               })
             }
           }
           await new Promise<void>((resolve, reject) => {
+            const onFinish = () => { writeStream.off('error', onError); resolve() }
+            const onError = (err: Error) => { writeStream.off('finish', onFinish); reject(err) }
+            writeStream.once('finish', onFinish)
+            writeStream.once('error', onError)
             writeStream.end()
-            writeStream.once('finish', resolve)
-            writeStream.once('error', reject)
           })
         } catch (err) {
           writeStream.destroy()
@@ -217,11 +229,8 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
   })
 
   // GET /api/upload-requests/:id/files - Fichiers recus (proprietaire ou admin)
-  app.get<{ Params: { id: string } }>('/:id/files', auth, async (req: any, reply) => {
-    const where =
-      req.user.role === 'ADMIN'
-        ? { id: req.params.id }
-        : { id: req.params.id, userId: req.user.id }
+  app.get<{ Params: { id: string } }>('/:id/files', auth, async (req, reply) => {
+    const where = ownerWhere(req, req.params.id)
     const request = await prisma.uploadRequest.findFirst({ where })
     if (!request) return reply.code(403).send({ code: 'FORBIDDEN' })
 
@@ -236,11 +245,8 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
   app.get<{ Params: { id: string; fileId: string } }>(
     '/:id/received/:fileId/download',
     auth,
-    async (req: any, reply) => {
-      const where =
-        req.user.role === 'ADMIN'
-          ? { id: req.params.id }
-          : { id: req.params.id, userId: req.user.id }
+    async (req, reply) => {
+      const where = ownerWhere(req, req.params.id)
       const request = await prisma.uploadRequest.findFirst({ where })
       if (!request) return reply.code(403).send({ code: 'FORBIDDEN' })
 
@@ -265,11 +271,8 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
   )
 
   // PATCH /api/upload-requests/:id/toggle (proprietaire ou admin)
-  app.patch<{ Params: { id: string } }>('/:id/toggle', auth, async (req: any, reply) => {
-    const where =
-      req.user.role === 'ADMIN'
-        ? { id: req.params.id }
-        : { id: req.params.id, userId: req.user.id }
+  app.patch<{ Params: { id: string } }>('/:id/toggle', auth, async (req, reply) => {
+    const where = ownerWhere(req, req.params.id)
     const request = await prisma.uploadRequest.findFirst({ where })
     if (!request) return reply.code(403).send({ code: 'FORBIDDEN' })
     const updated = await prisma.uploadRequest.update({
@@ -284,18 +287,14 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
   app.post<{ Params: { id: string }; Body: { to: string; lang?: string } }>(
     '/:id/send-email',
     auth,
-    async (req: any, reply) => {
+    async (req, reply) => {
       const { to, lang = 'fr' } = req.body
       const addresses: string[] = (to || '').split(',').map((s: string) => s.trim()).filter(Boolean)
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-      if (addresses.length === 0 || addresses.some(a => !emailRegex.test(a))) {
+      if (addresses.length === 0 || addresses.some(a => !isValidEmail(a))) {
         return reply.code(400).send({ code: 'EMAIL_INVALID' })
       }
       const toField = addresses.join(', ')
-      const where =
-        req.user.role === 'ADMIN'
-          ? { id: req.params.id }
-          : { id: req.params.id, userId: req.user.id }
+      const where = ownerWhere(req, req.params.id)
       const request = await prisma.uploadRequest.findFirst({ where })
       if (!request) return reply.code(403).send({ code: 'FORBIDDEN' })
 
@@ -340,11 +339,8 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
   )
 
   // DELETE /api/upload-requests/:id (proprietaire ou admin)
-  app.delete<{ Params: { id: string } }>('/:id', auth, async (req: any, reply) => {
-    const where =
-      req.user.role === 'ADMIN'
-        ? { id: req.params.id }
-        : { id: req.params.id, userId: req.user.id }
+  app.delete<{ Params: { id: string } }>('/:id', auth, async (req, reply) => {
+    const where = ownerWhere(req, req.params.id)
     const request = await prisma.uploadRequest.findFirst({ where })
     if (!request) return reply.code(403).send({ code: 'FORBIDDEN' })
 
