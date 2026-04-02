@@ -420,6 +420,7 @@ export const en = {
   'toast.messageRequired': 'Message is required',
   'toast.sendError': 'Error sending',
   'toast.tooManyRequests': 'Too many attempts, please try again in a minute',
+  'toast.tooManyRequestsForgot': 'Too many attempts, please try again in a few minutes',
 
   // ── Server error codes ────────────────────────────────────────
   'error.invalidCredentials': 'Invalid credentials',

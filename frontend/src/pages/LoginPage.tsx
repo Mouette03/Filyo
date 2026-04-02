@@ -108,7 +108,7 @@ export default function LoginPage() {
       setForgotSent(true)
     } catch (err: any) {
       const code = err.response?.data?.code
-      if (err.response?.status === 429) toast.error(t('toast.tooManyRequests'))
+      if (err.response?.status === 429) toast.error(t('toast.tooManyRequestsForgot'))
       else if (code === 'SMTP_NOT_CONFIGURED') toast.error(t('toast.smtpNotConfigured'))
       else toast.error(t('toast.sendError'))
     } finally {

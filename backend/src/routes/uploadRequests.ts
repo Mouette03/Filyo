@@ -283,7 +283,16 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
   // POST /api/upload-requests/:id/send-email (proprietaire ou admin)
   app.post<{ Params: { id: string }; Body: { to: string; lang?: string } }>(
     '/:id/send-email',
-    auth,
+    {
+      preHandler: auth,
+      config: {
+        rateLimit: {
+          max: 10,
+          timeWindow: '10 minutes',
+          keyGenerator: (req) => (req.user as { id?: string } | undefined)?.id ?? req.ip,
+        },
+      },
+    },
     async (req, reply) => {
       const { to, lang = 'fr' } = req.body
       const addresses: string[] = (to || '').split(',').map((s: string) => s.trim()).filter(Boolean)

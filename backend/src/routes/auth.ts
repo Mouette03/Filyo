@@ -23,6 +23,19 @@ const registerSchema = z.object({
   password: z.string().min(8)
 })
 
+const profileSchema = z.object({
+  name: z.string().trim().min(1)
+})
+
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(8)
+})
+
+const cleanupPreferenceSchema = z.object({
+  cleanupAfterDays: z.number().int().nonnegative().nullable()
+})
+
 /**
  * Registers authentication-related HTTP endpoints under /api/auth on the provided Fastify instance.
  *
@@ -182,11 +195,12 @@ export async function authRoutes(app: FastifyInstance) {
 
   // PATCH /api/auth/profile — mettre à jour son nom
   app.patch('/profile', { onRequest: [app.authenticate] }, async (req, reply) => {
-    const { name } = req.body as { name?: string }
-    if (!name?.trim()) return reply.code(400).send({ code: 'INVALID_NAME' })
+    const parsed = profileSchema.safeParse(req.body)
+    if (!parsed.success) return reply.code(400).send({ code: 'INVALID_NAME' })
+    const { name } = parsed.data
     const updated = await prisma.user.update({
       where: { id: req.user.id },
-      data: { name: name.trim() },
+      data: { name: name },
       select: { id: true, email: true, name: true, role: true, avatarUrl: true }
     })
     req.log.debug({ userId: req.user.id }, 'Profile updated')
@@ -195,10 +209,9 @@ export async function authRoutes(app: FastifyInstance) {
 
   // POST /api/auth/change-password
   app.post('/change-password', { onRequest: [app.authenticate] }, async (req, reply) => {
-    const { currentPassword, newPassword } = req.body as any
-    if (!currentPassword || !newPassword || newPassword.length < 8) {
-      return reply.code(400).send({ code: 'INVALID_DATA' })
-    }
+    const parsed = changePasswordSchema.safeParse(req.body)
+    if (!parsed.success) return reply.code(400).send({ code: 'INVALID_DATA' })
+    const { currentPassword, newPassword } = parsed.data
     const user = await prisma.user.findUnique({ where: { id: req.user.id } })
     if (!user) return reply.code(404).send({ code: 'NOT_FOUND' })
     const ok = await bcrypt.compare(currentPassword, user.password)
@@ -211,7 +224,9 @@ export async function authRoutes(app: FastifyInstance) {
 
   // PATCH /api/auth/cleanup-preference — préférence de nettoyage automatique
   app.patch('/cleanup-preference', { onRequest: [app.authenticate] }, async (req, reply) => {
-    const { cleanupAfterDays } = req.body as { cleanupAfterDays: number | null }
+    const parsed = cleanupPreferenceSchema.safeParse(req.body)
+    if (!parsed.success) return reply.code(400).send({ code: 'INVALID_DATA' })
+    const { cleanupAfterDays } = parsed.data
 
     // Valider contre le maximum admin
     if (cleanupAfterDays != null) {

@@ -420,6 +420,7 @@ export const fr = {
   'toast.messageRequired': 'Le message est obligatoire',
   'toast.sendError': "Erreur lors de l'envoi",
   'toast.tooManyRequests': 'Trop de tentatives, réessayez dans une minute',
+  'toast.tooManyRequestsForgot': 'Trop de tentatives, réessayez dans quelques minutes',
 
   // ── Erreurs serveur (codes machine) ──────────────────────────
   'error.invalidCredentials': 'Identifiants incorrects',
