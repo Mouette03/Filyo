@@ -7,4 +7,3 @@ data/
 *.log
 .DS_Store
 Thumbs.db
-**/licenses.csv
