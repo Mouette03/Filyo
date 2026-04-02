@@ -124,6 +124,7 @@ export default function RequestUploadPage() {
       if (code === 'WRONG_PASSWORD') toast.error(t('toast.passwordWrong'))
       else if (code === 'REQUEST_LIMIT_REACHED') toast.error(t('request.limitReachedDesc'))
       else if (code === 'FILE_TOO_LARGE') toast.error(t('error.fileTooLarge'))
+      else if (err.response?.status === 429) toast.error(t('toast.tooManyRequests'))
       else toast.error(t('toast.sendError'))
       setStatus('ready')
     }

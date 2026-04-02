@@ -419,6 +419,7 @@ export const fr = {
   'toast.emailFieldRequired': "L'adresse email est obligatoire",
   'toast.messageRequired': 'Le message est obligatoire',
   'toast.sendError': "Erreur lors de l'envoi",
+  'toast.tooManyRequests': 'Trop de tentatives, réessayez dans une minute',
 
   // ── Erreurs serveur (codes machine) ──────────────────────────
   'error.invalidCredentials': 'Identifiants incorrects',

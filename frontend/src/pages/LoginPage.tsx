@@ -50,6 +50,7 @@ export default function LoginPage() {
     } catch (err: any) {
       const code = err.response?.data?.code
       if (code === 'INVALID_CREDENTIALS') toast.error(t('error.invalidCredentials'))
+      else if (err.response?.status === 429) toast.error(t('toast.tooManyRequests'))
       else toast.error(t('toast.incorrectCredentials'))
     } finally {
       setLoading(false)

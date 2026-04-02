@@ -419,6 +419,7 @@ export const en = {
   'toast.emailFieldRequired': 'Email address is required',
   'toast.messageRequired': 'Message is required',
   'toast.sendError': 'Error sending',
+  'toast.tooManyRequests': 'Too many attempts, please try again in a minute',
 
   // ── Server error codes ────────────────────────────────────────
   'error.invalidCredentials': 'Invalid credentials',
