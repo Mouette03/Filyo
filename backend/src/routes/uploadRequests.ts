@@ -284,12 +284,13 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
   app.post<{ Params: { id: string }; Body: { to: string; lang?: string } }>(
     '/:id/send-email',
     {
-      preHandler: auth,
+      ...auth,
       config: {
         rateLimit: {
+          hook: 'preHandler',
           max: 10,
           timeWindow: '10 minutes',
-          keyGenerator: (req) => (req.user as { id?: string } | undefined)?.id ?? req.ip,
+          keyGenerator: (req) => req.user?.id ?? req.ip,
         },
       },
     },
