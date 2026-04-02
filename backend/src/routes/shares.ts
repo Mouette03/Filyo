@@ -265,7 +265,7 @@ export async function shareRoutes(app: FastifyInstance) {
     try {
       await transporter.sendMail({
         from: `"${appName}" <${settings.smtpFrom}>`,
-        to: settings.smtpFrom,
+        to: 'undisclosed-recipients:;',
         bcc: addresses.join(', '),
         subject: `[${appName}] ${subject}`,
         text: greetingText,
