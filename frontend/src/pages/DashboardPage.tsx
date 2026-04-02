@@ -159,12 +159,17 @@ export default function DashboardPage() {
   }
 
   const handleSendFileEmail = async (token: string) => {
-    if (!emailToFile.trim()) return toast.error(t('toast.emailRequired'))
-    if (!isValidEmail(emailToFile)) return toast.error(t('toast.emailInvalid'))
+    const addresses = emailToFile.split(',').map((s: string) => s.trim()).filter(Boolean)
+    if (addresses.length === 0) return toast.error(t('toast.emailRequired'))
+    if (addresses.some(a => !isValidEmail(a))) return toast.error(t('toast.emailInvalid'))
     setEmailSendingToken(token)
     try {
-      await sendShareByEmail(emailToFile.trim(), [token], lang)
-      toast.success(t('toast.linkEmailSent', { email: emailToFile }))
+      await sendShareByEmail(addresses.join(','), [token], lang)
+      if (addresses.length === 1) {
+        toast.success(t('toast.linkEmailSent', { email: addresses[0] }))
+      } else {
+        toast.success(t('toast.requestEmailsSent', { count: String(addresses.length) }))
+      }
       setEmailingFileId(null)
       setEmailToFile('')
     } catch (err: any) {

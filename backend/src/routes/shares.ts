@@ -144,8 +144,14 @@ export async function shareRoutes(app: FastifyInstance) {
     },
   }, async (req, reply) => {
     const { to, tokens, lang = 'fr' } = req.body
-    if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
+    const MAX_RECIPIENTS = 10
+    const rawAddresses: string[] = (to || '').split(',').map((s: string) => s.trim()).filter(Boolean)
+    const addresses: string[] = [...new Set(rawAddresses)]
+    if (addresses.length === 0 || addresses.some((a: string) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(a))) {
       return reply.code(400).send({ code: 'EMAIL_INVALID' })
+    }
+    if (addresses.length > MAX_RECIPIENTS) {
+      return reply.code(400).send({ code: 'TOO_MANY_RECIPIENTS', max: MAX_RECIPIENTS })
     }
     if (!Array.isArray(tokens) || tokens.length === 0) {
       return reply.code(400).send({ code: 'NO_TOKENS' })
@@ -259,7 +265,8 @@ export async function shareRoutes(app: FastifyInstance) {
     try {
       await transporter.sendMail({
         from: `"${appName}" <${settings.smtpFrom}>`,
-        to,
+        to: settings.smtpFrom,
+        bcc: addresses.join(', '),
         subject: `[${appName}] ${subject}`,
         text: greetingText,
         html: `
