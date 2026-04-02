@@ -110,16 +110,13 @@ export default function RequestUploadPage() {
     setProgress(0)
 
     const formData = new FormData()
-    // Les champs texte DOIVENT être ajoutés avant les fichiers pour être lus
-    // avant le traitement des fichiers dans le stream multipart backend
     if (uploaderName) formData.append('uploaderName', uploaderName)
     if (uploaderEmail) formData.append('uploaderEmail', uploaderEmail)
     if (message) formData.append('message', message)
-    if (password) formData.append('password', password)
     files.forEach(f => formData.append('files', f))
 
     try {
-      await submitToUploadRequest(token, formData, setProgress)
+      await submitToUploadRequest(token, formData, setProgress, password || undefined)
       setStatus('done')
       toast.success(t('toast.filesDeposited'))
     } catch (err: any) {

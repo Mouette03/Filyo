@@ -101,10 +101,14 @@ export const getReceivedFiles = (id: string) => api.get(`/upload-requests/${id}/
 export const submitToUploadRequest = (
   token: string,
   formData: FormData,
-  onProgress?: (pct: number) => void
+  onProgress?: (pct: number) => void,
+  password?: string
 ) =>
   api.post(`/upload-requests/${token}/upload`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
+    headers: {
+      'Content-Type': 'multipart/form-data',
+      ...(password ? { 'X-Upload-Password': password } : {})
+    },
     onUploadProgress: e => {
       if (onProgress && e.total) onProgress(Math.round((e.loaded * 100) / e.total))
     }

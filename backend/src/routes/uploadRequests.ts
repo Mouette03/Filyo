@@ -130,12 +130,18 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
       return reply.code(429).send({ code: 'REQUEST_LIMIT_REACHED' })
     }
 
+    // Vérification anticipée du mot de passe via header (avant toute écriture sur disque)
+    if (request.password) {
+      const provided = (req.headers['x-upload-password'] as string) ?? ''
+      const ok = await bcrypt.compare(provided, request.password)
+      if (!ok) return reply.code(401).send({ code: 'WRONG_PASSWORD' })
+    }
+
     const parts = req.parts()
     const savedFiles: any[] = []
     let uploaderName: string | undefined
     let uploaderEmail: string | undefined
     let message: string | undefined
-    let rawPassword: string | undefined
 
     const appSettings = await getAppSettings()
     const globalMaxBytes = appSettings.maxFileSizeBytes ?? null
@@ -145,7 +151,6 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
         if (part.fieldname === 'uploaderName') uploaderName = part.value as string
         if (part.fieldname === 'uploaderEmail') uploaderEmail = part.value as string
         if (part.fieldname === 'message') message = part.value as string
-        if (part.fieldname === 'password') rawPassword = part.value as string
       } else {
         const ext = path.extname(part.filename || '') || ''
         const filename = `recv_${nanoid(12)}${ext}`
@@ -202,16 +207,6 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
           uploaderEmail: uploaderEmail || null,
           message: message || null
         })
-      }
-    }
-
-    // Vérifier le mot de passe APRÈS la boucle pour s'assurer que le champ a bien été lu
-    if (request.password) {
-      const ok = await bcrypt.compare(rawPassword || '', request.password)
-      if (!ok) {
-        // Supprimer les fichiers temporaires déjà écrits
-        await Promise.all(savedFiles.map((f: any) => fs.remove(f.path).catch(() => {})))
-        return reply.code(401).send({ code: 'WRONG_PASSWORD' })
       }
     }
 
