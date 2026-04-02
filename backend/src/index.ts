@@ -3,6 +3,7 @@ import cors from '@fastify/cors'
 import multipart from '@fastify/multipart'
 import jwt from '@fastify/jwt'
 import staticFiles from '@fastify/static'
+import rateLimit from '@fastify/rate-limit'
 import path from 'path'
 import { existsSync, readFileSync } from 'fs'
 import { readFile } from 'fs/promises'
@@ -58,6 +59,9 @@ app.decorate('adminOnly', async function (req: FastifyRequest, reply: FastifyRep
 })
 
 async function bootstrap() {
+  // Rate limiting — protection brute-force sur les routes sensibles
+  await app.register(rateLimit, { global: false })
+
   // CORS — en production (NODE_ENV=production), le frontend est servi par ce même serveur
   // (même origine), donc CORS n'est pas nécessaire.
   // En développement, on autorise explicitement l'origine du dev server Vite.

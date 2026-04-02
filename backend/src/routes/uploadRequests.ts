@@ -115,7 +115,9 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
   })
 
   // POST /api/upload-requests/:token/upload - Deposer des fichiers (public)
-  app.post<{ Params: { token: string } }>('/:token/upload', async (req, reply) => {
+  app.post<{ Params: { token: string } }>('/:token/upload', {
+    config: { rateLimit: { max: 5, timeWindow: '1 minute' } }
+  }, async (req, reply) => {
     const request = await prisma.uploadRequest.findUnique({
       where: { token: req.params.token },
       include: { _count: { select: { receivedFiles: true } } }

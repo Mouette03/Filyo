@@ -38,7 +38,9 @@ export async function authRoutes(app: FastifyInstance) {
   })
 
   // POST /api/auth/login
-  app.post('/login', async (req, reply) => {
+  app.post('/login', {
+    config: { rateLimit: { max: 10, timeWindow: '1 minute' } }
+  }, async (req, reply) => {
     const body = loginSchema.safeParse(req.body)
     if (!body.success) return reply.code(400).send({ code: 'INVALID_DATA' })
 
@@ -232,7 +234,9 @@ export async function authRoutes(app: FastifyInstance) {
   })
 
   // POST /api/auth/forgot-password — demander un lien de réinitialisation
-  app.post('/forgot-password', async (req, reply) => {
+  app.post('/forgot-password', {
+    config: { rateLimit: { max: 5, timeWindow: '5 minutes' } }
+  }, async (req, reply) => {
     const body = req.body as Record<string, unknown>
     const email = typeof body?.email === 'string' ? body.email.trim() : null
     const lang = typeof body?.lang === 'string' ? body.lang : 'fr'
