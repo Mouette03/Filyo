@@ -296,11 +296,15 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
     },
     async (req, reply) => {
       const { to, lang = 'fr' } = req.body
-      const addresses: string[] = (to || '').split(',').map((s: string) => s.trim()).filter(Boolean)
+      const MAX_RECIPIENTS = 10
+      const raw: string[] = (to || '').split(',').map((s: string) => s.trim()).filter(Boolean)
+      const addresses: string[] = [...new Set(raw)]
       if (addresses.length === 0 || addresses.some(a => !isValidEmail(a))) {
         return reply.code(400).send({ code: 'EMAIL_INVALID' })
       }
-      const toField = addresses.join(', ')
+      if (addresses.length > MAX_RECIPIENTS) {
+        return reply.code(400).send({ code: 'TOO_MANY_RECIPIENTS', max: MAX_RECIPIENTS })
+      }
       const where = ownerWhere(req, req.params.id)
       const request = await prisma.uploadRequest.findFirst({ where })
       if (!request) return reply.code(403).send({ code: 'FORBIDDEN' })
@@ -323,7 +327,8 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
       try {
         await transporter.sendMail({
           from: `"${appName}" <${settings.smtpFrom}>`,
-          to: toField,
+          to: settings.smtpFrom,
+          bcc: addresses.join(', '),
           subject,
           text: bodyText,
           html: `<div style="font-family:system-ui,sans-serif;max-width:520px;margin:0 auto;background:#0d0e1a;color:#e8eaf6;padding:32px 24px;border-radius:16px">
@@ -340,7 +345,7 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
         req.log.error({ err: err.message }, 'Upload request email failed')
         return reply.code(502).send({ code: 'EMAIL_SEND_FAILED', detail: err.message })
       }
-      req.log.info({ id: req.params.id, to: toField }, 'Upload request email sent')
+      req.log.info({ id: req.params.id, recipientCount: addresses.length }, 'Upload request email sent')
       return { success: true }
     }
   )
