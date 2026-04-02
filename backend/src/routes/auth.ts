@@ -39,7 +39,7 @@ export async function authRoutes(app: FastifyInstance) {
 
   // POST /api/auth/login
   app.post('/login', {
-    config: { rateLimit: { max: 10, timeWindow: '1 minute' } }
+    config: { rateLimit: { max: 5, timeWindow: '1 minute' } }
   }, async (req, reply) => {
     const body = loginSchema.safeParse(req.body)
     if (!body.success) return reply.code(400).send({ code: 'INVALID_DATA' })
