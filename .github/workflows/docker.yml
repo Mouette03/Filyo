@@ -1,8 +1,6 @@
 name: Build & Publish Docker Image sqlite/MariaDB
 
 on:
-  push:
-    tags: ["v*.*.*"]
   release:
     types: [published]
   workflow_dispatch:
