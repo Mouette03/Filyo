@@ -31,7 +31,7 @@
 "@types/fs-extra@11.0.4","MIT","https://github.com/DefinitelyTyped/DefinitelyTyped"
 "@types/jsonfile@6.1.4","MIT","https://github.com/DefinitelyTyped/DefinitelyTyped"
 "@types/mime-types@2.1.4","MIT","https://github.com/DefinitelyTyped/DefinitelyTyped"
-"@types/node@24.12.0","MIT","https://github.com/DefinitelyTyped/DefinitelyTyped"
+"@types/node@24.12.2","MIT","https://github.com/DefinitelyTyped/DefinitelyTyped"
 "@types/nodemailer@7.0.11","MIT","https://github.com/DefinitelyTyped/DefinitelyTyped"
 "abstract-logging@2.0.1","MIT","https://github.com/jsumners/abstract-logging"
 "ajv-formats@3.0.1","MIT","https://github.com/ajv-validator/ajv-formats"
