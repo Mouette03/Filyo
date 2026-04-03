@@ -17,7 +17,13 @@ import { settingsRoutes } from './routes/settings'
 import { runScheduledCleanup } from './lib/cleanup'
 import { UPLOAD_DIR } from './lib/config'
 
-const appVersion: string = (JSON.parse(readFileSync(path.join(__dirname, '../package.json'), 'utf-8')) as { version: string }).version
+const appVersion: string = (() => {
+  try {
+    return (JSON.parse(readFileSync(path.join(__dirname, '../package.json'), 'utf-8')) as { version?: string }).version ?? 'unknown'
+  } catch {
+    return process.env.APP_VERSION ?? 'unknown'
+  }
+})()
 
 const UPLOAD_TIMEOUT_MIN_MS = 60_000        // 1 min
 const UPLOAD_TIMEOUT_MAX_MS = 7_200_000     // 2 h

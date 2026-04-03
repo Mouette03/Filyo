@@ -194,7 +194,7 @@ Application de partage de fichiers **auto-hébergée**, sans stockage S3. Design
 |---|---|
 | **Envoi de fichiers** | Upload multi-fichiers avec barre de progression et glisser-déposer |
 | **Protection** | Mot de passe optionnel par fichier/lien |
-| **Rate limiting** | Protection brute-force sur login, reset mot de passe et dépôt de fichiers |
+| **Limitation de débit** | Protection brute-force sur login, reset mot de passe et dépôt de fichiers |
 | **Expiration** | 1h / 24h / 7j / 30j / jamais |
 | **Max téléchargements** | Limite configurable par lien |
 | **Envoi par email** | Envoi du lien de partage par email |
