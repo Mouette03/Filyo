@@ -317,4 +317,4 @@ docker pull ghcr.io/mouette03/filyo:v1.0.3
 
 *licenses.csv auto-mis à jour via GitHub Actions*
 
-</details>
+</details> 
