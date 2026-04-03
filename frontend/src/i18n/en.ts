@@ -81,8 +81,8 @@ export const en = {
   'home.modal.linkSingle': '1 share link available',
   'home.modal.linksMultiple': '{{count}} share links available',
   'home.modal.emailLabel': 'Send by email',
-  'home.modal.emailPlaceholder': 'recipient@example.com',
-  'home.modal.emailHint': 'The share link will be sent to this address.',
+  'home.modal.emailPlaceholder': 'recipient@example.com, other@example.com',
+  'home.modal.emailHint': 'The share link will be sent to these addresses. Multiple addresses can be separated by commas.',
   'home.modal.newUpload': 'New upload',
   'home.modal.done': 'Done',
   'home.modal.linksBatch': '{{count}} files — 1 shared link',
@@ -109,7 +109,7 @@ export const en = {
   'dash.expiresNow': 'Expire now',
   'dash.expiryEdit': 'Edit expiry',
   'dash.dl': 'dl.',
-  'dash.emailPlaceholder': 'email@example.com',
+  'dash.emailPlaceholder': 'email@example.com, other@example.com',
   'dash.batchHideFilenames': 'Hidden filenames',
   'dash.batchGroupTitle': 'Batch of {{count}} files',
   'dash.batchGroupSize': '{{count}} files · {{size}}',
@@ -419,6 +419,8 @@ export const en = {
   'toast.emailFieldRequired': 'Email address is required',
   'toast.messageRequired': 'Message is required',
   'toast.sendError': 'Error sending',
+  'toast.tooManyRequests': 'Too many attempts, please try again in a minute',
+  'toast.tooManyRequestsForgot': 'Too many attempts, please try again in a few minutes',
 
   // ── Server error codes ────────────────────────────────────────
   'error.invalidCredentials': 'Invalid credentials',

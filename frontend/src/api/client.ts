@@ -17,7 +17,10 @@ api.interceptors.request.use(config => {
 api.interceptors.response.use(
   r => r,
   err => {
-    if (err.response?.status === 401 && useAuthStore.getState().isAuthenticated) {
+    const code = err.response?.data?.code
+    // Déconnecter si le token est invalide/expiré ou si l'utilisateur n'existe plus — pas sur un mauvais mot de passe applicatif
+    const SESSION_ENDING_CODES = ['INVALID_TOKEN', 'NOT_FOUND']
+    if (err.response?.status === 401 && SESSION_ENDING_CODES.includes(code) && useAuthStore.getState().isAuthenticated) {
       useAuthStore.getState().logout()
       window.location.href = '/login'
     }
@@ -101,10 +104,14 @@ export const getReceivedFiles = (id: string) => api.get(`/upload-requests/${id}/
 export const submitToUploadRequest = (
   token: string,
   formData: FormData,
-  onProgress?: (pct: number) => void
+  onProgress?: (pct: number) => void,
+  password?: string
 ) =>
   api.post(`/upload-requests/${token}/upload`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
+    headers: {
+      'Content-Type': 'multipart/form-data',
+      ...(password ? { 'X-Upload-Password': btoa(unescape(encodeURIComponent(password))) } : {})
+    },
     onUploadProgress: e => {
       if (onProgress && e.total) onProgress(Math.round((e.loaded * 100) / e.total))
     }

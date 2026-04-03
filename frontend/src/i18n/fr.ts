@@ -82,8 +82,8 @@ export const fr = {
   'home.modal.linksMultiple': '{{count}} liens de partage disponibles',
   'home.modal.linksBatch': '{{count}} fichiers — 1 lien groupé',
   'home.modal.emailLabel': 'Envoyer par email',
-  'home.modal.emailPlaceholder': 'destinataire@exemple.fr',
-  'home.modal.emailHint': 'Le lien de partage sera envoyé à cette adresse.',
+  'home.modal.emailPlaceholder': 'destinataire@exemple.fr, autre@exemple.fr',
+  'home.modal.emailHint': 'Le lien de partage sera envoyé à ces adresses. Plusieurs adresses possibles en les séparant par des virgules.',
   'home.modal.newUpload': 'Nouvel envoi',
   'home.modal.done': 'Terminé',
   'home.hideFilenames': 'Masquer les noms de fichiers',
@@ -109,7 +109,7 @@ export const fr = {
   'dash.expiresNow': 'Expirer maintenant',
   'dash.expiryEdit': 'Modifier expiration',
   'dash.dl': 'télécharg.',
-  'dash.emailPlaceholder': 'email@exemple.fr',
+  'dash.emailPlaceholder': 'email@exemple.fr, autre@exemple.fr',
   'dash.batchHideFilenames': 'Noms masqués',
   'dash.batchGroupSize': '{{count}} fichiers · {{size}}',
   'dash.batchGroupTitle': 'Lot de {{count}} fichiers',
@@ -419,6 +419,8 @@ export const fr = {
   'toast.emailFieldRequired': "L'adresse email est obligatoire",
   'toast.messageRequired': 'Le message est obligatoire',
   'toast.sendError': "Erreur lors de l'envoi",
+  'toast.tooManyRequests': 'Trop de tentatives, réessayez dans une minute',
+  'toast.tooManyRequestsForgot': 'Trop de tentatives, réessayez dans quelques minutes',
 
   // ── Erreurs serveur (codes machine) ──────────────────────────
   'error.invalidCredentials': 'Identifiants incorrects',

@@ -56,7 +56,7 @@ export async function adminRoutes(app: FastifyInstance) {
   })
 
   // POST /api/admin/cleanup - Supprimer les fichiers expirés (forcé, ignore délais de grâce)
-  app.post('/cleanup', authHook, async (req: any) => {
+  app.post('/cleanup', authHook, async (req) => {
     const result = await runForceCleanup()
     req.log.info(result, 'Manual cleanup completed')
     return result
