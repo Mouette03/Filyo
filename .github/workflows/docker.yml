@@ -16,7 +16,6 @@ jobs:
   lint:
     name: Lint & type-check
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' || github.event.base_ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
 
