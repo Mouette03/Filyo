@@ -1,11 +1,5 @@
 name: Update licenses
 on:
-  push:
-    branches:
-      - '**'
-    paths: 
-      - '**/package.json'
-      - '**/package-lock.json'
   schedule:
     - cron: '0 2 1 * *'
   workflow_dispatch:
