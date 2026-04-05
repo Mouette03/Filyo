@@ -8,18 +8,30 @@ export async function userRoutes(app: FastifyInstance) {
 
   // GET /api/users
   app.get('/', adminOnly, async () => {
-    return prisma.user.findMany({
-      select: { id: true, email: true, name: true, role: true, active: true, createdAt: true, lastLogin: true },
+    const users = await prisma.user.findMany({
+      select: { id: true, email: true, name: true, role: true, active: true, createdAt: true, lastLogin: true, storageQuotaBytes: true },
       orderBy: { createdAt: 'asc' }
     })
+    const usageRows = await prisma.file.groupBy({
+      by: ['userId'],
+      _sum: { size: true }
+    })
+    const usageMap = new Map(
+      usageRows.filter(r => r.userId).map(r => [r.userId!, r._sum.size ?? BigInt(0)])
+    )
+    return users.map(u => ({
+      ...u,
+      storageQuotaBytes: u.storageQuotaBytes?.toString() ?? null,
+      storageUsedBytes: (usageMap.get(u.id) ?? BigInt(0)).toString()
+    }))
   })
 
   // POST /api/users — créer un utilisateur
-  app.post<{ Body: { email: string; name: string; password: string; role: string } }>(
+  app.post<{ Body: { email: string; name: string; password: string; role: string; storageQuotaMB?: number | null } }>(
     '/',
     adminOnly,
     async (req, reply) => {
-      const { email, name, password, role } = req.body
+      const { email, name, password, role, storageQuotaMB } = req.body
       if (!email || !name || !password) {
         return reply.code(400).send({ code: 'MISSING_FIELDS' })
       }
@@ -27,22 +39,25 @@ export async function userRoutes(app: FastifyInstance) {
       if (existing) return reply.code(409).send({ code: 'EMAIL_TAKEN' })
 
       const hashed = await bcrypt.hash(password, 12)
+      const storageQuotaBytes = storageQuotaMB != null && storageQuotaMB > 0
+        ? BigInt(Math.round(storageQuotaMB * 1024 * 1024))
+        : null
       const user = await prisma.user.create({
-        data: { email, name, password: hashed, role: role === 'ADMIN' ? 'ADMIN' : 'USER' },
-        select: { id: true, email: true, name: true, role: true, active: true, createdAt: true }
+        data: { email, name, password: hashed, role: role === 'ADMIN' ? 'ADMIN' : 'USER', storageQuotaBytes },
+        select: { id: true, email: true, name: true, role: true, active: true, createdAt: true, storageQuotaBytes: true }
       })
       req.log.info({ email, role: user.role }, 'User created by admin')
-      return reply.code(201).send(user)
+      return reply.code(201).send({ ...user, storageQuotaBytes: user.storageQuotaBytes?.toString() ?? null, storageUsedBytes: '0' })
     }
   )
 
   // PATCH /api/users/:id — modifier un utilisateur
-  app.patch<{ Params: { id: string }; Body: { name?: string; email?: string; role?: string; active?: boolean; password?: string } }>(
+  app.patch<{ Params: { id: string }; Body: { name?: string; email?: string; role?: string; active?: boolean; password?: string; storageQuotaMB?: number | null } }>(
     '/:id',
     adminOnly,
     async (req, reply) => {
       const caller = req.user
-      const { name, email, role, active, password } = req.body
+      const { name, email, role, active, password, storageQuotaMB } = req.body
       const isSelf = caller.id === req.params.id
 
       // Bloquer auto-rétrogradation et auto-désactivation
@@ -72,15 +87,22 @@ export async function userRoutes(app: FastifyInstance) {
       if (role !== undefined) data.role = role === 'ADMIN' ? 'ADMIN' : 'USER'
       if (active !== undefined) data.active = active
       if (password) data.password = await bcrypt.hash(password, 12)
+      if (storageQuotaMB !== undefined) {
+        data.storageQuotaBytes = storageQuotaMB != null && storageQuotaMB > 0
+          ? BigInt(Math.round(storageQuotaMB * 1024 * 1024))
+          : null
+      }
 
       try {
         const user = await prisma.user.update({
           where: { id: req.params.id },
           data,
-          select: { id: true, email: true, name: true, role: true, active: true, createdAt: true }
+          select: { id: true, email: true, name: true, role: true, active: true, createdAt: true, storageQuotaBytes: true }
         })
         req.log.info({ id: req.params.id }, 'User updated by admin')
-        return user
+        const usedAgg = await prisma.file.aggregate({ _sum: { size: true }, where: { userId: req.params.id } })
+        const storageUsedBytes = (usedAgg._sum.size ?? BigInt(0)).toString()
+        return { ...user, storageQuotaBytes: user.storageQuotaBytes?.toString() ?? null, storageUsedBytes }
       } catch {
         return reply.code(404).send({ code: 'USER_NOT_FOUND' })
       }

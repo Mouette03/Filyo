@@ -79,8 +79,11 @@ export default function HomePage() {
       setFiles([])
       setShowShareModal(true)
       toast.success(t('toast.uploadSuccess', { count: String(res.data.length) }))
-    } catch {
-      toast.error(t('toast.uploadFailed'))
+    } catch (err: any) {
+      const code = err?.response?.data?.code
+      if (code === 'QUOTA_EXCEEDED') toast.error(t('error.quotaExceeded'))
+      else if (code === 'FILE_TOO_LARGE') toast.error(t('error.fileTooLarge'))
+      else toast.error(t('toast.uploadFailed'))
     } finally {
       setUploading(false)
     }

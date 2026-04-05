@@ -16,6 +16,17 @@ export async function fileRoutes(app: FastifyInstance) {
     const userId: string = req.user.id
     const appSettings = await getAppSettings()
     const globalMaxBytes = appSettings.maxFileSizeBytes ?? null
+
+    // Vérification quota utilisateur
+    const userRecord = await prisma.user.findUnique({ where: { id: userId }, select: { storageQuotaBytes: true } })
+    if (userRecord?.storageQuotaBytes != null) {
+      const usedAgg = await prisma.file.aggregate({ _sum: { size: true }, where: { userId } })
+      const usedBytes = usedAgg._sum.size ?? BigInt(0)
+      if (usedBytes >= userRecord.storageQuotaBytes) {
+        return reply.code(413).send({ code: 'QUOTA_EXCEEDED' })
+      }
+    }
+
     const parts = req.parts()
     const uploadedFiles: any[] = []
     let expiresIn: string | undefined
