@@ -96,9 +96,23 @@ async function bootstrap() {
     secret: process.env.JWT_SECRET
   })
 
-  // Sécurité HTTP headers (CSP désactivée pour compatibilité SPA React/Vite)
+  // Sécurité HTTP headers
+  // En production : CSP stricte (tout est servi par le même serveur, 'self' suffit)
+  // En développement : CSP désactivée (frontend Vite tourne sur un port différent)
   await app.register(helmet, {
-    contentSecurityPolicy: false
+    contentSecurityPolicy: isDev ? false : {
+      directives: {
+        defaultSrc:             ["'self'"],
+        scriptSrc:              ["'self'", "'unsafe-inline'"],
+        styleSrc:               ["'self'", "'unsafe-inline'"],
+        imgSrc:                 ["'self'", 'data:', 'blob:'],
+        fontSrc:                ["'self'", 'data:'],
+        connectSrc:             ["'self'"],
+        objectSrc:              ["'none'"],
+        frameAncestors:         ["'none'"],
+        upgradeInsecureRequests: [], // désactivé : le serveur peut tourner en HTTP pur
+      }
+    }
   })
 
   // Multipart (file upload)
