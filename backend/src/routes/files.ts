@@ -170,7 +170,11 @@ export async function fileRoutes(app: FastifyInstance) {
         where: { id: req.params.id, userId: req.user.id }
       })
       if (!file) return reply.code(404).send({ code: 'FILE_NOT_FOUND' })
-      const expiresAt = req.body.expiresAt ? new Date(req.body.expiresAt) : null
+      let expiresAt: Date | null = null
+      if (req.body.expiresAt) {
+        expiresAt = new Date(req.body.expiresAt)
+        if (isNaN(expiresAt.getTime())) return reply.code(400).send({ code: 'INVALID_DATE' })
+      }
       await prisma.file.update({ where: { id: req.params.id }, data: { expiresAt } })
       await prisma.share.updateMany({ where: { fileId: req.params.id }, data: { expiresAt } })
       return { expiresAt }

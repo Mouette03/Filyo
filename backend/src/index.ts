@@ -4,6 +4,7 @@ import multipart from '@fastify/multipart'
 import jwt from '@fastify/jwt'
 import staticFiles from '@fastify/static'
 import rateLimit from '@fastify/rate-limit'
+import helmet from '@fastify/helmet'
 import path from 'path'
 import { existsSync, readFileSync } from 'fs'
 import { readFile } from 'fs/promises'
@@ -34,14 +35,18 @@ const UPLOAD_TIMEOUT_MS = Number.isFinite(_parsedTimeout) && _parsedTimeout >= U
   ? _parsedTimeout
   : UPLOAD_TIMEOUT_DEFAULT_MS
 
+const isDev = process.env.NODE_ENV !== 'production'
+
 const app = Fastify({
   logger: {
     level: process.env.LOG_LEVEL || 'info',
-    transport: {
-      target: 'pino-pretty',
-      level: process.env.LOG_LEVEL || 'info',
-      options: { colorize: true }
-    }
+    ...(isDev && {
+      transport: {
+        target: 'pino-pretty',
+        level: process.env.LOG_LEVEL || 'info',
+        options: { colorize: true }
+      }
+    })
   },
   disableRequestLogging: true,
   bodyLimit: 10 * 1024 * 1024 * 1024, // 10 GB
@@ -86,8 +91,25 @@ async function bootstrap() {
   })
 
   // JWT
+  if (!process.env.JWT_SECRET) throw new Error('JWT_SECRET must be set (use a random 32+ character string)')
   await app.register(jwt, {
-    secret: process.env.JWT_SECRET || 'filyo-super-secret-change-me-in-production'
+    secret: process.env.JWT_SECRET
+  })
+
+  // Sécurité HTTP headers
+  await app.register(helmet, {
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:', 'blob:'],
+        fontSrc: ["'self'", 'data:'],
+        connectSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        frameAncestors: ["'none'"],
+      }
+    }
   })
 
   // Multipart (file upload)
