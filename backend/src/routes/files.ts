@@ -16,6 +16,12 @@ export async function fileRoutes(app: FastifyInstance) {
     const userId: string = req.user.id
     const appSettings = await getAppSettings()
     const globalMaxBytes = appSettings.maxFileSizeBytes ?? null
+    const contentLength = req.headers['content-length'] ? BigInt(req.headers['content-length']) : null
+
+    // Rejet anticipé via Content-Length vs limite globale par fichier
+    if (globalMaxBytes !== null && contentLength !== null && contentLength > globalMaxBytes) {
+      return reply.code(413).send({ code: 'FILE_TOO_LARGE', maxBytes: globalMaxBytes.toString() })
+    }
 
     // Vérification quota utilisateur
     const userRecord = await prisma.user.findUnique({ where: { id: userId }, select: { storageQuotaBytes: true } })
@@ -24,17 +30,11 @@ export async function fileRoutes(app: FastifyInstance) {
     if (quotaBytes !== null) {
       const usedAgg = await prisma.file.aggregate({ _sum: { size: true }, where: { userId } })
       usedBytes = usedAgg._sum.size ?? BigInt(0)
-      // Vérifier que le quota n'est pas déjà dépassé avant même de commencer
       if (usedBytes >= quotaBytes) {
         return reply.code(413).send({ code: 'QUOTA_EXCEEDED' })
       }
-      // Rejet anticipé via Content-Length si disponible (évite de streamer inutilement)
-      const contentLength = req.headers['content-length']
-      if (contentLength) {
-        const declared = BigInt(contentLength)
-        if (usedBytes + declared > quotaBytes) {
-          return reply.code(413).send({ code: 'QUOTA_EXCEEDED' })
-        }
+      if (contentLength !== null && usedBytes + contentLength > quotaBytes) {
+        return reply.code(413).send({ code: 'QUOTA_EXCEEDED' })
       }
     }
 

@@ -141,14 +141,27 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
       if (!ok) return reply.code(401).send({ code: 'WRONG_PASSWORD' })
     }
 
+    const appSettings = await getAppSettings()
+    const globalMaxBytes = appSettings.maxFileSizeBytes ?? null
+    const perRequestMax = request.maxSizeBytes ?? null
+    // Limite effective = le plus restrictif des deux
+    const effectiveMaxBytes = perRequestMax !== null && globalMaxBytes !== null
+      ? (perRequestMax < globalMaxBytes ? perRequestMax : globalMaxBytes)
+      : (perRequestMax ?? globalMaxBytes)
+
+    // Rejet anticipé via Content-Length (avant toute écriture sur disque)
+    if (effectiveMaxBytes !== null) {
+      const contentLength = req.headers['content-length']
+      if (contentLength && BigInt(contentLength) > effectiveMaxBytes) {
+        return reply.code(413).send({ code: 'FILE_TOO_LARGE' })
+      }
+    }
+
     const parts = req.parts()
     const savedFiles: any[] = []
     let uploaderName: string | undefined
     let uploaderEmail: string | undefined
     let message: string | undefined
-
-    const appSettings = await getAppSettings()
-    const globalMaxBytes = appSettings.maxFileSizeBytes ?? null
 
     for await (const part of parts) {
       if (part.type === 'field') {
@@ -172,15 +185,11 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
 
         const writeStream = fs.createWriteStream(filePath)
         let size = 0n
-        const perRequestMax = request.maxSizeBytes ?? null
-        const maxBytes = perRequestMax !== null && globalMaxBytes !== null
-          ? (perRequestMax < globalMaxBytes ? perRequestMax : globalMaxBytes)
-          : (perRequestMax ?? globalMaxBytes)
 
         try {
           for await (const chunk of part.file) {
             size += BigInt(chunk.length)
-            if (maxBytes !== null && size > maxBytes) {
+            if (effectiveMaxBytes !== null && size > effectiveMaxBytes) {
               writeStream.destroy()
               await fs.remove(filePath).catch(() => {})
               await Promise.all(savedFiles.map((f: any) => fs.remove(f.path).catch(() => {})))
