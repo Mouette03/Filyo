@@ -97,22 +97,11 @@ async function bootstrap() {
   })
 
   // Sécurité HTTP headers
-  // En production : CSP stricte (tout est servi par le même serveur, 'self' suffit)
-  // En développement : CSP désactivée (frontend Vite tourne sur un port différent)
+  // CSP désactivée : les autres headers (X-Frame-Options, X-Content-Type-Options,
+  // Referrer-Policy…) restent actifs et protègent contre clickjacking, MIME sniffing, etc.
+  // La CSP fine sur SPA React/Vite nécessite une configuration avancée (nonces/hashes).
   await app.register(helmet, {
-    contentSecurityPolicy: isDev ? false : {
-      directives: {
-        defaultSrc:             ["'self'"],
-        scriptSrc:              ["'self'", "'unsafe-inline'"],
-        styleSrc:               ["'self'", "'unsafe-inline'"],
-        imgSrc:                 ["'self'", 'data:', 'blob:'],
-        fontSrc:                ["'self'", 'data:'],
-        connectSrc:             ["'self'"],
-        objectSrc:              ["'none'"],
-        frameAncestors:         ["'none'"],
-        upgradeInsecureRequests: false, // désactivé : le serveur peut tourner en HTTP pur
-      }
-    }
+    contentSecurityPolicy: false
   })
 
   // Multipart (file upload)
