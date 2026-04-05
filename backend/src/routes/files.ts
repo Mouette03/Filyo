@@ -19,11 +19,22 @@ export async function fileRoutes(app: FastifyInstance) {
 
     // Vérification quota utilisateur
     const userRecord = await prisma.user.findUnique({ where: { id: userId }, select: { storageQuotaBytes: true } })
-    if (userRecord?.storageQuotaBytes != null) {
+    const quotaBytes = userRecord?.storageQuotaBytes ?? null
+    let usedBytes = BigInt(0)
+    if (quotaBytes !== null) {
       const usedAgg = await prisma.file.aggregate({ _sum: { size: true }, where: { userId } })
-      const usedBytes = usedAgg._sum.size ?? BigInt(0)
-      if (usedBytes >= userRecord.storageQuotaBytes) {
+      usedBytes = usedAgg._sum.size ?? BigInt(0)
+      // Vérifier que le quota n'est pas déjà dépassé avant même de commencer
+      if (usedBytes >= quotaBytes) {
         return reply.code(413).send({ code: 'QUOTA_EXCEEDED' })
+      }
+      // Rejet anticipé via Content-Length si disponible (évite de streamer inutilement)
+      const contentLength = req.headers['content-length']
+      if (contentLength) {
+        const declared = BigInt(contentLength)
+        if (usedBytes + declared > quotaBytes) {
+          return reply.code(413).send({ code: 'QUOTA_EXCEEDED' })
+        }
       }
     }
 
@@ -56,6 +67,12 @@ export async function fileRoutes(app: FastifyInstance) {
               await fs.remove(filePath).catch(() => {})
               await Promise.all(uploadedFiles.map((f: any) => fs.remove(f.path).catch(() => {})))
               return reply.code(413).send({ code: 'FILE_TOO_LARGE', maxBytes: globalMaxBytes.toString() })
+            }
+            if (quotaBytes !== null && usedBytes + BigInt(size) > quotaBytes) {
+              writeStream.destroy()
+              await fs.remove(filePath).catch(() => {})
+              await Promise.all(uploadedFiles.map((f: any) => fs.remove(f.path).catch(() => {})))
+              return reply.code(413).send({ code: 'QUOTA_EXCEEDED' })
             }
             if (!writeStream.write(chunk)) {
               await new Promise<void>((resolve, reject) => {
