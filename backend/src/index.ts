@@ -110,7 +110,7 @@ async function bootstrap() {
         connectSrc:             ["'self'"],
         objectSrc:              ["'none'"],
         frameAncestors:         ["'none'"],
-        upgradeInsecureRequests: [], // désactivé : le serveur peut tourner en HTTP pur
+        upgradeInsecureRequests: false, // désactivé : le serveur peut tourner en HTTP pur
       }
     }
   })
