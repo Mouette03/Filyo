@@ -8,6 +8,7 @@ import helmet from '@fastify/helmet'
 import path from 'path'
 import { existsSync, readFileSync } from 'fs'
 import { readFile } from 'fs/promises'
+import { prisma } from './lib/prisma'
 import { fileRoutes } from './routes/files'
 import { shareRoutes } from './routes/shares'
 import { uploadRequestRoutes } from './routes/uploadRequests'
@@ -57,6 +58,16 @@ const app = Fastify({
 app.decorate('authenticate', async function (req: FastifyRequest, reply: FastifyReply) {
   try {
     await req.jwtVerify()
+    // Vérifier que l'utilisateur existe toujours en base (protège contre tokens d'anciennes instances)
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { id: true, active: true, role: true }
+    })
+    if (!user || !user.active) {
+      return reply.code(401).send({ code: 'INVALID_TOKEN' })
+    }
+    // Rafraîchir le rôle depuis la DB pour éviter des tokens avec des rôles obsolètes
+    req.user.role = user.role
   } catch {
     return reply.code(401).send({ code: 'INVALID_TOKEN' })
   }

@@ -28,9 +28,13 @@ export default function LoginPage() {
   const { t, lang } = useT()
 
   useEffect(() => {
-    if (isAuthenticated) navigate('/')
     getSettings().then(r => setSettings(r.data)).catch(() => {})
-    checkSetup().then(r => setSetupNeeded(r.data.setupNeeded)).catch(() => setSetupNeeded(false))
+    checkSetup().then(r => {
+      const needed = r.data.setupNeeded
+      setSetupNeeded(needed)
+      // Ne rediriger que si authentifié ET setup déjà fait
+      if (!needed && isAuthenticated) navigate('/')
+    }).catch(() => setSetupNeeded(false))
   }, [isAuthenticated, navigate])
 
   const resetForm = () => {
