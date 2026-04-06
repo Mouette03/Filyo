@@ -71,11 +71,14 @@ export async function fileRoutes(app: FastifyInstance) {
               await Promise.all(uploadedFiles.map((f: any) => fs.remove(f.path).catch(() => {})))
               return reply.code(413).send({ code: 'FILE_TOO_LARGE', maxBytes: globalMaxBytes.toString() })
             }
-            if (quotaBytes !== null && usedBytes + BigInt(size) > quotaBytes) {
-              writeStream.destroy()
-              await fs.remove(filePath).catch(() => {})
-              await Promise.all(uploadedFiles.map((f: any) => fs.remove(f.path).catch(() => {})))
-              return reply.code(413).send({ code: 'QUOTA_EXCEEDED' })
+            if (quotaBytes !== null) {
+              const uploadedSize = uploadedFiles.reduce((acc: bigint, f: any) => acc + f.size, BigInt(0))
+              if (usedBytes + uploadedSize + BigInt(size) > quotaBytes) {
+                writeStream.destroy()
+                await fs.remove(filePath).catch(() => {})
+                await Promise.all(uploadedFiles.map((f: any) => fs.remove(f.path).catch(() => {})))
+                return reply.code(413).send({ code: 'QUOTA_EXCEEDED' })
+              }
             }
             if (!writeStream.write(chunk)) {
               await new Promise<void>((resolve, reject) => {
