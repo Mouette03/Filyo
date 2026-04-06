@@ -57,6 +57,7 @@
 | **Themes** | Dark/Light/Auto + customizable accent colors |
 | **i18n** | Fully translated in French and English |
 | **Docker** | Multi-arch images (amd64 + arm64), SQLite and MariaDB variants |
+| **Per-user storage quota** | Admin can set a storage limit per user (MB/GB); enforced on upload to prevent disk saturation |
 
 ---
 
@@ -98,10 +99,13 @@ labels:
 
 | Variable | Default | Description |
 |---|---|---|
-| `JWT_SECRET` | *required prod* | **Change in production!** |
-| `LOG_LEVEL` | `info` | `silent\|error\|warn\|info\|debug` |
-| `PORT` | `3001` | Server port |
-| `DATA_PATH` | `./data` | Data folder |
+| `JWT_SECRET` | *required, no default* | **Required — must be set before first launch.** Also used as the AES-256-GCM encryption key for the SMTP password stored in the database. |
+| `PORT` | `3001` | Host port exposed by the container (internal port is always 3001) |
+| `DATA_PATH` | `./data` | Data folder (database + uploads) |
+| `LOG_LEVEL` | `info` | Pino log level: `silent\|error\|warn\|info\|debug` |
+
+> [!NOTE]
+> The SMTP password is always stored **encrypted** in the database (AES-256-GCM, key derived from `JWT_SECRET`). It is never stored in plaintext.
 
 **SQLite** : `DATABASE_URL=file:/data/filyo.db`
 **MariaDB** : `DB_HOST`, `DB_USER`, `DB_PASSWORD`, etc.
@@ -209,6 +213,7 @@ Application de partage de fichiers **auto-hébergée**, sans stockage S3. Design
 | **Thèmes** | Sombre/Clair/Auto + couleurs personnalisables |
 | **i18n** | Français + Anglais |
 | **Docker** | Multi-arch (amd64/arm64), SQLite + MariaDB |
+| **Quota stockage par utilisateur** | L'administrateur peut définir une limite de stockage par utilisateur (MB/GB) ; appliquée lors des uploads pour éviter la saturation du disque |
 
 ---
 
@@ -250,10 +255,13 @@ labels:
 
 | Variable | Défaut | Description |
 |---|---|---|
-| `JWT_SECRET` | *requis prod* | **À changer en prod !** |
-| `LOG_LEVEL` | `info` | `silent\|error\|warn\|info\|debug` |
-| `PORT` | `3001` | Port serveur |
-| `DATA_PATH` | `./data` | Dossier données |
+| `JWT_SECRET` | *obligatoire, aucun défaut* | **Obligatoire — à renseigner avant le premier lancement.** Sert aussi de clé AES-256-GCM pour chiffrer le mot de passe SMTP stocké en base. |
+| `PORT` | `3001` | Port exposé sur l'hôte (le conteneur interne tourne toujours sur 3001) |
+| `DATA_PATH` | `./data` | Dossier données (base de données + uploads) |
+| `LOG_LEVEL` | `info` | Niveau de log Pino : `silent\|error\|warn\|info\|debug` |
+
+> [!NOTE]
+> Le mot de passe SMTP est toujours stocké **chiffré** en base de données (AES-256-GCM, clé dérivée de `JWT_SECRET`). Il n'est jamais stocké en clair.
 
 **SQLite** : `DATABASE_URL=file:/data/filyo.db`
 **MariaDB** : `DB_HOST`, `DB_USER`, `DB_PASSWORD`, etc.
