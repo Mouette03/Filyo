@@ -122,8 +122,11 @@ export async function userRoutes(app: FastifyInstance) {
           select: { id: true, email: true, name: true, role: true, active: true, createdAt: true, storageQuotaBytes: true }
         })
         req.log.info({ id: req.params.id }, 'User updated by admin')
-        const usedAgg = await prisma.file.aggregate({ _sum: { size: true }, where: { userId: req.params.id } })
-        const storageUsedBytes = (usedAgg._sum.size ?? BigInt(0)).toString()
+        const [usedAgg, receivedAgg] = await Promise.all([
+          prisma.file.aggregate({ _sum: { size: true }, where: { userId: req.params.id } }),
+          prisma.receivedFile.aggregate({ _sum: { size: true }, where: { uploadRequest: { userId: req.params.id } } })
+        ])
+        const storageUsedBytes = ((usedAgg._sum.size ?? BigInt(0)) + (receivedAgg._sum.size ?? BigInt(0))).toString()
         return { ...user, storageQuotaBytes: user.storageQuotaBytes?.toString() ?? null, storageUsedBytes }
       } catch {
         return reply.code(404).send({ code: 'USER_NOT_FOUND' })
