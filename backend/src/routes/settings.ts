@@ -6,6 +6,7 @@ import sharp from 'sharp'
 import { prisma } from '../lib/prisma'
 import { UPLOAD_DIR } from '../lib/config'
 import { getAppSettings } from '../lib/appSettings'
+import { encrypt, decrypt } from '../lib/crypto'
 
 const LOGO_DIR = path.join(UPLOAD_DIR, 'logos')
 
@@ -44,12 +45,13 @@ export async function settingsRoutes(app: FastifyInstance) {
   // GET /api/settings/smtp — config SMTP (admin uniquement)
   app.get('/smtp', { onRequest: [app.authenticate, app.adminOnly] }, async () => {
     const s = await getAppSettings()
+    const encKey = process.env.JWT_SECRET!
     return {
       smtpHost: s.smtpHost ?? '',
       smtpPort: s.smtpPort ?? 587,
       smtpFrom: s.smtpFrom ?? '',
       smtpUser: s.smtpUser ?? '',
-      smtpPass: s.smtpPass ?? '',
+      smtpPass: s.smtpPass ? decrypt(s.smtpPass, encKey) : '',
       smtpSecure: s.smtpSecure ?? true
     }
   })
@@ -62,12 +64,14 @@ export async function settingsRoutes(app: FastifyInstance) {
     }
   }>('/smtp', { onRequest: [app.authenticate, app.adminOnly] }, async (req, reply) => {
     const { smtpHost, smtpPort, smtpFrom, smtpUser, smtpPass, smtpSecure } = req.body
+    const encKey = process.env.JWT_SECRET!
+    const encryptedPass = smtpPass ? encrypt(smtpPass, encKey) : undefined
     const updated = await prisma.appSettings.upsert({
       where: { id: 'singleton' },
-      update: { smtpHost, smtpPort, smtpFrom, smtpUser, smtpPass, smtpSecure },
+      update: { smtpHost, smtpPort, smtpFrom, smtpUser, smtpPass: encryptedPass, smtpSecure },
       create: {
         id: 'singleton', appName: 'Filyo',
-        smtpHost, smtpPort, smtpFrom, smtpUser, smtpPass, smtpSecure: smtpSecure ?? true
+        smtpHost, smtpPort, smtpFrom, smtpUser, smtpPass: encryptedPass, smtpSecure: smtpSecure ?? true
       }
     })
     req.log.info({ smtpHost }, 'SMTP configuration updated')
