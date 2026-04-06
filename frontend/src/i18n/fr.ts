@@ -306,6 +306,10 @@ export const fr = {
   'users.neverConnected': 'Jamais connecté',
   'users.lastLogin': 'Dernière connexion {{date}}',
   'users.createdAt': 'Créé {{date}}',
+  'users.quotaLabel': 'Quota de stockage (MB)',
+  'users.quotaPlaceholder': 'Illimité',
+  'users.quotaUnlimited': 'Illimité',
+  'users.quotaUsed': '{{used}} / {{quota}} utilisé',
 
   // ── Toasts ──────────────────────────────────────────────────
   'toast.welcome': 'Bienvenue, {{name}} !',
@@ -321,6 +325,7 @@ export const fr = {
   'toast.requestDeleted': 'Demande supprimée',
   'toast.userCreated': 'Utilisateur créé',
   'toast.userDeleted': 'Utilisateur supprimé',
+  'toast.quotaSaved': 'Quota mis à jour',
   'toast.edited': 'Modifié',
   'toast.avatarUpdated': 'Avatar mis à jour',
   'toast.avatarDeleted': 'Avatar supprimé',
@@ -426,6 +431,7 @@ export const fr = {
   'error.invalidCredentials': 'Identifiants incorrects',
   'error.registrationDisabled': 'Les inscriptions sont désactivées',
   'error.emailTaken': 'Cet email est déjà utilisé',
+  'error.quotaExceeded': 'Quota de stockage dépassé',
   'error.wrongPassword': 'Mot de passe actuel incorrect',
   'error.invalidFormat': 'Format non supporté (png, jpg, webp, gif)',
   'error.cleanupExceedsMax': 'La valeur doit être entre 0 et {{max}} jours',

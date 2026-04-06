@@ -141,14 +141,48 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
       if (!ok) return reply.code(401).send({ code: 'WRONG_PASSWORD' })
     }
 
+    const appSettings = await getAppSettings()
+    const globalMaxBytes = appSettings.maxFileSizeBytes ?? null
+    const perRequestMax = request.maxSizeBytes ?? null
+    // Limite effective = le plus restrictif des deux
+    const effectiveMaxBytes = perRequestMax !== null && globalMaxBytes !== null
+      ? (perRequestMax < globalMaxBytes ? perRequestMax : globalMaxBytes)
+      : (perRequestMax ?? globalMaxBytes)
+
+    // Quota du propriétaire de la demande
+    const ownerId = request.userId
+    const owner = ownerId ? await prisma.user.findUnique({
+      where: { id: ownerId },
+      select: { storageQuotaBytes: true }
+    }) : null
+    const quotaBytes = owner?.storageQuotaBytes ?? null
+    let ownerUsedBytes = BigInt(0)
+    if (quotaBytes !== null && ownerId) {
+      const filesAgg = await prisma.file.aggregate({ _sum: { size: true }, where: { userId: ownerId } })
+      const receivedAgg = await prisma.receivedFile.aggregate({
+        _sum: { size: true },
+        where: { uploadRequest: { userId: ownerId } }
+      })
+      ownerUsedBytes = (filesAgg._sum.size ?? BigInt(0)) + (receivedAgg._sum.size ?? BigInt(0))
+      if (ownerUsedBytes >= quotaBytes) {
+        return reply.code(413).send({ code: 'QUOTA_EXCEEDED' })
+      }
+    }
+
+    // Rejet anticipé via Content-Length (avant toute écriture sur disque)
+    const contentLength = req.headers['content-length'] ? BigInt(req.headers['content-length']) : null
+    if (effectiveMaxBytes !== null && contentLength !== null && contentLength > effectiveMaxBytes) {
+      return reply.code(413).send({ code: 'FILE_TOO_LARGE' })
+    }
+    if (quotaBytes !== null && contentLength !== null && ownerUsedBytes + contentLength > quotaBytes) {
+      return reply.code(413).send({ code: 'QUOTA_EXCEEDED' })
+    }
+
     const parts = req.parts()
     const savedFiles: any[] = []
     let uploaderName: string | undefined
     let uploaderEmail: string | undefined
     let message: string | undefined
-
-    const appSettings = await getAppSettings()
-    const globalMaxBytes = appSettings.maxFileSizeBytes ?? null
 
     for await (const part of parts) {
       if (part.type === 'field') {
@@ -172,19 +206,21 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
 
         const writeStream = fs.createWriteStream(filePath)
         let size = 0n
-        const perRequestMax = request.maxSizeBytes ?? null
-        const maxBytes = perRequestMax !== null && globalMaxBytes !== null
-          ? (perRequestMax < globalMaxBytes ? perRequestMax : globalMaxBytes)
-          : (perRequestMax ?? globalMaxBytes)
 
         try {
           for await (const chunk of part.file) {
             size += BigInt(chunk.length)
-            if (maxBytes !== null && size > maxBytes) {
+            if (effectiveMaxBytes !== null && size > effectiveMaxBytes) {
               writeStream.destroy()
               await fs.remove(filePath).catch(() => {})
               await Promise.all(savedFiles.map((f: any) => fs.remove(f.path).catch(() => {})))
               return reply.code(413).send({ code: 'FILE_TOO_LARGE' })
+            }
+            if (quotaBytes !== null && ownerUsedBytes + size > quotaBytes) {
+              writeStream.destroy()
+              await fs.remove(filePath).catch(() => {})
+              await Promise.all(savedFiles.map((f: any) => fs.remove(f.path).catch(() => {})))
+              return reply.code(413).send({ code: 'QUOTA_EXCEEDED' })
             }
             if (!writeStream.write(chunk)) {
               await new Promise<void>((resolve, reject) => {

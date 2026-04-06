@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { Upload, X, Copy, Check, Lock, Clock, Download, Plus, Trash2, Share2, Mail, Send, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { uploadFiles, sendShareByEmail } from '../api/client'
+import { uploadFiles, sendShareByEmail, getMyQuota } from '../api/client'
 import { formatBytes, getFileIcon, copyToClipboard, isValidEmail } from '../lib/utils'
 import { useT } from '../i18n'
 import { useAppSettingsStore } from '../stores/useAppSettingsStore'
@@ -63,6 +63,22 @@ export default function HomePage() {
       }
     }
 
+    // Validation quota utilisateur côté client (évite d'uploader pour rien)
+    try {
+      const { data: quota } = await getMyQuota()
+      if (quota.storageQuotaBytes !== null) {
+        const quotaBytes = BigInt(quota.storageQuotaBytes)
+        const usedBytes = BigInt(quota.storageUsedBytes)
+        const totalUploadBytes = BigInt(totalSize)
+        if (usedBytes + totalUploadBytes > quotaBytes) {
+          toast.error(t('error.quotaExceeded'))
+          return
+        }
+      }
+    } catch {
+      // En cas d'échec de l'appel quota, on laisse le serveur trancher
+    }
+
     setUploading(true)
     setProgress(0)
 
@@ -79,8 +95,11 @@ export default function HomePage() {
       setFiles([])
       setShowShareModal(true)
       toast.success(t('toast.uploadSuccess', { count: String(res.data.length) }))
-    } catch {
-      toast.error(t('toast.uploadFailed'))
+    } catch (err: any) {
+      const code = err?.response?.data?.code
+      if (code === 'QUOTA_EXCEEDED') toast.error(t('error.quotaExceeded'))
+      else if (code === 'FILE_TOO_LARGE') toast.error(t('error.fileTooLarge'))
+      else toast.error(t('toast.uploadFailed'))
     } finally {
       setUploading(false)
     }

@@ -16,6 +16,28 @@ export async function fileRoutes(app: FastifyInstance) {
     const userId: string = req.user.id
     const appSettings = await getAppSettings()
     const globalMaxBytes = appSettings.maxFileSizeBytes ?? null
+    const contentLength = req.headers['content-length'] ? BigInt(req.headers['content-length']) : null
+
+    // Rejet anticipé via Content-Length vs limite globale par fichier
+    if (globalMaxBytes !== null && contentLength !== null && contentLength > globalMaxBytes) {
+      return reply.code(413).send({ code: 'FILE_TOO_LARGE', maxBytes: globalMaxBytes.toString() })
+    }
+
+    // Vérification quota utilisateur
+    const userRecord = await prisma.user.findUnique({ where: { id: userId }, select: { storageQuotaBytes: true } })
+    const quotaBytes = userRecord?.storageQuotaBytes ?? null
+    let usedBytes = BigInt(0)
+    if (quotaBytes !== null) {
+      const usedAgg = await prisma.file.aggregate({ _sum: { size: true }, where: { userId } })
+      usedBytes = usedAgg._sum.size ?? BigInt(0)
+      if (usedBytes >= quotaBytes) {
+        return reply.code(413).send({ code: 'QUOTA_EXCEEDED' })
+      }
+      if (contentLength !== null && usedBytes + contentLength > quotaBytes) {
+        return reply.code(413).send({ code: 'QUOTA_EXCEEDED' })
+      }
+    }
+
     const parts = req.parts()
     const uploadedFiles: any[] = []
     let expiresIn: string | undefined
@@ -45,6 +67,12 @@ export async function fileRoutes(app: FastifyInstance) {
               await fs.remove(filePath).catch(() => {})
               await Promise.all(uploadedFiles.map((f: any) => fs.remove(f.path).catch(() => {})))
               return reply.code(413).send({ code: 'FILE_TOO_LARGE', maxBytes: globalMaxBytes.toString() })
+            }
+            if (quotaBytes !== null && usedBytes + BigInt(size) > quotaBytes) {
+              writeStream.destroy()
+              await fs.remove(filePath).catch(() => {})
+              await Promise.all(uploadedFiles.map((f: any) => fs.remove(f.path).catch(() => {})))
+              return reply.code(413).send({ code: 'QUOTA_EXCEEDED' })
             }
             if (!writeStream.write(chunk)) {
               await new Promise<void>((resolve, reject) => {

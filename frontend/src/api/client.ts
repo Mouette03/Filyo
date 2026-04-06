@@ -43,12 +43,13 @@ export const uploadAvatar = (form: FormData) =>
   api.post('/auth/avatar', form, { headers: { 'Content-Type': 'multipart/form-data' } })
 export const deleteAvatar = () => api.delete('/auth/avatar')
 export const updateProfile = (data: { name: string }) => api.patch('/auth/profile', data)
+export const getMyQuota = () => api.get<{ storageQuotaBytes: string | null; storageUsedBytes: string }>('/auth/quota')
 
 // ---- Utilisateurs (admin) ----
 export const listUsers = () => api.get('/users')
-export const createUser = (data: { email: string; name: string; password: string; role: string }) =>
+export const createUser = (data: { email: string; name: string; password: string; role: string; storageQuotaMB?: number | null }) =>
   api.post('/users', data)
-export const updateUser = (id: string, data: Partial<{ name: string; email: string; role: string; active: boolean; password: string }>) =>
+export const updateUser = (id: string, data: Partial<{ name: string; email: string; role: string; active: boolean; password: string; storageQuotaMB: number | null }>) =>
   api.patch(`/users/${id}`, data)
 export const deleteUser = (id: string) => api.delete(`/users/${id}`)
 
