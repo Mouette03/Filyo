@@ -151,6 +151,7 @@ export default function SettingsPage() {
   const handleSaveSmtp = async () => {
     setSavingSmtp(true)
     try {
+      const hasNewPassword = smtpPass.trim().length > 0
       await updateSmtpSettings({
         smtpHost: smtpHost.trim() || undefined,
         smtpPort: smtpPort ? parseInt(smtpPort) : undefined,
@@ -159,6 +160,10 @@ export default function SettingsPage() {
         smtpPass: smtpPass || undefined,
         smtpSecure,
       })
+      if (hasNewPassword) {
+        setSmtpPassSet(true)
+        setSmtpPass('')
+      }
       toast.success(t('toast.smtpSaved'))
     } catch { toast.error(t('toast.saveError')) }
     setSavingSmtp(false)
