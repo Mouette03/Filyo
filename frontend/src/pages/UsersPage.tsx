@@ -9,6 +9,7 @@ import { useT } from '../i18n'
 interface UserItem {
   id: string; name: string; email: string; role: string
   active: boolean; createdAt: string; lastLogin: string | null
+  storageQuotaBytes: string | null; storageUsedBytes: string
 }
 
 interface AdminFile {
@@ -39,12 +40,14 @@ export default function UsersPage() {
   const [newPassword, setNewPassword] = useState('')
   const [newConfirmPassword, setNewConfirmPassword] = useState('')
   const [newRole, setNewRole] = useState('USER')
+  const [newQuotaMB, setNewQuotaMB] = useState('')
   const [creating, setCreating] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
   const [editEmail, setEditEmail] = useState('')
   const [editRole, setEditRole] = useState('')
   const [editActive, setEditActive] = useState(true)
+  const [editQuotaMB, setEditQuotaMB] = useState('')
 
   // --- Onglet Fichiers ---
   const [allFiles, setAllFiles] = useState<AdminFile[]>([])
@@ -96,10 +99,11 @@ export default function UsersPage() {
     if (newPassword !== newConfirmPassword) return toast.error(t('toast.passwordMismatch'))
     setCreating(true)
     try {
-      const res = await createUser({ name: newName, email: newEmail, password: newPassword, role: newRole })
+      const quotaMB = newQuotaMB !== '' ? parseFloat(newQuotaMB) : null
+      const res = await createUser({ name: newName, email: newEmail, password: newPassword, role: newRole, storageQuotaMB: quotaMB })
       setUsers(prev => [...prev, res.data])
       setShowCreate(false)
-      setNewName(''); setNewEmail(''); setNewPassword(''); setNewConfirmPassword(''); setNewRole('USER')
+      setNewName(''); setNewEmail(''); setNewPassword(''); setNewConfirmPassword(''); setNewRole('USER'); setNewQuotaMB('')
       toast.success(t('toast.userCreated'))
     } catch (err: any) {
       const code = err.response?.data?.code
@@ -111,11 +115,14 @@ export default function UsersPage() {
 
   const startEdit = (u: UserItem) => {
     setEditId(u.id); setEditName(u.name); setEditEmail(u.email); setEditRole(u.role); setEditActive(u.active)
+    const quotaBytes = u.storageQuotaBytes ? BigInt(u.storageQuotaBytes) : null
+    setEditQuotaMB(quotaBytes ? (Number(quotaBytes) / (1024 * 1024)).toFixed(0) : '')
   }
 
   const saveEdit = async (id: string) => {
     try {
-      const res = await updateUser(id, { name: editName, email: editEmail, role: editRole, active: editActive })
+      const quotaMB = editQuotaMB !== '' ? parseFloat(editQuotaMB) : null
+      const res = await updateUser(id, { name: editName, email: editEmail, role: editRole, active: editActive, storageQuotaMB: quotaMB })
       setUsers(prev => prev.map(u => u.id === id ? { ...u, ...res.data } : u))
       setEditId(null)
       toast.success(t('toast.edited'))
@@ -259,6 +266,10 @@ export default function UsersPage() {
                     <option value="ADMIN">{t('users.roleAdmin')}</option>
                   </select>
                 </div>
+                <div className="sm:col-span-2">
+                  <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('users.quotaLabel')}</label>
+                  <input type="number" min="1" value={newQuotaMB} onChange={e => setNewQuotaMB(e.target.value)} placeholder={t('users.quotaPlaceholder')} className="input" />
+                </div>
               </div>
               <div className="flex gap-3 pt-1">
                 <button onClick={handleCreate} disabled={creating} className="btn-primary flex items-center gap-2 py-2.5 px-5">
@@ -311,6 +322,10 @@ export default function UsersPage() {
                             <span className="text-sm text-white/60">{editActive ? t('common.active') : t('common.inactive')}</span>
                           </label>
                         </div>
+                        <div className="sm:col-span-2">
+                          <label className="text-xs text-white/50 mb-1.5 block">{t('users.quotaLabel')}</label>
+                          <input type="number" min="1" value={editQuotaMB} onChange={e => setEditQuotaMB(e.target.value)} placeholder={t('users.quotaPlaceholder')} className="input text-sm py-2" />
+                        </div>
                       </div>
                       <div className="flex gap-2">
                         <button onClick={() => saveEdit(u.id)} className="btn-primary flex items-center gap-1.5 py-2 px-4 text-sm">
@@ -343,6 +358,22 @@ export default function UsersPage() {
                           {t('users.createdAt', { date: formatDate(u.createdAt) })}
                           {u.lastLogin ? ` · ${t('users.lastLogin', { date: formatDate(u.lastLogin) })}` : ` · ${t('users.neverConnected')}`}
                         </p>
+                        {(() => {
+                          const usedBytes = parseInt(u.storageUsedBytes || '0')
+                          const quotaBytes = u.storageQuotaBytes ? parseInt(u.storageQuotaBytes) : null
+                          if (quotaBytes === null) return (
+                            <p className="text-xs text-white/25 mt-0.5">{formatBytes(usedBytes)} · {t('users.quotaUnlimited')}</p>
+                          )
+                          const pct = Math.min(100, Math.round(usedBytes / quotaBytes * 100))
+                          return (
+                            <div className="mt-1.5 flex items-center gap-2">
+                              <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
+                                <div className={`h-full rounded-full transition-all ${pct >= 90 ? 'bg-red-500' : pct >= 70 ? 'bg-yellow-500' : 'bg-brand-500'}`} style={{ width: `${pct}%` }} />
+                              </div>
+                              <span className="text-xs text-white/30 whitespace-nowrap">{t('users.quotaUsed', { used: formatBytes(usedBytes), quota: formatBytes(quotaBytes) })}</span>
+                            </div>
+                          )
+                        })()}
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         <button onClick={() => startEdit(u)} className="btn-secondary flex items-center gap-1.5 text-xs px-2.5 sm:px-3 py-2">

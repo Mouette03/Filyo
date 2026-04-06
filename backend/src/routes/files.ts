@@ -16,6 +16,31 @@ export async function fileRoutes(app: FastifyInstance) {
     const userId: string = req.user.id
     const appSettings = await getAppSettings()
     const globalMaxBytes = appSettings.maxFileSizeBytes ?? null
+    const contentLength = req.headers['content-length'] ? BigInt(req.headers['content-length']) : null
+
+    // Rejet anticipé via Content-Length vs limite globale par fichier
+    if (globalMaxBytes !== null && contentLength !== null && contentLength > globalMaxBytes) {
+      return reply.code(413).send({ code: 'FILE_TOO_LARGE', maxBytes: globalMaxBytes.toString() })
+    }
+
+    // Vérification quota utilisateur
+    const userRecord = await prisma.user.findUnique({ where: { id: userId }, select: { storageQuotaBytes: true } })
+    const quotaBytes = userRecord?.storageQuotaBytes ?? null
+    let usedBytes = BigInt(0)
+    if (quotaBytes !== null) {
+      const [filesAgg, receivedAgg] = await Promise.all([
+        prisma.file.aggregate({ _sum: { size: true }, where: { userId } }),
+        prisma.receivedFile.aggregate({ _sum: { size: true }, where: { uploadRequest: { userId } } })
+      ])
+      usedBytes = (filesAgg._sum.size ?? BigInt(0)) + (receivedAgg._sum.size ?? BigInt(0))
+      if (usedBytes >= quotaBytes) {
+        return reply.code(413).send({ code: 'QUOTA_EXCEEDED' })
+      }
+      if (contentLength !== null && usedBytes + contentLength > quotaBytes) {
+        return reply.code(413).send({ code: 'QUOTA_EXCEEDED' })
+      }
+    }
+
     const parts = req.parts()
     const uploadedFiles: any[] = []
     let expiresIn: string | undefined
@@ -45,6 +70,15 @@ export async function fileRoutes(app: FastifyInstance) {
               await fs.remove(filePath).catch(() => {})
               await Promise.all(uploadedFiles.map((f: any) => fs.remove(f.path).catch(() => {})))
               return reply.code(413).send({ code: 'FILE_TOO_LARGE', maxBytes: globalMaxBytes.toString() })
+            }
+            if (quotaBytes !== null) {
+              const uploadedSize = uploadedFiles.reduce((acc: bigint, f: any) => acc + f.size, BigInt(0))
+              if (usedBytes + uploadedSize + BigInt(size) > quotaBytes) {
+                writeStream.destroy()
+                await fs.remove(filePath).catch(() => {})
+                await Promise.all(uploadedFiles.map((f: any) => fs.remove(f.path).catch(() => {})))
+                return reply.code(413).send({ code: 'QUOTA_EXCEEDED' })
+              }
             }
             if (!writeStream.write(chunk)) {
               await new Promise<void>((resolve, reject) => {
@@ -170,7 +204,11 @@ export async function fileRoutes(app: FastifyInstance) {
         where: { id: req.params.id, userId: req.user.id }
       })
       if (!file) return reply.code(404).send({ code: 'FILE_NOT_FOUND' })
-      const expiresAt = req.body.expiresAt ? new Date(req.body.expiresAt) : null
+      let expiresAt: Date | null = null
+      if (req.body.expiresAt) {
+        expiresAt = new Date(req.body.expiresAt)
+        if (isNaN(expiresAt.getTime())) return reply.code(400).send({ code: 'INVALID_DATE' })
+      }
       await prisma.file.update({ where: { id: req.params.id }, data: { expiresAt } })
       await prisma.share.updateMany({ where: { fileId: req.params.id }, data: { expiresAt } })
       return { expiresAt }

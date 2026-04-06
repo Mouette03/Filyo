@@ -19,6 +19,7 @@ model User {
   createdAt      DateTime        @default(now())
   lastLogin      DateTime?
   cleanupAfterDays   Int?          // préférence perso : null=jamais, 0=à expiration, N=N jours après
+  storageQuotaBytes  BigInt?       // null=illimité
   resetToken         String?
   resetTokenExpiry   DateTime?
   files          File[]

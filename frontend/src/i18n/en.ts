@@ -306,6 +306,10 @@ export const en = {
   'users.neverConnected': 'Never connected',
   'users.lastLogin': 'Last login {{date}}',
   'users.createdAt': 'Created {{date}}',
+  'users.quotaLabel': 'Storage quota (MB)',
+  'users.quotaPlaceholder': 'Unlimited',
+  'users.quotaUnlimited': 'Unlimited',
+  'users.quotaUsed': '{{used}} / {{quota}} used',
 
   // ── Toasts ───────────────────────────────────────────────────
   'toast.welcome': 'Welcome, {{name}}!',
@@ -321,6 +325,7 @@ export const en = {
   'toast.requestDeleted': 'Request deleted',
   'toast.userCreated': 'User created',
   'toast.userDeleted': 'User deleted',
+  'toast.quotaSaved': 'Quota updated',
   'toast.edited': 'Saved',
   'toast.avatarUpdated': 'Avatar updated',
   'toast.avatarDeleted': 'Avatar deleted',
@@ -426,6 +431,7 @@ export const en = {
   'error.invalidCredentials': 'Invalid credentials',
   'error.registrationDisabled': 'Registrations are disabled',
   'error.emailTaken': 'This email is already in use',
+  'error.quotaExceeded': 'Storage quota exceeded',
   'error.wrongPassword': 'Current password is incorrect',
   'error.invalidFormat': 'Unsupported format (png, jpg, webp, gif)',
   'error.cleanupExceedsMax': 'Value must be between 0 and {{max}} days',

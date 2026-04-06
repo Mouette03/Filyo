@@ -10,6 +10,7 @@ CREATE TABLE "User" (
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "lastLogin" DATETIME,
     "cleanupAfterDays" INTEGER,
+    "storageQuotaBytes" BIGINT,
     "resetToken" TEXT,
     "resetTokenExpiry" DATETIME
 );

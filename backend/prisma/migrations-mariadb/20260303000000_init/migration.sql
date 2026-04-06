@@ -9,6 +9,7 @@ CREATE TABLE `User` (
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `lastLogin` DATETIME(3) NULL,
     `cleanupAfterDays` INTEGER NULL,
+    `storageQuotaBytes` BIGINT NULL,
     `resetToken` VARCHAR(191) NULL,
     `resetTokenExpiry` DATETIME(3) NULL,
     PRIMARY KEY (`id`)
