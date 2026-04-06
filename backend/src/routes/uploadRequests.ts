@@ -150,17 +150,18 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
       : (perRequestMax ?? globalMaxBytes)
 
     // Quota du propriétaire de la demande
-    const owner = await prisma.user.findUnique({
-      where: { id: request.userId },
+    const ownerId = request.userId
+    const owner = ownerId ? await prisma.user.findUnique({
+      where: { id: ownerId },
       select: { storageQuotaBytes: true }
-    })
+    }) : null
     const quotaBytes = owner?.storageQuotaBytes ?? null
     let ownerUsedBytes = BigInt(0)
-    if (quotaBytes !== null) {
-      const filesAgg = await prisma.file.aggregate({ _sum: { size: true }, where: { userId: request.userId } })
+    if (quotaBytes !== null && ownerId) {
+      const filesAgg = await prisma.file.aggregate({ _sum: { size: true }, where: { userId: ownerId } })
       const receivedAgg = await prisma.receivedFile.aggregate({
         _sum: { size: true },
-        where: { uploadRequest: { userId: request.userId } }
+        where: { uploadRequest: { userId: ownerId } }
       })
       ownerUsedBytes = (filesAgg._sum.size ?? BigInt(0)) + (receivedAgg._sum.size ?? BigInt(0))
       if (ownerUsedBytes >= quotaBytes) {
