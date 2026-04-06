@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { Upload, X, Copy, Check, Lock, Clock, Download, Plus, Trash2, Share2, Mail, Send, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { uploadFiles, sendShareByEmail } from '../api/client'
+import { uploadFiles, sendShareByEmail, getMyQuota } from '../api/client'
 import { formatBytes, getFileIcon, copyToClipboard, isValidEmail } from '../lib/utils'
 import { useT } from '../i18n'
 import { useAppSettingsStore } from '../stores/useAppSettingsStore'
@@ -61,6 +61,22 @@ export default function HomePage() {
         toast.error(t('error.fileTooLargeGlobal', { name: tooBig[0].name, max: formatBytes(maxBytes) }))
         return
       }
+    }
+
+    // Validation quota utilisateur côté client (évite d'uploader pour rien)
+    try {
+      const { data: quota } = await getMyQuota()
+      if (quota.storageQuotaBytes !== null) {
+        const quotaBytes = BigInt(quota.storageQuotaBytes)
+        const usedBytes = BigInt(quota.storageUsedBytes)
+        const totalUploadBytes = BigInt(totalSize)
+        if (usedBytes + totalUploadBytes > quotaBytes) {
+          toast.error(t('error.quotaExceeded'))
+          return
+        }
+      }
+    } catch {
+      // En cas d'échec de l'appel quota, on laisse le serveur trancher
     }
 
     setUploading(true)

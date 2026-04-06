@@ -309,6 +309,23 @@ export async function authRoutes(app: FastifyInstance) {
     return reply.send({ success: true })
   })
 
+  // GET /api/auth/quota — quota et usage de l'utilisateur connecté
+  app.get('/quota', { onRequest: [app.authenticate] }, async (req) => {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { storageQuotaBytes: true }
+    })
+    const usedAgg = await prisma.file.aggregate({
+      _sum: { size: true },
+      where: { userId: req.user.id }
+    })
+    const storageUsedBytes = (usedAgg._sum.size ?? BigInt(0)).toString()
+    return {
+      storageQuotaBytes: user?.storageQuotaBytes?.toString() ?? null,
+      storageUsedBytes
+    }
+  })
+
   // POST /api/auth/reset-password — appliquer le nouveau mot de passe
   app.post('/reset-password', async (req, reply) => {
     const { token, password } = req.body as { token?: string; password?: string }

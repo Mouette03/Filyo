@@ -43,6 +43,7 @@ export const uploadAvatar = (form: FormData) =>
   api.post('/auth/avatar', form, { headers: { 'Content-Type': 'multipart/form-data' } })
 export const deleteAvatar = () => api.delete('/auth/avatar')
 export const updateProfile = (data: { name: string }) => api.patch('/auth/profile', data)
+export const getMyQuota = () => api.get<{ storageQuotaBytes: string | null; storageUsedBytes: string }>('/auth/quota')
 
 // ---- Utilisateurs (admin) ----
 export const listUsers = () => api.get('/users')
