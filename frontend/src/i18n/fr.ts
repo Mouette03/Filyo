@@ -246,6 +246,7 @@ export const fr = {
   'settings.smtpUser': 'Identifiant',
   'settings.smtpUserPlaceholder': 'votre@email.fr',
   'settings.smtpPassword': 'Mot de passe',
+  'settings.smtpPasswordSet': 'Mot de passe configuré — laissez vide pour le conserver',
   'settings.smtpStarttls': 'STARTTLS (chiffrement)',
   'settings.smtpStarttlsHint': 'Exiger TLS lors de la connexion (recommandé sur le port 587). Désactiver uniquement si votre serveur ne le supporte pas.',
   'settings.smtpTest': 'Tester',

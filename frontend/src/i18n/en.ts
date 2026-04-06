@@ -246,6 +246,7 @@ export const en = {
   'settings.smtpUser': 'Username',
   'settings.smtpUserPlaceholder': 'your@email.com',
   'settings.smtpPassword': 'Password',
+  'settings.smtpPasswordSet': 'Password configured — leave empty to keep it',
   'settings.smtpStarttls': 'STARTTLS (encryption)',
   'settings.smtpStarttlsHint': 'Require TLS when connecting (recommended on port 587). Disable only if your server does not support it.',
   'settings.smtpTest': 'Test',

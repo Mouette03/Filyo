@@ -41,6 +41,7 @@ export default function SettingsPage() {
   const [smtpFrom, setSmtpFrom] = useState('')
   const [smtpUser, setSmtpUser] = useState('')
   const [smtpPass, setSmtpPass] = useState('')
+  const [smtpPassSet, setSmtpPassSet] = useState(false)
   const [smtpSecure, setSmtpSecure] = useState(true)
   const [showSmtpPass, setShowSmtpPass] = useState(false)
   const [savingSmtp, setSavingSmtp] = useState(false)
@@ -82,7 +83,7 @@ export default function SettingsPage() {
       setSmtpPort(String(res.data.smtpPort || 587))
       setSmtpFrom(res.data.smtpFrom || '')
       setSmtpUser(res.data.smtpUser || '')
-      setSmtpPass(res.data.smtpPass || '')
+      setSmtpPassSet(res.data.smtpPassSet ?? false)
       setSmtpSecure(res.data.smtpSecure ?? true)
     }).catch(() => {})
   }, [])
@@ -669,6 +670,9 @@ export default function SettingsPage() {
                 {showSmtpPass ? <EyeOff size={15} /> : <Eye size={15} />}
               </button>
             </div>
+            {smtpPassSet && !smtpPass && (
+              <p className="text-xs text-white/40 mt-1">{t('settings.smtpPasswordSet')}</p>
+            )}
           </div>
         </div>
 
