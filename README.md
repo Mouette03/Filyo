@@ -107,7 +107,7 @@ labels:
 | `UPLOAD_TIMEOUT_MS` | `1800000` | Upload timeout in ms (default 30 min, min 1 min, max 2 h) |
 
 > [!NOTE]
-> The SMTP password is always stored **encrypted** in the database (AES-256-GCM, key derived from `JWT_SECRET`). It is never stored in plaintext.
+> Any SMTP password saved through the settings form is stored **encrypted** in the database (AES-256-GCM, key derived from `JWT_SECRET`). Passwords imported before this feature was introduced may still be stored in plaintext and will be migrated automatically on next save. **Rotating `JWT_SECRET` breaks existing encrypted passwords — you must re-enter the SMTP password in the settings after any key rotation.**
 
 **SQLite** : `DATABASE_URL=file:/data/filyo.db`
 **MariaDB** : `DB_HOST`, `DB_USER`, `DB_PASSWORD`, etc.
@@ -265,7 +265,7 @@ labels:
 | `UPLOAD_TIMEOUT_MS` | `1800000` | Délai d'attente des uploads (ms — défaut 30 min, min 1 min, max 2 h) |
 
 > [!NOTE]
-> Le mot de passe SMTP est toujours stocké **chiffré** en base de données (AES-256-GCM, clé dérivée de `JWT_SECRET`). Il n'est jamais stocké en clair.
+> Tout mot de passe SMTP enregistré via le formulaire de réglages est stocké **chiffré** en base de données (AES-256-GCM, clé dérivée de `JWT_SECRET`). Les mots de passe importés avant l'introduction de cette fonctionnalité peuvent encore être en clair et seront migrés automatiquement à la prochaine sauvegarde. **Une rotation de `JWT_SECRET` invalide les mots de passe chiffrés existants — vous devez ressaisir le mot de passe SMTP dans les réglages après tout changement de clé.**
 
 **SQLite** : `DATABASE_URL=file:/data/filyo.db`
 **MariaDB** : `DB_HOST`, `DB_USER`, `DB_PASSWORD`, etc.
