@@ -234,22 +234,22 @@ export default function RequestUploadPage() {
                   }`}>
                     {nameReq !== 'hidden' && (
                       <div>
-                        <label className="text-xs [color:var(--text-50)] mb-1.5 flex items-center gap-1">
+                        <label htmlFor="uploader-name" className="text-xs [color:var(--text-50)] mb-1.5 flex items-center gap-1">
                           <User size={11} /> {t('request.nameLabel')}
                           {nameReq === 'required' && <span className="text-red-400 ml-0.5">*</span>}
                         </label>
-                        <input type="text" value={uploaderName} onChange={e => setUploaderName(e.target.value)}
+                        <input id="uploader-name" type="text" value={uploaderName} onChange={e => setUploaderName(e.target.value)}
                           placeholder={nameReq === 'required' ? t('request.namePlaceholderReq') : t('request.namePlaceholderOpt')}
                           className="input text-sm py-2.5" required={nameReq === 'required'} />
                       </div>
                     )}
                     {emailReq !== 'hidden' && (
                       <div>
-                        <label className="text-xs [color:var(--text-50)] mb-1.5 flex items-center gap-1">
+                        <label htmlFor="uploader-email" className="text-xs [color:var(--text-50)] mb-1.5 flex items-center gap-1">
                           <Mail size={11} /> Email
                           {emailReq === 'required' && <span className="text-red-400 ml-0.5">*</span>}
                         </label>
-                        <input type="email" value={uploaderEmail} onChange={e => setUploaderEmail(e.target.value)}
+                        <input id="uploader-email" type="email" value={uploaderEmail} onChange={e => setUploaderEmail(e.target.value)}
                           placeholder={emailReq === 'required' ? t('request.emailPlaceholderReq') : t('request.emailPlaceholderOpt')}
                           className="input text-sm py-2.5" required={emailReq === 'required'} />
                       </div>
@@ -258,22 +258,22 @@ export default function RequestUploadPage() {
                 )}
                 {msgReq !== 'hidden' && (
                   <div>
-                    <label className="text-xs [color:var(--text-50)] mb-1.5 flex items-center gap-1">
+                    <label htmlFor="uploader-message" className="text-xs [color:var(--text-50)] mb-1.5 flex items-center gap-1">
                       <MessageSquare size={11} /> {t('request.messageLabel')}
                       {msgReq === 'required' && <span className="text-red-400 ml-0.5">*</span>}
                       {msgReq === 'optional' && <span className="[color:var(--text-20)] ml-1">{t('request.messageOptional')}</span>}
                     </label>
-                    <textarea value={message} onChange={e => setMessage(e.target.value)}
+                    <textarea id="uploader-message" value={message} onChange={e => setMessage(e.target.value)}
                       placeholder={msgReq === 'required' ? t('request.messagePlaceholderReq') : t('request.messagePlaceholderOpt')}
                       rows={2} className="input text-sm py-2.5 resize-none" />
                   </div>
                 )}
                 {info.hasPassword && (
                   <div>
-                    <label className="text-xs [color:var(--text-50)] mb-1.5 block flex items-center gap-1">
+                    <label htmlFor="uploader-password" className="text-xs [color:var(--text-50)] mb-1.5 block flex items-center gap-1">
                       <Lock size={11} /> {t('request.passwordLabel')}
                     </label>
-                    <input type="password" value={password} onChange={e => setPassword(e.target.value)}
+                    <input id="uploader-password" type="password" value={password} onChange={e => setPassword(e.target.value)}
                       placeholder={t('request.passwordPlaceholder')} className="input text-sm py-2.5" />
                   </div>
                 )}
@@ -282,10 +282,10 @@ export default function RequestUploadPage() {
             {/* Mot de passe seul si tous les champs déposant masqués */}
             {nameReq === 'hidden' && emailReq === 'hidden' && msgReq === 'hidden' && info.hasPassword && (
               <div className="card">
-                <label className="text-xs [color:var(--text-50)] mb-1.5 block flex items-center gap-1">
+                <label htmlFor="uploader-password" className="text-xs [color:var(--text-50)] mb-1.5 block flex items-center gap-1">
                   <Lock size={11} /> {t('request.passwordLabel')}
                 </label>
-                <input type="password" value={password} onChange={e => setPassword(e.target.value)}
+                <input id="uploader-password" type="password" value={password} onChange={e => setPassword(e.target.value)}
                   placeholder={t('request.passwordPlaceholder')} className="input text-sm py-2.5" />
               </div>
             )}
