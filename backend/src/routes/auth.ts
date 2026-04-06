@@ -119,9 +119,14 @@ export async function authRoutes(app: FastifyInstance) {
     const existing = await prisma.user.findUnique({ where: { email: body.data.email } })
     if (existing) return reply.code(409).send({ code: 'EMAIL_TAKEN' })
 
+    // Quota par défaut pour les auto-inscriptions (500 MB)
+    // Les admins et les users créés par un admin n'ont pas de quota imposé ici
+    const isPublicRegistration = count > 0 && role === 'USER'
+    const storageQuotaBytes = isPublicRegistration ? BigInt(500 * 1024 * 1024) : null
+
     const hashed = await bcrypt.hash(body.data.password, 12)
     const user = await prisma.user.create({
-      data: { email: body.data.email, name: body.data.name, password: hashed, role },
+      data: { email: body.data.email, name: body.data.name, password: hashed, role, storageQuotaBytes },
       select: { id: true, email: true, name: true, role: true, createdAt: true }
     })
 
