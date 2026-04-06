@@ -194,6 +194,9 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
         if (request.maxFiles) {
           const total = request._count.receivedFiles + savedFiles.length
           if (total >= request.maxFiles) {
+             // Drainer le reste du stream avant de retourner pour éviter de corrompre la connexion
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            for await (const _ of part.file) { /* drain */ }
             await Promise.all(savedFiles.map((f: any) => fs.remove(f.path).catch(() => {})))
             return reply.code(429).send({ code: 'REQUEST_LIMIT_REACHED' })
           }
