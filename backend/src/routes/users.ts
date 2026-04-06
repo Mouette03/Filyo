@@ -12,17 +12,39 @@ export async function userRoutes(app: FastifyInstance) {
       select: { id: true, email: true, name: true, role: true, active: true, createdAt: true, lastLogin: true, storageQuotaBytes: true },
       orderBy: { createdAt: 'asc' }
     })
-    const usageRows = await prisma.file.groupBy({
-      by: ['userId'],
-      _sum: { size: true }
-    })
-    const usageMap = new Map(
-      usageRows.filter(r => r.userId).map(r => [r.userId!, r._sum.size ?? BigInt(0)])
+    const [filesRows, receivedRows] = await Promise.all([
+      prisma.file.groupBy({ by: ['userId'], _sum: { size: true } }),
+      prisma.receivedFile.groupBy({
+        by: ['uploadRequestId'],
+        _sum: { size: true },
+        where: { uploadRequest: { userId: { in: users.map(u => u.id) } } }
+      })
+    ])
+    // Récupérer les uploadRequestId → userId pour agréger les ReceivedFile par propriétaire
+    const requestIds = receivedRows.map(r => r.uploadRequestId)
+    const requestOwners = requestIds.length > 0
+      ? await prisma.uploadRequest.findMany({
+          where: { id: { in: requestIds } },
+          select: { id: true, userId: true }
+        })
+      : []
+    const requestOwnerMap = new Map<string, string>(
+      requestOwners.map(r => [r.id, r.userId] as [string, string])
+    )
+    const receivedByUser = new Map<string, bigint>()
+    for (const row of receivedRows) {
+      const uid = requestOwnerMap.get(row.uploadRequestId)
+      if (uid) {
+        receivedByUser.set(uid, (receivedByUser.get(uid) ?? BigInt(0)) + (row._sum.size ?? BigInt(0)))
+      }
+    }
+    const filesMap = new Map<string, bigint>(
+      filesRows.filter(r => r.userId).map(r => [r.userId!, r._sum.size ?? BigInt(0)] as [string, bigint])
     )
     return users.map(u => ({
       ...u,
       storageQuotaBytes: u.storageQuotaBytes?.toString() ?? null,
-      storageUsedBytes: (usageMap.get(u.id) ?? BigInt(0)).toString()
+      storageUsedBytes: ((filesMap.get(u.id) ?? BigInt(0)) + (receivedByUser.get(u.id) ?? BigInt(0))).toString()
     }))
   })
 

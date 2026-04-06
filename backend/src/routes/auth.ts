@@ -315,11 +315,16 @@ export async function authRoutes(app: FastifyInstance) {
       where: { id: req.user.id },
       select: { storageQuotaBytes: true }
     })
-    const usedAgg = await prisma.file.aggregate({
-      _sum: { size: true },
-      where: { userId: req.user.id }
-    })
-    const storageUsedBytes = (usedAgg._sum.size ?? BigInt(0)).toString()
+    const [filesAgg, receivedAgg] = await Promise.all([
+      prisma.file.aggregate({ _sum: { size: true }, where: { userId: req.user.id } }),
+      prisma.receivedFile.aggregate({
+        _sum: { size: true },
+        where: { uploadRequest: { userId: req.user.id } }
+      })
+    ])
+    const storageUsedBytes = (
+      (filesAgg._sum.size ?? BigInt(0)) + (receivedAgg._sum.size ?? BigInt(0))
+    ).toString()
     return {
       storageQuotaBytes: user?.storageQuotaBytes?.toString() ?? null,
       storageUsedBytes

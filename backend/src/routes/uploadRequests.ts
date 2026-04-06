@@ -149,12 +149,32 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
       ? (perRequestMax < globalMaxBytes ? perRequestMax : globalMaxBytes)
       : (perRequestMax ?? globalMaxBytes)
 
-    // Rejet anticipé via Content-Length (avant toute écriture sur disque)
-    if (effectiveMaxBytes !== null) {
-      const contentLength = req.headers['content-length']
-      if (contentLength && BigInt(contentLength) > effectiveMaxBytes) {
-        return reply.code(413).send({ code: 'FILE_TOO_LARGE' })
+    // Quota du propriétaire de la demande
+    const owner = await prisma.user.findUnique({
+      where: { id: request.userId },
+      select: { storageQuotaBytes: true }
+    })
+    const quotaBytes = owner?.storageQuotaBytes ?? null
+    let ownerUsedBytes = BigInt(0)
+    if (quotaBytes !== null) {
+      const filesAgg = await prisma.file.aggregate({ _sum: { size: true }, where: { userId: request.userId } })
+      const receivedAgg = await prisma.receivedFile.aggregate({
+        _sum: { size: true },
+        where: { uploadRequest: { userId: request.userId } }
+      })
+      ownerUsedBytes = (filesAgg._sum.size ?? BigInt(0)) + (receivedAgg._sum.size ?? BigInt(0))
+      if (ownerUsedBytes >= quotaBytes) {
+        return reply.code(413).send({ code: 'QUOTA_EXCEEDED' })
       }
+    }
+
+    // Rejet anticipé via Content-Length (avant toute écriture sur disque)
+    const contentLength = req.headers['content-length'] ? BigInt(req.headers['content-length']) : null
+    if (effectiveMaxBytes !== null && contentLength !== null && contentLength > effectiveMaxBytes) {
+      return reply.code(413).send({ code: 'FILE_TOO_LARGE' })
+    }
+    if (quotaBytes !== null && contentLength !== null && ownerUsedBytes + contentLength > quotaBytes) {
+      return reply.code(413).send({ code: 'QUOTA_EXCEEDED' })
     }
 
     const parts = req.parts()
@@ -194,6 +214,12 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
               await fs.remove(filePath).catch(() => {})
               await Promise.all(savedFiles.map((f: any) => fs.remove(f.path).catch(() => {})))
               return reply.code(413).send({ code: 'FILE_TOO_LARGE' })
+            }
+            if (quotaBytes !== null && ownerUsedBytes + size > quotaBytes) {
+              writeStream.destroy()
+              await fs.remove(filePath).catch(() => {})
+              await Promise.all(savedFiles.map((f: any) => fs.remove(f.path).catch(() => {})))
+              return reply.code(413).send({ code: 'QUOTA_EXCEEDED' })
             }
             if (!writeStream.write(chunk)) {
               await new Promise<void>((resolve, reject) => {
