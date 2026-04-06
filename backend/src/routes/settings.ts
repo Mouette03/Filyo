@@ -8,7 +8,7 @@ import { UPLOAD_DIR } from '../lib/config'
 import { getAppSettings } from '../lib/appSettings'
 import { encrypt, decrypt } from '../lib/crypto'
 
-const ENC_KEY = process.env.JWT_SECRET ?? ''
+const ENC_KEY = process.env.JWT_SECRET || null
 
 const LOGO_DIR = path.join(UPLOAD_DIR, 'logos')
 
@@ -68,9 +68,12 @@ export async function settingsRoutes(app: FastifyInstance) {
     // smtpPass absent = ne pas toucher au secret existant
     // smtpPass === '' = effacer explicitement le secret
     // smtpPass = valeur non vide = chiffrer et stocker
+    if (smtpPass && !ENC_KEY) {
+      return reply.code(500).send({ code: 'ENCRYPTION_KEY_MISSING', message: 'JWT_SECRET is not set — cannot encrypt SMTP password' })
+    }
     const encryptedPass = smtpPass === undefined ? undefined
       : smtpPass === '' ? null
-      : encrypt(smtpPass, ENC_KEY)
+      : encrypt(smtpPass, ENC_KEY!)
     const updated = await prisma.appSettings.upsert({
       where: { id: 'singleton' },
       update: { smtpHost, smtpPort, smtpFrom, smtpUser, smtpPass: encryptedPass, smtpSecure },

@@ -31,7 +31,9 @@ export function createSmtpTransport(cfg: SmtpConfig) {
       user: cfg.smtpUser,
       pass: (() => {
         if (!cfg.smtpPass) return ''
-        try { return decrypt(cfg.smtpPass, process.env.JWT_SECRET || '') }
+        const key = process.env.JWT_SECRET
+        if (!key) throw new Error('JWT_SECRET is not set — cannot decrypt SMTP password')
+        try { return decrypt(cfg.smtpPass, key) }
         catch { return cfg.smtpPass } // fallback : valeur legacy en clair
       })()
     } : undefined
