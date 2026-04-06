@@ -431,7 +431,7 @@ export const fr = {
   'error.invalidCredentials': 'Identifiants incorrects',
   'error.registrationDisabled': 'Les inscriptions sont désactivées',
   'error.emailTaken': 'Cet email est déjà utilisé',
-  'error.quotaExceeded': 'Quota de stockage dépassé',
+  'error.quotaExceeded': 'Quota de stockage dépassé. Contactez votre administrateur pour augmenter votre capacité.',
   'error.wrongPassword': 'Mot de passe actuel incorrect',
   'error.invalidFormat': 'Format non supporté (png, jpg, webp, gif)',
   'error.cleanupExceedsMax': 'La valeur doit être entre 0 et {{max}} jours',

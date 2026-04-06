@@ -13,7 +13,7 @@ services:
       - "${PORT:-3001}:3001"
     environment:
       NODE_ENV: production
-      JWT_SECRET: ${JWT_SECRET:-filyo-super-secret-change-me-in-production}
+      JWT_SECRET: ${JWT_SECRET}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       DB_USER: ${DB_USER:-filyo}
       DB_PASSWORD: ${DB_PASSWORD:-filyo}
