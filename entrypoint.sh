@@ -27,4 +27,4 @@ if [ "$PRISMA_EXIT" -ne 0 ]; then
 fi
 echo "Prisma migrate deploy completed (exit: $PRISMA_EXIT)"
 
-exec gosu node sh -c 'set -o pipefail; node dist/index.js 2>&1 | ./node_modules/.bin/pino-pretty'
+exec gosu node bash -c 'set -o pipefail; node dist/index.js 2>&1 | ./node_modules/.bin/pino-pretty'
