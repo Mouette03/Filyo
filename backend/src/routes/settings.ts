@@ -49,7 +49,11 @@ export async function settingsRoutes(app: FastifyInstance) {
       smtpPort: s.smtpPort ?? 587,
       smtpFrom: s.smtpFrom ?? '',
       smtpUser: s.smtpUser ?? '',
+<<<<<<< Updated upstream
       smtpPass: s.smtpPass ?? '',
+=======
+      smtpPassSet: !!s.smtpPass, // ne jamais exposer le secret en clair
+>>>>>>> Stashed changes
       smtpSecure: s.smtpSecure ?? true
     }
   })
@@ -62,12 +66,25 @@ export async function settingsRoutes(app: FastifyInstance) {
     }
   }>('/smtp', { onRequest: [app.authenticate, app.adminOnly] }, async (req, reply) => {
     const { smtpHost, smtpPort, smtpFrom, smtpUser, smtpPass, smtpSecure } = req.body
+<<<<<<< Updated upstream
+=======
+    // smtpPass absent = ne pas toucher au secret existant
+    // smtpPass === '' = effacer explicitement le secret
+    // smtpPass = valeur non vide = chiffrer et stocker
+    const encryptedPass = smtpPass === undefined ? undefined
+      : smtpPass === '' ? null
+      : encrypt(smtpPass, ENC_KEY)
+>>>>>>> Stashed changes
     const updated = await prisma.appSettings.upsert({
       where: { id: 'singleton' },
       update: { smtpHost, smtpPort, smtpFrom, smtpUser, smtpPass, smtpSecure },
       create: {
         id: 'singleton', appName: 'Filyo',
+<<<<<<< Updated upstream
         smtpHost, smtpPort, smtpFrom, smtpUser, smtpPass, smtpSecure: smtpSecure ?? true
+=======
+        smtpHost, smtpPort, smtpFrom, smtpUser, smtpPass: encryptedPass ?? null, smtpSecure: smtpSecure ?? true
+>>>>>>> Stashed changes
       }
     })
     req.log.info({ smtpHost }, 'SMTP configuration updated')

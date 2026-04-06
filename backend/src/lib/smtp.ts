@@ -26,6 +26,17 @@ export function createSmtpTransport(cfg: SmtpConfig) {
     connectionTimeout: 10_000,
     greetingTimeout: 10_000,
     socketTimeout: 15_000,
+<<<<<<< Updated upstream
     auth: cfg.smtpUser ? { user: cfg.smtpUser, pass: cfg.smtpPass ?? '' } : undefined
+=======
+    auth: cfg.smtpUser ? {
+      user: cfg.smtpUser,
+      pass: (() => {
+        if (!cfg.smtpPass) return ''
+        try { return decrypt(cfg.smtpPass, process.env.JWT_SECRET || '') }
+        catch { return cfg.smtpPass } // fallback : valeur legacy en clair
+      })()
+    } : undefined
+>>>>>>> Stashed changes
   })
 }

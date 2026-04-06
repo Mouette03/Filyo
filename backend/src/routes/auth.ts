@@ -100,8 +100,8 @@ export async function authRoutes(app: FastifyInstance) {
     const role = count === 0 ? 'ADMIN' : 'USER'
 
     // Si ce n'est pas le premier, vérifier que l'appelant est admin OU que l'inscription libre est activée
+    let isAdmin = false
     if (count > 0) {
-      let isAdmin = false
       try {
         await req.jwtVerify()
         const caller = req.user
@@ -119,6 +119,14 @@ export async function authRoutes(app: FastifyInstance) {
     const existing = await prisma.user.findUnique({ where: { email: body.data.email } })
     if (existing) return reply.code(409).send({ code: 'EMAIL_TAKEN' })
 
+<<<<<<< Updated upstream
+=======
+    // Quota par défaut uniquement pour les auto-inscriptions (inscription libre sans admin)
+    // isAdmin est déjà calculé dans le bloc count > 0 ci-dessus
+    const isPublicRegistration = count > 0 && !isAdmin
+    const storageQuotaBytes = isPublicRegistration ? BigInt(500 * 1024 * 1024) : null
+
+>>>>>>> Stashed changes
     const hashed = await bcrypt.hash(body.data.password, 12)
     const user = await prisma.user.create({
       data: { email: body.data.email, name: body.data.name, password: hashed, role },

@@ -250,10 +250,21 @@ labels:
 
 | Variable | Défaut | Description |
 |---|---|---|
+<<<<<<< Updated upstream
 | `JWT_SECRET` | *requis prod* | **À changer en prod !** |
 | `LOG_LEVEL` | `info` | `silent\|error\|warn\|info\|debug` |
 | `PORT` | `3001` | Port serveur |
 | `DATA_PATH` | `./data` | Dossier données |
+=======
+| `JWT_SECRET` | *obligatoire, aucun défaut* | **Obligatoire — à renseigner avant le premier lancement.** Sert aussi de clé AES-256-GCM pour chiffrer le mot de passe SMTP stocké en base. |
+| `PORT` | `3001` | Port exposé sur l'hôte (le conteneur interne tourne toujours sur 3001) |
+| `DATA_PATH` | `./data` | Dossier données (base de données + uploads) |
+| `LOG_LEVEL` | `info` | Seuil minimum de log (Pino). Le code émet `debug`, `info`, `warn`, `error`. Utiliser `debug` pour plus de verbosité, `warn` pour le silence relatif, `silent` pour tout désactiver. |
+| `UPLOAD_TIMEOUT_MS` | `1800000` | Délai d'attente des uploads (ms — défaut 30 min, min 1 min, max 2 h) |
+
+> [!NOTE]
+> Le mot de passe SMTP est toujours stocké **chiffré** en base de données (AES-256-GCM, clé dérivée de `JWT_SECRET`). Il n'est jamais stocké en clair.
+>>>>>>> Stashed changes
 
 **SQLite** : `DATABASE_URL=file:/data/filyo.db`
 **MariaDB** : `DB_HOST`, `DB_USER`, `DB_PASSWORD`, etc.
