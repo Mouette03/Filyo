@@ -431,7 +431,7 @@ export const en = {
   'error.invalidCredentials': 'Invalid credentials',
   'error.registrationDisabled': 'Registrations are disabled',
   'error.emailTaken': 'This email is already in use',
-  'error.quotaExceeded': 'Storage quota exceeded',
+  'error.quotaExceeded': 'Storage quota exceeded. Contact your administrator to increase your limit.',
   'error.wrongPassword': 'Current password is incorrect',
   'error.invalidFormat': 'Unsupported format (png, jpg, webp, gif)',
   'error.cleanupExceedsMax': 'Value must be between 0 and {{max}} days',

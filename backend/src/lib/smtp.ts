@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer'
+import { decrypt } from './crypto'
 
 interface SmtpConfig {
   smtpHost: string | null
@@ -26,6 +27,6 @@ export function createSmtpTransport(cfg: SmtpConfig) {
     connectionTimeout: 10_000,
     greetingTimeout: 10_000,
     socketTimeout: 15_000,
-    auth: cfg.smtpUser ? { user: cfg.smtpUser, pass: cfg.smtpPass ?? '' } : undefined
+    auth: cfg.smtpUser ? { user: cfg.smtpUser, pass: cfg.smtpPass ? decrypt(cfg.smtpPass, process.env.JWT_SECRET || '') : '' } : undefined
   })
 }
