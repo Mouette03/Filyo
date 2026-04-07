@@ -120,10 +120,21 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
   }, async (req, reply) => {
     // Drainer le stream brut pour éviter de corrompre la connexion sur les retours anticipés
     const drainBody = () => new Promise<void>((resolve) => {
-      if (req.raw.readableEnded) return resolve()
+      if (req.raw.readableEnded || req.raw.destroyed) return resolve()
+
+      const done = () => {
+        clearTimeout(timer)
+        req.raw.off('end', done)
+        req.raw.off('error', done)
+        req.raw.off('close', done)
+        resolve()
+      }
+
+      const timer = setTimeout(done, 5000)
       req.raw.resume()
-      req.raw.once('end', resolve)
-      req.raw.once('error', resolve)
+      req.raw.once('end', done)
+      req.raw.once('error', done)
+      req.raw.once('close', done)
     })
 
     const request = await prisma.uploadRequest.findUnique({
