@@ -118,17 +118,39 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
   app.post<{ Params: { token: string } }>('/:token/upload', {
     config: { rateLimit: { max: 5, timeWindow: '1 minute' } }
   }, async (req, reply) => {
+    // Drainer le stream brut pour éviter de corrompre la connexion sur les retours anticipés
+    const drainBody = () => new Promise<void>((resolve) => {
+      if (req.raw.readableEnded || req.raw.destroyed) return resolve()
+
+      const done = () => {
+        clearTimeout(timer)
+        req.raw.off('end', done)
+        req.raw.off('error', done)
+        req.raw.off('close', done)
+        resolve()
+      }
+
+      const timer = setTimeout(done, 5000)
+      req.raw.resume()
+      req.raw.once('end', done)
+      req.raw.once('error', done)
+      req.raw.once('close', done)
+    })
+
     const request = await prisma.uploadRequest.findUnique({
       where: { token: req.params.token },
       include: { _count: { select: { receivedFiles: true } } }
     })
     if (!request || !request.active) {
+      await drainBody()
       return reply.code(404).send({ code: 'REQUEST_NOT_FOUND' })
     }
     if (request.expiresAt && request.expiresAt < new Date()) {
+      await drainBody()
       return reply.code(410).send({ code: 'REQUEST_EXPIRED' })
     }
     if (request.maxFiles && request._count.receivedFiles >= request.maxFiles) {
+      await drainBody()
       return reply.code(429).send({ code: 'REQUEST_LIMIT_REACHED' })
     }
 
@@ -138,7 +160,10 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
       let provided = ''
       try { provided = Buffer.from(rawHeader, 'base64').toString('utf8') } catch { provided = rawHeader }
       const ok = await bcrypt.compare(provided, request.password)
-      if (!ok) return reply.code(401).send({ code: 'WRONG_PASSWORD' })
+      if (!ok) {
+        await drainBody()
+        return reply.code(401).send({ code: 'WRONG_PASSWORD' })
+      }
     }
 
     const appSettings = await getAppSettings()
@@ -165,6 +190,7 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
       })
       ownerUsedBytes = (filesAgg._sum.size ?? BigInt(0)) + (receivedAgg._sum.size ?? BigInt(0))
       if (ownerUsedBytes >= quotaBytes) {
+        await drainBody()
         return reply.code(413).send({ code: 'QUOTA_EXCEEDED' })
       }
     }
@@ -172,9 +198,11 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
     // Rejet anticipé via Content-Length (avant toute écriture sur disque)
     const contentLength = req.headers['content-length'] ? BigInt(req.headers['content-length']) : null
     if (effectiveMaxBytes !== null && contentLength !== null && contentLength > effectiveMaxBytes) {
+      await drainBody()
       return reply.code(413).send({ code: 'FILE_TOO_LARGE' })
     }
     if (quotaBytes !== null && contentLength !== null && ownerUsedBytes + contentLength > quotaBytes) {
+      await drainBody()
       return reply.code(413).send({ code: 'QUOTA_EXCEEDED' })
     }
 
