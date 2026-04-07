@@ -113,6 +113,7 @@ export default function DashboardPage() {
       await deleteFile(id)
       setFiles(prev => prev.filter(f => f.id !== id))
       toast.success(t('toast.fileDeleted'))
+      load() // Rafraîchit les stats après suppression
     } catch { toast.error(t('toast.deleteError')) }
   }
 
@@ -122,6 +123,7 @@ export default function DashboardPage() {
       const ids = new Set(batchFiles.map(f => f.id))
       setFiles(prev => prev.filter(f => !ids.has(f.id)))
       toast.success(t('toast.fileDeleted'))
+      load() // Rafraîchit les stats après suppression d'un lot
     } catch { toast.error(t('toast.deleteError')) }
   }
 
