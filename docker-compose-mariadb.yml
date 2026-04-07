@@ -20,7 +20,7 @@ services:
     volumes:
       - ${DATA_PATH:-./data}/uploads:/data/uploads
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3001/health"]
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://127.0.0.1:3001/health', r => process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))\""]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -38,6 +38,8 @@ services:
     volumes:
       - ${DATA_PATH:-./data}/db:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
-      interval: 10s
-      retries: 5
+      test: ["CMD-SHELL", "mariadb-admin ping -h 127.0.0.1 -ufilyo -ptest --silent"]
+      interval: '10s'
+      timeout: '5s'
+      retries: 10
+      start_period: '60s'

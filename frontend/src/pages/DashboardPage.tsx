@@ -86,6 +86,7 @@ export default function DashboardPage() {
 
   const load = async () => {
     setLoading(true)
+    setReceivedFiles({}) // Vide le cache des fichiers reçus (partage inversé)
     try {
       const [filesRes, reqRes, statsRes] = await Promise.all([
         listFiles(), listUploadRequests(), ...(isAdmin ? [getStats()] : [Promise.resolve(null)])
