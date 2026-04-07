@@ -86,7 +86,8 @@ export default function DashboardPage() {
 
   const load = async () => {
     setLoading(true)
-    setReceivedFiles({}) // Vide le cache des fichiers reçus (partage inversé)
+    // On vide le cache local puis on refetch pour les panels déjà ouverts
+    setReceivedFiles({})
     try {
       const [filesRes, reqRes, statsRes] = await Promise.all([
         listFiles(), listUploadRequests(), ...(isAdmin ? [getStats()] : [Promise.resolve(null)])
@@ -94,6 +95,13 @@ export default function DashboardPage() {
       setFiles(filesRes.data)
       setRequests(reqRes.data)
       if (statsRes) setStats((statsRes as any).data)
+      // Refetch pour les demandes déjà ouvertes
+      if (expandedRequest) {
+        try {
+          const res = await getReceivedFiles(expandedRequest)
+          setReceivedFiles(prev => ({ ...prev, [expandedRequest]: res.data }))
+        } catch { /* ignore */ }
+      }
     } catch { toast.error(t('toast.loadError')) }
     setLoading(false)
   }
