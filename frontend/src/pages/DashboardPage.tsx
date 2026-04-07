@@ -132,6 +132,7 @@ export default function DashboardPage() {
       await deleteUploadRequest(id)
       setRequests(prev => prev.filter(r => r.id !== id))
       toast.success(t('toast.requestDeleted'))
+      load() // Rafraîchit stats et demandes après suppression
     } catch { toast.error(t('toast.deleteError')) }
   }
 
