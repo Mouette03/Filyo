@@ -17,8 +17,12 @@
 
 ---
 
+
 <details open>
 <summary>🇬🇧 English</summary>
+
+> **Why Filyo?**
+> I created this application because I couldn't find a simple file sharing tool that suited my needs. So, I decided to build my own, with the help of AI.
 
 **Self-hosted** file-sharing app, no S3 storage. Dark glassmorphism design, bilingual interface (FR/EN), and **reverse sharing** feature.
 
@@ -175,8 +179,12 @@ docker pull ghcr.io/mouette03/filyo:v1.0.3
 
 ---
 
+
 <details>
 <summary>🇫🇷 Français</summary>
+
+> **Pourquoi Filyo ?**
+> J'ai créé cette application car je n'ai pas trouvé d'outil de partage de fichiers simple qui me convenait. J'ai donc décidé de la développer moi-même, avec l'aide de l'IA.
 
 Application de partage de fichiers **auto-hébergée**, sans stockage S3. Design glassmorphism sombre, interface bilingue (FR/EN), et fonctionnalité de **partage inversé**.
 

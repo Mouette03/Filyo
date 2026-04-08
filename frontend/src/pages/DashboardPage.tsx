@@ -95,15 +95,22 @@ export default function DashboardPage() {
       setFiles(filesRes.data)
       setRequests(reqRes.data)
       if (statsRes) setStats((statsRes as any).data)
-      // Refetch pour les demandes déjà ouvertes
-      if (expandedRequest) {
+      // Refetch uniquement si la demande ouverte existe toujours
+      const currentExpanded = expandedRequest
+      const expandedStillExists =
+        !!currentExpanded &&
+        reqRes.data.some((r: UploadRequest) => r.id === currentExpanded)
+
+      if (expandedStillExists && currentExpanded) {
         try {
-          const res = await getReceivedFiles(expandedRequest)
-          setReceivedFiles(prev => ({ ...prev, [expandedRequest]: res.data }))
+          const res = await getReceivedFiles(currentExpanded)
+          setReceivedFiles(prev => ({ ...prev, [currentExpanded]: res.data }))
         } catch {
-          setReceivedFiles(prev => ({ ...prev, [expandedRequest]: [] }))
+          setReceivedFiles(prev => ({ ...prev, [currentExpanded]: [] }))
           toast.error(t('toast.cannotLoadReceived'))
         }
+      } else if (currentExpanded) {
+        setExpandedRequest(null)
       }
     } catch { toast.error(t('toast.loadError')) }
     setLoading(false)
