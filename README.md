@@ -22,7 +22,7 @@
 <summary>🇬🇧 English</summary>
 
 > **Why Filyo?**
-> I created this application because I couldn't find a simple file sharing tool that suited my needs. So, I decided to build my own, with the help of AI.
+> I created this application because I couldn't find a simple file-sharing tool that suited my needs. So, I decided to build my own, with the help of AI.
 
 **Self-hosted** file-sharing app, no S3 storage. Dark glassmorphism design, bilingual interface (FR/EN), and **reverse sharing** feature.
 
