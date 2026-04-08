@@ -142,6 +142,15 @@ export default function DashboardPage() {
     try {
       await deleteUploadRequest(id)
       setRequests(prev => prev.filter(r => r.id !== id))
+      // Si la demande supprimée était ouverte, nettoyer l'état associé
+      if (expandedRequest === id) {
+        setExpandedRequest(null)
+      }
+      setReceivedFiles(prev => {
+        const next = { ...prev }
+        delete next[id]
+        return next
+      })
       toast.success(t('toast.requestDeleted'))
       load() // Rafraîchit stats et demandes après suppression
     } catch { toast.error(t('toast.deleteError')) }
