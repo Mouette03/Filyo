@@ -100,7 +100,10 @@ export default function DashboardPage() {
         try {
           const res = await getReceivedFiles(expandedRequest)
           setReceivedFiles(prev => ({ ...prev, [expandedRequest]: res.data }))
-        } catch { /* ignore */ }
+        } catch {
+          setReceivedFiles(prev => ({ ...prev, [expandedRequest]: [] }))
+          toast.error(t('toast.cannotLoadReceived'))
+        }
       }
     } catch { toast.error(t('toast.loadError')) }
     setLoading(false)
