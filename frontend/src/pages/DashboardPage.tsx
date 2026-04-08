@@ -106,7 +106,8 @@ export default function DashboardPage() {
         try {
           const res = await getReceivedFiles(requestId)
           if (expandedRequest !== requestId) return
-          setReceivedFiles(prev => ({ ...prev, [requestId]: res.data }))
+          // Correction : toujours remplir la clé avec le tableau retourné (même vide)
+          setReceivedFiles(prev => ({ ...prev, [requestId]: Array.isArray(res.data) ? res.data : [] }))
         } catch (err: any) {
           if (expandedRequest !== requestId) return
           console.error('Failed to fetch received files for request', requestId, err)
@@ -183,7 +184,8 @@ export default function DashboardPage() {
       try {
         const res = await getReceivedFiles(requestId)
         if (expandedRequest !== requestId) return
-        setReceivedFiles(prev => ({ ...prev, [requestId]: res.data }))
+        // Correction : toujours remplir la clé avec le tableau retourné (même vide)
+        setReceivedFiles(prev => ({ ...prev, [requestId]: Array.isArray(res.data) ? res.data : [] }))
       } catch {
         if (expandedRequest !== requestId) return
         toast.error(t('toast.cannotLoadReceived'))
