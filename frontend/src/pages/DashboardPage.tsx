@@ -105,7 +105,8 @@ export default function DashboardPage() {
         try {
           const res = await getReceivedFiles(currentExpanded)
           setReceivedFiles(prev => ({ ...prev, [currentExpanded]: res.data }))
-        } catch {
+        } catch (err: any) {
+          console.error('Failed to fetch received files for request', currentExpanded, err)
           setReceivedFiles(prev => ({ ...prev, [currentExpanded]: [] }))
           toast.error(t('toast.cannotLoadReceived'))
         }
