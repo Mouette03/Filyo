@@ -102,12 +102,15 @@ export default function DashboardPage() {
         reqRes.data.some((r: UploadRequest) => r.id === currentExpanded)
 
       if (expandedStillExists && currentExpanded) {
+        const requestId = currentExpanded
         try {
-          const res = await getReceivedFiles(currentExpanded)
-          setReceivedFiles(prev => ({ ...prev, [currentExpanded]: res.data }))
+          const res = await getReceivedFiles(requestId)
+          if (expandedRequest !== requestId) return
+          setReceivedFiles(prev => ({ ...prev, [requestId]: res.data }))
         } catch (err: any) {
-          console.error('Failed to fetch received files for request', currentExpanded, err)
-          setReceivedFiles(prev => ({ ...prev, [currentExpanded]: [] }))
+          if (expandedRequest !== requestId) return
+          console.error('Failed to fetch received files for request', requestId, err)
+          setReceivedFiles(prev => ({ ...prev, [requestId]: [] }))
           toast.error(t('toast.cannotLoadReceived'))
         }
       } else if (currentExpanded) {
@@ -176,10 +179,15 @@ export default function DashboardPage() {
     if (expandedRequest === id) { setExpandedRequest(null); return }
     setExpandedRequest(id)
     if (!receivedFiles[id]) {
+      const requestId = id
       try {
-        const res = await getReceivedFiles(id)
-        setReceivedFiles(prev => ({ ...prev, [id]: res.data }))
-      } catch { toast.error(t('toast.cannotLoadReceived')) }
+        const res = await getReceivedFiles(requestId)
+        if (expandedRequest !== requestId) return
+        setReceivedFiles(prev => ({ ...prev, [requestId]: res.data }))
+      } catch {
+        if (expandedRequest !== requestId) return
+        toast.error(t('toast.cannotLoadReceived'))
+      }
     }
   }
 
