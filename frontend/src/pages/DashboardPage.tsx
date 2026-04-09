@@ -174,8 +174,10 @@ export default function DashboardPage() {
       const requestId = id
       try {
         const res = await getReceivedFiles(requestId)
+        if (expandedRequestRef.current !== requestId) return
         setReceivedFiles(prev => ({ ...prev, [requestId]: res.data }))
       } catch {
+        if (expandedRequestRef.current !== requestId) return
         setReceivedFiles(prev => ({ ...prev, [requestId]: [] }))
         toast.error(t('toast.cannotLoadReceived'))
       }
