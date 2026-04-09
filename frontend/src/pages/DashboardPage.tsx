@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Trash2, Download, RefreshCw, Copy, Check, Eye, ToggleLeft, ToggleRight, HardDrive, Clock, Mail, Send, ExternalLink, User, TimerOff, AlertTriangle, MessageSquare, Package, EyeOff, ChevronDown, ChevronUp } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '../stores/useAuthStore'
@@ -46,6 +46,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [copiedToken, setCopiedToken] = useState<string | null>(null)
   const [expandedRequest, setExpandedRequest] = useState<string | null>(null)
+  const expandedRequestRef = useRef<string | null>(null)
   const [receivedFiles, setReceivedFiles] = useState<Record<string, ReceivedFile[]>>({})
   const [emailingFileId, setEmailingFileId] = useState<string | null>(null)
   const [emailToFile, setEmailToFile] = useState('')
@@ -96,7 +97,7 @@ export default function DashboardPage() {
       setRequests(reqRes.data)
       if (statsRes) setStats((statsRes as any).data)
       // Refetch uniquement si la demande ouverte existe toujours
-      const currentExpanded = expandedRequest
+      const currentExpanded = expandedRequestRef.current
       const expandedStillExists =
         !!currentExpanded &&
         reqRes.data.some((r: UploadRequest) => r.id === currentExpanded)
@@ -113,6 +114,7 @@ export default function DashboardPage() {
         }
       } else if (currentExpanded) {
         setExpandedRequest(null)
+        expandedRequestRef.current = null
       }
     } catch { toast.error(t('toast.loadError')) }
     setLoading(false)
@@ -161,8 +163,9 @@ export default function DashboardPage() {
   }
 
   const toggleExpandRequest = async (id: string) => {
-    if (expandedRequest === id) { setExpandedRequest(null); return }
+    if (expandedRequest === id) { setExpandedRequest(null); expandedRequestRef.current = null; return }
     setExpandedRequest(id)
+    expandedRequestRef.current = id
     if (!receivedFiles[id]) {
       const requestId = id
       try {
