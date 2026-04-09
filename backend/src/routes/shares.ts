@@ -88,8 +88,8 @@ export async function shareRoutes(app: FastifyInstance) {
   }>('/:token/download', {
     config: {
       rateLimit: {
-        max: 5,
-        timeWindow: '5 minutes',
+        max: 3,
+        timeWindow: '1 minute',
         keyGenerator: (req) => `${req.ip}:${(req.params as any).token}`,
       },
     },
