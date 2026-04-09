@@ -153,7 +153,7 @@ export default function DashboardPage() {
         return next
       })
       toast.success(t('toast.requestDeleted'))
-      await load() // Rafraîchit stats et demandes après suppression
+      await load()
     } catch { toast.error(t('toast.deleteError')) }
   }
 
