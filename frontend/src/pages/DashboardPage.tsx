@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Trash2, Download, RefreshCw, Copy, Check, Eye, ToggleLeft, ToggleRight, HardDrive, Clock, Mail, Send, ExternalLink, User, TimerOff, AlertTriangle, MessageSquare, Package, EyeOff, ChevronDown, ChevronUp } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '../stores/useAuthStore'
@@ -61,7 +61,7 @@ export default function DashboardPage() {
     | { type: 'single'; file: FileItem }
     | { type: 'batch'; batchToken: string; files: FileItem[] }
 
-  const displayItems: DisplayItem[] = (() => {
+  const displayItems = useMemo<DisplayItem[]>(() => {
     const batchMap = new Map<string, FileItem[]>()
     for (const f of files) {
       if (f.batchToken) {
@@ -82,7 +82,7 @@ export default function DashboardPage() {
       }
     }
     return result
-  })()
+  }, [files])
 
   const load = async () => {
     setLoading(true)
@@ -123,37 +123,24 @@ export default function DashboardPage() {
   const handleDeleteFile = async (id: string) => {
     try {
       await deleteFile(id)
-      setFiles(prev => prev.filter(f => f.id !== id))
       toast.success(t('toast.fileDeleted'))
-      await load() // Rafraîchit les stats après suppression
+      await load()
     } catch { toast.error(t('toast.deleteError')) }
   }
 
   const handleDeleteBatch = async (batchFiles: FileItem[]) => {
     try {
       await Promise.all(batchFiles.map(f => deleteFile(f.id)))
-      const ids = new Set(batchFiles.map(f => f.id))
-      setFiles(prev => prev.filter(f => !ids.has(f.id)))
       toast.success(t('toast.fileDeleted'))
-      await load() // Rafraîchit les stats après suppression d'un lot
+      await load()
     } catch { toast.error(t('toast.deleteError')) }
   }
 
   const handleDeleteRequest = async (id: string) => {
     try {
       await deleteUploadRequest(id)
-      setRequests(prev => prev.filter(r => r.id !== id))
-      // Si la demande supprimée était ouverte, nettoyer l'état associé
-      if (expandedRequest === id) {
-        setExpandedRequest(null)
-      }
-      setReceivedFiles(prev => {
-        const next = { ...prev }
-        delete next[id]
-        return next
-      })
       toast.success(t('toast.requestDeleted'))
-      await load() // Rafraîchit stats et demandes après suppression
+      await load()
     } catch { toast.error(t('toast.deleteError')) }
   }
 
@@ -272,7 +259,7 @@ export default function DashboardPage() {
     try {
       const res = await runCleanup()
       toast.success(t('toast.cleanupDone', { count: String(res.data.deletedFiles) }))
-      load()
+      await load()
     } catch { toast.error(t('common.error')) }
   }
 

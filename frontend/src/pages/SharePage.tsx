@@ -87,7 +87,9 @@ export default function SharePage() {
       setDownloaded(p => ({ ...p, [token]: true }))
       toast.success(t('toast.downloadStarted'))
     } catch (err: any) {
-      if (err.response?.status === 401) {
+      if (err.response?.status === 429) {
+        toast.error(t('toast.tooManyRequests'))
+      } else if (err.response?.status === 401) {
         toast.error(t('toast.passwordWrong'))
       } else if (err.response?.data?.code === 'FILE_MISSING') {
         toast.error(t('error.fileMissing'))
@@ -107,7 +109,9 @@ export default function SharePage() {
       setDownloaded(p => ({ ...p, [shareToken]: true }))
       toast.success(t('toast.downloadStarted'))
     } catch (err: any) {
-      if (err.response?.status === 401) {
+      if (err.response?.status === 429) {
+        toast.error(t('toast.tooManyRequests'))
+      } else if (err.response?.status === 401) {
         toast.error(t('toast.passwordWrong'))
       } else if (err.response?.data?.code === 'FILE_MISSING') {
         toast.error(t('error.fileMissing'))
@@ -132,7 +136,12 @@ export default function SharePage() {
         downloadBlob(res.data, info.hideFilenames ? `fichier-${i + 1}` : bf.filename)
         setDownloaded(p => ({ ...p, [bf.shareToken]: true }))
       } catch (err: any) {
-        if (err.response?.status === 401) {
+        if (err.response?.status === 429) {
+          toast.error(t('toast.tooManyRequests'))
+          setDownloading(p => ({ ...p, [bf.shareToken]: false }))
+          setDownloadingAll(false)
+          return
+        } else if (err.response?.status === 401) {
           toast.error(t('toast.passwordWrong'))
           setDownloading(p => ({ ...p, [bf.shareToken]: false }))
           setDownloadingAll(false)
