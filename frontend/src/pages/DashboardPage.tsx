@@ -116,7 +116,11 @@ export default function DashboardPage() {
         setExpandedRequest(null)
         expandedRequestRef.current = null
       }
-    } catch { toast.error(t('toast.loadError')) }
+    } catch {
+      toast.error(t('toast.loadError'))
+      setExpandedRequest(null)
+      expandedRequestRef.current = null
+    }
     setLoading(false)
   }
 
