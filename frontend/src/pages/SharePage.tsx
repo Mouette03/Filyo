@@ -127,6 +127,7 @@ export default function SharePage() {
     if (!info?.batchFiles) return
     const files = info.batchFiles.filter(bf => bf.shareToken)
     setDownloadingAll(true)
+    let failures = 0
     for (let i = 0; i < files.length; i++) {
       const bf = files[i]
       if (downloaded[bf.shareToken]) continue
@@ -147,12 +148,13 @@ export default function SharePage() {
           setDownloadingAll(false)
           return
         }
+        failures++
         toast.error(t('common.error'))
       }
       setDownloading(p => ({ ...p, [bf.shareToken]: false }))
     }
     setDownloadingAll(false)
-    toast.success(t('toast.downloadStarted'))
+    if (failures === 0) toast.success(t('toast.downloadStarted'))
   }
 
   const isBatch = info?.batchFiles && info.batchFiles.filter(bf => bf.shareToken).length > 1
