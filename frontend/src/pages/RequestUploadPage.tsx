@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import { useDropzone } from 'react-dropzone'
-import { Upload, ArrowDownUp, AlertTriangle, Clock, Check, Lock, User, Mail, MessageSquare } from 'lucide-react'
+import { Upload, ArrowDownUp, AlertTriangle, Clock, Check, Lock, User, Mail, MessageSquare, RotateCcw, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { getUploadRequestInfo, submitToUploadRequest, getSettings, initChunkedUpload, getChunkUploadStatus, uploadChunk, finalizeChunkedUpload } from '../api/client'
 import { formatBytes, formatDate, getFileIcon } from '../lib/utils'
@@ -20,6 +20,15 @@ interface RequestInfo {
   maxSizeBytes: string | null
 }
 
+interface PendingResume {
+  key: string
+  filename: string
+  fileSize: number
+  uploadId: string
+  receivedChunks: number
+  totalChunks: number
+}
+
 type Status = 'loading' | 'ready' | 'uploading' | 'done' | 'error' | 'expired'
 
 export default function RequestUploadPage() {
@@ -34,6 +43,7 @@ export default function RequestUploadPage() {
   const [password, setPassword] = useState('')
   const [progress, setProgress] = useState(0)
   const [progressLabel, setProgressLabel] = useState('')
+  const [pendingResumes, setPendingResumes] = useState<PendingResume[]>([])
   const [nameReq, setNameReq] = useState<FieldReq>('optional')
   const [emailReq, setEmailReq] = useState<FieldReq>('optional')
   const [msgReq, setMsgReq] = useState<FieldReq>('optional')
@@ -69,6 +79,54 @@ export default function RequestUploadPage() {
         }
       })
   }, [token])
+
+  // Scanner localStorage pour les uploads interrompus
+  useEffect(() => {
+    if (status !== 'ready' || !token || !settings.uploadChunkSizeMb) return
+    const prefix = `filyo-upload-${token}-`
+    const found: Omit<PendingResume, 'receivedChunks' | 'totalChunks'>[] = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (!key?.startsWith(prefix)) continue
+      const uploadId = localStorage.getItem(key)
+      if (!uploadId) continue
+      const rest = key.slice(prefix.length)
+      const lastDash = rest.lastIndexOf('-')
+      if (lastDash === -1) continue
+      const filename = rest.slice(0, lastDash)
+      const fileSize = parseInt(rest.slice(lastDash + 1))
+      if (isNaN(fileSize)) continue
+      found.push({ key, filename, fileSize, uploadId })
+    }
+    if (!found.length) return
+    Promise.all(
+      found.map(async item => {
+        try {
+          const res = await getChunkUploadStatus(token, item.uploadId)
+          return { ...item, receivedChunks: res.data.receivedChunks, totalChunks: res.data.totalChunks } as PendingResume
+        } catch {
+          localStorage.removeItem(item.key)
+          return null
+        }
+      })
+    ).then(results => setPendingResumes(results.filter(Boolean) as PendingResume[]))
+  }, [status, token, settings.uploadChunkSizeMb])
+
+  // Bloquer navigation pendant upload en cours
+  useEffect(() => {
+    if (status !== 'uploading') return
+    const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = '' }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [status])
+
+  const handleAbandon = (item: PendingResume) => {
+    localStorage.removeItem(item.key)
+    setPendingResumes(prev => prev.filter(r => r.key !== item.key))
+  }
+
+  const getResumeInfo = (file: { name: string; size: number }) =>
+    pendingResumes.find(r => r.filename === file.name && r.fileSize === file.size) ?? null
 
   const onDrop = useCallback((accepted: File[]) => {
     setFiles(prev => {
@@ -163,6 +221,7 @@ export default function RequestUploadPage() {
 
           await finalizeChunkedUpload(token, uploadId)
           localStorage.removeItem(RESUME_KEY)
+          setPendingResumes(prev => prev.filter(r => r.key !== RESUME_KEY))
         }
         setStatus('done')
         toast.success(t('toast.filesDeposited'))
@@ -251,6 +310,33 @@ export default function RequestUploadPage() {
 
         {(status === 'ready' || status === 'uploading') && info && (
           <>
+            {/* Bandeau uploads interrompus */}
+            {pendingResumes.length > 0 && status !== 'uploading' && (
+              <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <RotateCcw size={15} className="text-amber-400 shrink-0" />
+                  <p className="text-sm font-semibold text-amber-300">{t('request.resumeTitle')}</p>
+                </div>
+                {pendingResumes.map(item => (
+                  <div key={item.key} className="flex items-center gap-3 [background:var(--surface-700)] rounded-xl px-3 py-2.5">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{item.filename}</p>
+                      <p className="text-xs text-amber-400/80 mt-0.5">
+                        {t('request.resumeProgress', { done: String(item.receivedChunks), total: String(item.totalChunks) })}
+                      </p>
+                      <p className="text-xs [color:var(--text-30)] mt-0.5">{t('request.resumeHint')}</p>
+                    </div>
+                    <button
+                      onClick={() => handleAbandon(item)}
+                      className="shrink-0 flex items-center gap-1 text-xs text-red-400/70 hover:text-red-400 transition-colors px-2 py-1 rounded-lg hover:bg-red-500/10"
+                    >
+                      <X size={12} /> {t('request.resumeAbandon')}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* Request info */}
             <div className="card">
               <div className="flex items-center gap-3 mb-3">
@@ -380,15 +466,24 @@ export default function RequestUploadPage() {
             {/* File list */}
             {files.length > 0 && (
               <div className="card space-y-2">
-                {files.map((f, i) => (
+                {files.map((f, i) => {
+                    const resume = getResumeInfo(f)
+                    return (
                     <div key={i} className="flex items-center gap-3 [background:var(--surface-700)] rounded-xl px-3 py-2.5">
                     <span className="text-xl">{getFileIcon(f.type)}</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{f.name}</p>
                       <p className="text-xs [color:var(--text-40)]">{formatBytes(f.size)}</p>
+                      {resume && (
+                        <p className="text-xs text-amber-400/80 mt-0.5 flex items-center gap-1">
+                          <RotateCcw size={10} />
+                          {t('request.resumeMatched', { done: String(resume.receivedChunks), total: String(resume.totalChunks) })}
+                        </p>
+                      )}
                     </div>
                   </div>
-                ))}
+                    )
+                  })}
               </div>
             )}
 

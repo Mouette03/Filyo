@@ -75,7 +75,7 @@ export async function runScheduledCleanup(): Promise<{ deletedFiles: number; del
  * Indépendant du paramètre cleanupAfterDays — toujours actif pour éviter l'accumulation de chunks temporaires.
  */
 export async function cleanupOrphanedChunks(): Promise<number> {
-  const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000)
+  const cutoff = new Date(Date.now() - 4 * 60 * 60 * 1000)
   const orphans = await prisma.chunkedUpload.findMany({
     where: { createdAt: { lt: cutoff } }
   })
