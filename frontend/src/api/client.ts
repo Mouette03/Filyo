@@ -120,12 +120,9 @@ export const submitToUploadRequest = (
 
 export const initChunkedUpload = (
   token: string,
-  data: { filename: string; mimeType: string; totalSize: number; totalChunks: number; uploaderName?: string; uploaderEmail?: string; message?: string },
-  password?: string
+  data: { filename: string; mimeType: string; totalSize: number; totalChunks: number; uploaderName?: string; uploaderEmail?: string; message?: string; password?: string }
 ) =>
-  api.post(`/upload-requests/${token}/upload-init`, data, {
-    headers: { ...(password ? { 'X-Upload-Password': btoa(unescape(encodeURIComponent(password))) } : {}) }
-  })
+  api.post(`/upload-requests/${token}/upload-init`, data)
 
 export const getChunkUploadStatus = (token: string, uploadId: string) =>
   api.get(`/upload-requests/${token}/upload-status/${uploadId}`)

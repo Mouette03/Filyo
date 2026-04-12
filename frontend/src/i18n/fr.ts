@@ -406,6 +406,7 @@ export const fr = {
   'request.resumeTitle': 'Upload interrompu',
   'request.resumeHint': 'Sélectionnez à nouveau ce fichier pour reprendre automatiquement.',
   'request.resumeProgress': '{{done}}/{{total}} morceaux déjà envoyés',
+  'request.resumePending': 'Initialisation en cours…',
   'request.resumeAbandon': 'Abandonner',
   'request.resumeMatched': '↩ Reprendra depuis le morceau {{done}}/{{total}}',
   'request.uploadingChunk': 'Morceau {{current}}/{{total}} — {{pct}}%',

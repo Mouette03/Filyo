@@ -406,6 +406,7 @@ export const en = {
   'request.resumeTitle': 'Interrupted upload',
   'request.resumeHint': 'Re-select this file to resume automatically.',
   'request.resumeProgress': '{{done}}/{{total}} chunks already sent',
+  'request.resumePending': 'Initialization in progress…',
   'request.resumeAbandon': 'Discard',
   'request.resumeMatched': '↩ Will resume from chunk {{done}}/{{total}}',
   'request.uploadingChunk': 'Chunk {{current}}/{{total}} — {{pct}}%',
