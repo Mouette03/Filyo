@@ -125,15 +125,16 @@ async function bootstrap() {
 
   // ── Gestionnaire d'erreurs global ──────────────────────────────────────────
   app.setErrorHandler((err, req, reply) => {
-    const status = err.statusCode ?? 500
+    const e = err as Error & { statusCode?: number }
+    const status = e.statusCode ?? 500
     if (status >= 500) {
       req.log.error({
-        err: { message: err.message, stack: err.stack, name: err.name },
+        err: { message: e.message, stack: e.stack, name: e.name },
         req: { method: req.method, url: req.url, id: req.id },
         user: (req as any).user?.id ?? null
-      }, `Unhandled error: ${err.message}`)
+      }, `Unhandled error: ${e.message}`)
     }
-    void reply.code(status).send({ error: err.message || 'Internal server error' })
+    void reply.code(status).send({ error: e.message || 'Internal server error' })
   })
 
   // ── Routes ──
