@@ -1,11 +1,20 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useDropzone } from 'react-dropzone'
-import { Upload, X, Copy, Check, Lock, Clock, Download, Plus, Trash2, Share2, Mail, Send, EyeOff } from 'lucide-react'
+import { Upload, X, Copy, Check, Lock, Clock, Download, Plus, Trash2, Share2, Mail, Send, EyeOff, RotateCcw } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { uploadFiles, sendShareByEmail, getMyQuota, initFileChunkedUpload, getFileChunkUploadStatus, uploadFileChunk, finalizeFileChunkedUpload } from '../api/client'
 import { formatBytes, getFileIcon, copyToClipboard, isValidEmail } from '../lib/utils'
 import { useT } from '../i18n'
 import { useAppSettingsStore } from '../stores/useAppSettingsStore'
+
+interface PendingResume {
+  key: string
+  filename: string
+  fileSize: number
+  uploadId: string
+  receivedChunks: number
+  totalChunks: number
+}
 
 interface UploadedResult {
   id: string
@@ -30,9 +39,57 @@ export default function HomePage() {
   const [hideFilenames, setHideFilenames] = useState(false)
   const [copiedToken, setCopiedToken] = useState<string | null>(null)
   const [showShareModal, setShowShareModal] = useState(false)
+  const [pendingResumes, setPendingResumes] = useState<PendingResume[]>([])
   const [emailTo, setEmailTo] = useState('')
   const [emailSending, setEmailSending] = useState(false)
   const [emailSent, setEmailSent] = useState(false)
+
+  // Scanner localStorage pour les uploads admin interrompus
+  useEffect(() => {
+    const prefix = 'filyo-file-'
+    const found: Omit<PendingResume, 'receivedChunks' | 'totalChunks'>[] = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (!key?.startsWith(prefix)) continue
+      const uploadId = localStorage.getItem(key)
+      if (!uploadId) continue
+      const rest = key.slice(prefix.length)
+      const lastDash = rest.lastIndexOf('-')
+      if (lastDash === -1) continue
+      const filename = rest.slice(0, lastDash)
+      const fileSize = parseInt(rest.slice(lastDash + 1))
+      if (isNaN(fileSize)) continue
+      found.push({ key, filename, fileSize, uploadId })
+    }
+    if (!found.length) return
+    Promise.all(
+      found.map(async item => {
+        if (item.uploadId === 'pending') {
+          return { ...item, receivedChunks: 0, totalChunks: 0 } as PendingResume
+        }
+        try {
+          const res = await getFileChunkUploadStatus(item.uploadId)
+          return { ...item, receivedChunks: res.data.receivedChunks, totalChunks: res.data.totalChunks } as PendingResume
+        } catch (e: any) {
+          if (e?.response?.status === 404) {
+            localStorage.removeItem(item.key)
+            return null
+          }
+          return { ...item, receivedChunks: 0, totalChunks: 0 } as PendingResume
+        }
+      })
+    ).then(results => {
+      setPendingResumes(results.filter(Boolean) as PendingResume[])
+    })
+  }, [])
+
+  const handleAbandon = (item: PendingResume) => {
+    localStorage.removeItem(item.key)
+    setPendingResumes(prev => prev.filter(r => r.key !== item.key))
+  }
+
+  const getResumeInfo = (file: { name: string; size: number }) =>
+    pendingResumes.find(r => r.filename === file.name && r.fileSize === file.size) ?? null
 
   const onDrop = useCallback((accepted: File[]) => {
     setFiles(prev => [...prev, ...accepted])
@@ -145,6 +202,7 @@ export default function HomePage() {
 
           const finalRes = await finalizeFileChunkedUpload(uploadId)
           localStorage.removeItem(RESUME_KEY)
+          setPendingResumes(prev => prev.filter(r => r.key !== RESUME_KEY))
           accumulated.push(finalRes.data)
         }
 
@@ -360,6 +418,35 @@ export default function HomePage() {
           </div>
         </div>
       )}
+      {/* Bandeau uploads admin interrompus */}
+      {pendingResumes.length > 0 && !uploading && (
+        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 space-y-3 mb-6">
+          <div className="flex items-center gap-2">
+            <RotateCcw size={15} className="text-amber-400 shrink-0" />
+            <p className="text-sm font-semibold text-amber-300">{t('request.resumeTitle')}</p>
+          </div>
+          {pendingResumes.map(item => (
+            <div key={item.key} className="flex items-center gap-3 [background:var(--surface-700)] rounded-xl px-3 py-2.5">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{item.filename}</p>
+                <p className="text-xs text-amber-400/80 mt-0.5">
+                  {item.totalChunks > 0
+                    ? t('request.resumeProgress', { done: String(item.receivedChunks), total: String(item.totalChunks) })
+                    : t('request.resumePending')}
+                </p>
+                <p className="text-xs [color:var(--text-30)] mt-0.5">{t('request.resumeHint')}</p>
+              </div>
+              <button
+                onClick={() => handleAbandon(item)}
+                className="shrink-0 flex items-center gap-1 text-xs text-red-400/70 hover:text-red-400 transition-colors px-2 py-1 rounded-lg hover:bg-red-500/10"
+              >
+                <X size={12} /> {t('request.resumeAbandon')}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Header */}
       <div className="text-center mb-10">
         <h1 className="text-4xl font-bold mb-3">
@@ -417,6 +504,11 @@ export default function HomePage() {
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{file.name}</p>
                 <p className="text-xs text-white/40">{formatBytes(file.size)}</p>
+                {(() => { const r = getResumeInfo(file); return r ? (
+                  <p className="text-xs text-amber-400/80 mt-0.5">
+                    {t('request.resumeMatched', { done: String(r.receivedChunks), total: String(r.totalChunks) })}
+                  </p>
+                ) : null })()}
               </div>
               <button
                 onClick={() => removeFile(i)}
