@@ -71,6 +71,24 @@ export async function runScheduledCleanup(): Promise<{ deletedFiles: number; del
 }
 
 /**
+ * Nettoyage des uploads chunked orphelins (> 24h sans finalisation).
+ * Indépendant du paramètre cleanupAfterDays — toujours actif pour éviter l'accumulation de chunks temporaires.
+ */
+export async function cleanupOrphanedChunks(): Promise<number> {
+  const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000)
+  const orphans = await prisma.chunkedUpload.findMany({
+    where: { createdAt: { lt: cutoff } }
+  })
+  for (const c of orphans) {
+    await fs.remove(path.join(UPLOAD_DIR, 'chunks', c.id)).catch(() => {})
+  }
+  if (orphans.length) {
+    await prisma.chunkedUpload.deleteMany({ where: { id: { in: orphans.map(c => c.id) } } })
+  }
+  return orphans.length
+}
+
+/**
  * Nettoyage forcé (admin) : supprime TOUT ce qui est expiré,
  * sans tenir compte des préférences ni des délais de grâce.
  */

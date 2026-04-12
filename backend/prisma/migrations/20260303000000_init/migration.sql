@@ -33,6 +33,7 @@ CREATE TABLE "AppSettings" (
     "allowRegistration" BOOLEAN NOT NULL DEFAULT false,
     "cleanupAfterDays" INTEGER,
     "maxFileSizeBytes" BIGINT,
+    "uploadChunkSizeMb" INTEGER,
     "updatedAt" DATETIME NOT NULL
 );
 
@@ -109,3 +110,20 @@ CREATE UNIQUE INDEX "Share_token_key" ON "Share"("token");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "UploadRequest_token_key" ON "UploadRequest"("token");
+
+-- CreateTable
+CREATE TABLE "ChunkedUpload" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "uploadRequestId" TEXT NOT NULL,
+    "originalName" TEXT NOT NULL,
+    "mimeType" TEXT NOT NULL,
+    "totalSize" BIGINT NOT NULL,
+    "totalChunks" INTEGER NOT NULL,
+    "receivedChunks" INTEGER NOT NULL DEFAULT 0,
+    "password" TEXT,
+    "uploaderName" TEXT,
+    "uploaderEmail" TEXT,
+    "message" TEXT,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "ChunkedUpload_uploadRequestId_fkey" FOREIGN KEY ("uploadRequestId") REFERENCES "UploadRequest" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);

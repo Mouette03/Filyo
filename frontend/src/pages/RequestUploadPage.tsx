@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { useDropzone } from 'react-dropzone'
 import { Upload, ArrowDownUp, AlertTriangle, Clock, Check, Lock, User, Mail, MessageSquare } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { getUploadRequestInfo, submitToUploadRequest, getSettings } from '../api/client'
+import { getUploadRequestInfo, submitToUploadRequest, getSettings, initChunkedUpload, getChunkUploadStatus, uploadChunk, finalizeChunkedUpload } from '../api/client'
 import { formatBytes, formatDate, getFileIcon } from '../lib/utils'
 import { useT } from '../i18n'
 import { useAppSettingsStore } from '../stores/useAppSettingsStore'
@@ -33,6 +33,7 @@ export default function RequestUploadPage() {
   const [message, setMessage] = useState('')
   const [password, setPassword] = useState('')
   const [progress, setProgress] = useState(0)
+  const [progressLabel, setProgressLabel] = useState('')
   const [nameReq, setNameReq] = useState<FieldReq>('optional')
   const [emailReq, setEmailReq] = useState<FieldReq>('optional')
   const [msgReq, setMsgReq] = useState<FieldReq>('optional')
@@ -108,7 +109,77 @@ export default function RequestUploadPage() {
 
     setStatus('uploading')
     setProgress(0)
+    setProgressLabel('')
 
+    const chunkSizeMb = settings.uploadChunkSizeMb
+    const chunkSizeBytes = chunkSizeMb ? chunkSizeMb * 1024 * 1024 : null
+
+    // Upload chunked si activé et AU MOINS un fichier dépasse la taille d'un chunk
+    if (chunkSizeBytes && files.some(f => f.size > chunkSizeBytes)) {
+      try {
+        for (let fi = 0; fi < files.length; fi++) {
+          const file = files[fi]
+          const totalChunks = Math.ceil(file.size / chunkSizeBytes)
+          const RESUME_KEY = `filyo-upload-${token}-${file.name}-${file.size}`
+
+          // Vérifier si un upload est en cours pour ce fichier
+          let uploadId: string | null = localStorage.getItem(RESUME_KEY)
+          let startChunk = 0
+
+          if (uploadId) {
+            try {
+              setProgressLabel(t('request.chunkResuming'))
+              const statusRes = await getChunkUploadStatus(token, uploadId)
+              startChunk = statusRes.data.receivedChunks
+            } catch {
+              // Upload introuvable — recommencer
+              uploadId = null
+              startChunk = 0
+            }
+          }
+
+          if (!uploadId) {
+            const initRes = await initChunkedUpload(
+              token,
+              { filename: file.name, mimeType: file.type || 'application/octet-stream', totalSize: file.size, totalChunks, uploaderName: uploaderName || undefined, uploaderEmail: uploaderEmail || undefined, message: message || undefined },
+              password || undefined
+            )
+            uploadId = initRes.data.uploadId as string
+            localStorage.setItem(RESUME_KEY, uploadId)
+          }
+
+          for (let ci = startChunk; ci < totalChunks; ci++) {
+            const start = ci * chunkSizeBytes
+            const chunk = file.slice(start, start + chunkSizeBytes)
+            setProgressLabel(t('request.uploadingChunk', { current: String(ci + 1), total: String(totalChunks), pct: '0' }))
+            await uploadChunk(token, uploadId, ci, chunk, pct => {
+              setProgressLabel(t('request.uploadingChunk', { current: String(ci + 1), total: String(totalChunks), pct: String(pct) }))
+              // Progression globale inter-fichiers
+              const filePct = (ci + pct / 100) / totalChunks
+              const globalPct = ((fi + filePct) / files.length) * 100
+              setProgress(Math.round(globalPct))
+            })
+          }
+
+          await finalizeChunkedUpload(token, uploadId)
+          localStorage.removeItem(RESUME_KEY)
+        }
+        setStatus('done')
+        toast.success(t('toast.filesDeposited'))
+      } catch (err: any) {
+        const code = err.response?.data?.code
+        if (code === 'WRONG_PASSWORD') toast.error(t('toast.passwordWrong'))
+        else if (code === 'REQUEST_LIMIT_REACHED') toast.error(t('request.limitReachedDesc'))
+        else if (code === 'FILE_TOO_LARGE') toast.error(t('error.fileTooLarge'))
+        else if (code === 'QUOTA_EXCEEDED') toast.error(t('error.quotaExceeded'))
+        else if (err.response?.status === 429) toast.error(t('toast.tooManyRequests'))
+        else toast.error(t('toast.sendError'))
+        setStatus('ready')
+      }
+      return
+    }
+
+    // Upload classique (pas chunked ou tous les fichiers plus petits qu'un chunk)
     const formData = new FormData()
     if (uploaderName) formData.append('uploaderName', uploaderName)
     if (uploaderEmail) formData.append('uploaderEmail', uploaderEmail)
@@ -323,11 +394,16 @@ export default function RequestUploadPage() {
 
             {/* Progress bar */}
             {status === 'uploading' && (
-              <div className="h-1.5 [background:var(--surface-600)] rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-brand-600 to-brand-400 rounded-full transition-all duration-300"
-                  style={{ width: `${progress}%` }}
-                />
+              <div>
+                <div className="h-1.5 [background:var(--surface-600)] rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-brand-600 to-brand-400 rounded-full transition-all duration-300"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+                {progressLabel && (
+                  <p className="text-xs [color:var(--text-30)] mt-1 text-center">{progressLabel}</p>
+                )}
               </div>
             )}
 

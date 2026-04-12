@@ -118,6 +118,43 @@ export const submitToUploadRequest = (
     }
   })
 
+export const initChunkedUpload = (
+  token: string,
+  data: { filename: string; mimeType: string; totalSize: number; totalChunks: number; uploaderName?: string; uploaderEmail?: string; message?: string },
+  password?: string
+) =>
+  api.post(`/upload-requests/${token}/upload-init`, data, {
+    headers: { ...(password ? { 'X-Upload-Password': btoa(unescape(encodeURIComponent(password))) } : {}) }
+  })
+
+export const getChunkUploadStatus = (token: string, uploadId: string) =>
+  api.get(`/upload-requests/${token}/upload-status/${uploadId}`)
+
+export const uploadChunk = (
+  token: string,
+  uploadId: string,
+  chunkIndex: number,
+  blob: Blob,
+  onProgress?: (pct: number) => void
+) => {
+  const form = new FormData()
+  form.append('uploadId', uploadId)
+  form.append('chunkIndex', String(chunkIndex))
+  form.append('chunk', blob)
+  return api.post(`/upload-requests/${token}/upload-chunk`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    onUploadProgress: e => {
+      if (onProgress && e.total) onProgress(Math.round((e.loaded * 100) / e.total))
+    }
+  })
+}
+
+export const finalizeChunkedUpload = (token: string, uploadId: string) =>
+  api.post(`/upload-requests/${token}/upload-finalize`, { uploadId })
+
+export const updateChunkSize = (mb: number | null) =>
+  api.patch('/settings/chunk-size', { uploadChunkSizeMb: mb })
+
 export const downloadReceivedFile = (requestId: string, fileId: string) =>
   api.get(`/upload-requests/${requestId}/received/${fileId}/download`, {
     responseType: 'blob'

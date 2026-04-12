@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { Settings, Upload, Trash2, Check, Type, Image, RefreshCw, Mail, Eye, EyeOff, Wifi, Globe, Users, Palette, Moon, Sun, Monitor, Clock } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { updateAppName, uploadLogo, deleteLogo, getSmtpSettings, updateSmtpSettings, testSmtp, updateSiteUrl, updateUploaderFields, updateAllowRegistration, updateCleanupSetting, updateMaxFileSize } from '../api/client'
+import { updateAppName, uploadLogo, deleteLogo, getSmtpSettings, updateSmtpSettings, testSmtp, updateSiteUrl, updateUploaderFields, updateAllowRegistration, updateCleanupSetting, updateMaxFileSize, updateChunkSize } from '../api/client'
 import { useAppSettingsStore } from '../stores/useAppSettingsStore'
 import { usePreferencesStore, ACCENT_PRESETS, BG_PRESETS, type ThemeMode, type AccentKey, type BgColorKey } from '../stores/usePreferencesStore'
 import { useT } from '../i18n'
@@ -76,6 +76,21 @@ export default function SettingsPage() {
   useEffect(() => {
     setMaxFileSizeMb(settings.maxFileSizeBytes ? String(Math.round(parseInt(settings.maxFileSizeBytes) / (1024 * 1024))) : '')
   }, [settings.maxFileSizeBytes])
+
+  // Upload par morceaux
+  const [chunkSizeMb, setChunkSizeMb] = useState<string>(settings.uploadChunkSizeMb ? String(settings.uploadChunkSizeMb) : '0')
+  const [savingChunkSize, setSavingChunkSize] = useState(false)
+  useEffect(() => { setChunkSizeMb(settings.uploadChunkSizeMb ? String(settings.uploadChunkSizeMb) : '0') }, [settings.uploadChunkSizeMb])
+
+  const handleSaveChunkSize = async (mb: number | null) => {
+    setSavingChunkSize(true)
+    try {
+      await updateChunkSize(mb)
+      setSettings({ uploadChunkSizeMb: mb })
+      toast.success(mb ? t('settings.chunkSaved') : t('settings.chunkRemoved'))
+    } catch { toast.error(t('toast.saveError')) }
+    setSavingChunkSize(false)
+  }
 
   useEffect(() => {
     getSmtpSettings().then(res => {
@@ -543,6 +558,36 @@ export default function SettingsPage() {
               {t('settings.maxFileSizeUnlimited')}
             </button>
           )}
+        </div>
+      </div>
+
+      {/* Section : Upload par morceaux */}
+      <div className="card mb-6">
+        <div className="flex items-center gap-2 mb-5">
+          <Upload size={16} className="text-brand-400" />
+          <h3 className="font-semibold">{t('settings.chunkSection')}</h3>
+          <span className="text-xs text-white/30 ml-auto">{t('settings.chunkHint')}</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <select
+            value={chunkSizeMb}
+            onChange={e => setChunkSizeMb(e.target.value)}
+            className="input w-44"
+          >
+            <option value="0">{t('settings.chunkDisabled')}</option>
+            <option value="5">5 MB</option>
+            <option value="10">10 MB</option>
+            <option value="20">20 MB</option>
+            <option value="50">50 MB</option>
+          </select>
+          <button
+            onClick={() => handleSaveChunkSize(chunkSizeMb === '0' ? null : parseInt(chunkSizeMb))}
+            disabled={savingChunkSize}
+            className="btn-primary flex items-center gap-2 py-2 px-4"
+          >
+            {savingChunkSize ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
+            {t('common.save')}
+          </button>
         </div>
       </div>
 

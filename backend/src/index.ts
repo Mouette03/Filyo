@@ -16,7 +16,7 @@ import { adminRoutes } from './routes/admin'
 import { authRoutes } from './routes/auth'
 import { userRoutes } from './routes/users'
 import { settingsRoutes } from './routes/settings'
-import { runScheduledCleanup } from './lib/cleanup'
+import { runScheduledCleanup, cleanupOrphanedChunks } from './lib/cleanup'
 import { UPLOAD_DIR } from './lib/config'
 
 const appVersion: string = (() => {
@@ -185,6 +185,12 @@ async function bootstrap() {
       }
     } catch (err) {
       app.log.error(err, 'Auto-cleanup failed')
+    }
+    try {
+      const deleted = await cleanupOrphanedChunks()
+      if (deleted > 0) app.log.info({ deleted }, '🧹 Orphaned chunks cleaned')
+    } catch (err) {
+      app.log.error(err, 'Orphaned chunks cleanup failed')
     }
   }
   // Premier passage 1 min après le démarrage, puis toutes les heures
