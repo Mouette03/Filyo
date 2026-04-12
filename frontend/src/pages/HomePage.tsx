@@ -205,6 +205,7 @@ export default function HomePage() {
             })
           }
 
+          setProgressLabel(t('home.finalizing'))
           const finalRes = await finalizeFileChunkedUpload(uploadId)
           localStorage.removeItem(RESUME_KEY)
           setPendingResumes(prev => prev.filter(r => r.key !== RESUME_KEY))

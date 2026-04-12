@@ -75,6 +75,7 @@ export const fr = {
   'home.expiryLabel': 'Expiration',
   'home.maxDlLabel': 'Téléchargements max (optionnel)',
   'home.uploading': 'Envoi en cours… {{pct}}%',
+  'home.finalizing': 'Finalisation…',
   'home.uploadBtnMultiple': 'Envoyer {{count}} fichiers',
   'home.uploadBtnSingle': 'Envoyer le fichier',
   'home.modal.title': 'Fichiers envoyés !',

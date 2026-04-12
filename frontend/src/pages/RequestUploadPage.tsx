@@ -253,6 +253,7 @@ export default function RequestUploadPage() {
             })
           }
 
+          setProgressLabel(t('home.finalizing'))
           await finalizeChunkedUpload(token, uploadId)
           localStorage.removeItem(RESUME_KEY)
           setPendingResumes(prev => prev.filter(r => r.key !== RESUME_KEY))
