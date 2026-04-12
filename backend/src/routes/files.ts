@@ -62,6 +62,7 @@ export async function fileRoutes(app: FastifyInstance) {
 
         let size = 0
         const writeStream = fs.createWriteStream(filePath)
+        writeStream.on('error', () => {})
         try {
           for await (const chunk of part.file) {
             size += chunk.length
