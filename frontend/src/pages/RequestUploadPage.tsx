@@ -113,10 +113,16 @@ export default function RequestUploadPage() {
           const res = await getChunkUploadStatus(token, item.uploadId)
           console.debug('[Filyo resume] status OK:', res.data)
           return { ...item, receivedChunks: res.data.receivedChunks, totalChunks: res.data.totalChunks } as PendingResume
-        } catch (e) {
-          console.debug('[Filyo resume] status failed, removing key:', item.key, e)
-          localStorage.removeItem(item.key)
-          return null
+        } catch (e: any) {
+          // Supprimer la clé UNIQUEMENT si le serveur confirme que l'upload n'existe plus (404)
+          // Pour les erreurs réseau ou erreurs serveur transitoires, conserver la clé et afficher le bandeau
+          if (e?.response?.status === 404) {
+            console.debug('[Filyo resume] upload not found (404), removing key:', item.key)
+            localStorage.removeItem(item.key)
+            return null
+          }
+          console.debug('[Filyo resume] transient error, keeping key:', item.key, e?.message)
+          return { ...item, receivedChunks: 0, totalChunks: 0 } as PendingResume
         }
       })
     ).then(results => {
