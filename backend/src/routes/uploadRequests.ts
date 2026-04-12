@@ -715,6 +715,8 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
 
       const writeStream = fs.createWriteStream(finalPath)
       writeStream.on('error', () => {})
+      try {
+        for (let i = 0; i < chunked.totalChunks; i++) {
           const chunkPath = path.join(chunksDir, `chunk_${i}`)
           if (!(await fs.pathExists(chunkPath))) {
             writeStream.destroy()
