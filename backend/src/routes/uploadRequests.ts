@@ -236,6 +236,7 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
         const filePath = path.join(destDir, filename)
 
         const writeStream = fs.createWriteStream(filePath)
+        writeStream.on('error', () => {})
         let size = 0n
 
         try {
@@ -619,6 +620,7 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
 
         await fs.ensureDir(chunksDir)
         const writeStream = fs.createWriteStream(chunkPath)
+        writeStream.on('error', () => {})
         try {
           for await (const data of part.file) {
             if (!writeStream.write(data)) {
@@ -712,8 +714,7 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
       const chunksDir = path.join(UPLOAD_DIR, 'chunks', chunked.id)
 
       const writeStream = fs.createWriteStream(finalPath)
-      try {
-        for (let i = 0; i < chunked.totalChunks; i++) {
+      writeStream.on('error', () => {})
           const chunkPath = path.join(chunksDir, `chunk_${i}`)
           if (!(await fs.pathExists(chunkPath))) {
             writeStream.destroy()
