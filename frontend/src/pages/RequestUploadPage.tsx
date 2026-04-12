@@ -497,7 +497,7 @@ export default function RequestUploadPage() {
                   />
                 </div>
                 {progressLabel && (
-                  <p className="text-xs [color:var(--text-30)] mt-1 text-center">{progressLabel}</p>
+                  <p className="text-xs text-brand-300/80 mt-1.5 text-center font-medium">{progressLabel}</p>
                 )}
               </div>
             )}
@@ -505,12 +505,17 @@ export default function RequestUploadPage() {
             <button
               onClick={handleSubmit}
               disabled={!files.length || status === 'uploading'}
-              className="btn-primary w-full flex items-center justify-center gap-2"
+              className="btn-primary w-full flex flex-col items-center justify-center gap-1 py-3"
             >
               {status === 'uploading' ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  {t('request.uploading', { pct: String(progress) })}
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    {t('request.uploading', { pct: String(progress) })}
+                  </div>
+                  {progressLabel && (
+                    <span className="text-xs text-white/60 font-normal">{progressLabel}</span>
+                  )}
                 </>
               ) : (
                 <>
