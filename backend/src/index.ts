@@ -125,8 +125,16 @@ async function bootstrap() {
 
   // ── Gestionnaire d'erreurs global ──────────────────────────────────────────
   app.setErrorHandler((err, req, reply) => {
-    const e = err as Error & { statusCode?: number }
+    const e = err as Error & { statusCode?: number; code?: string }
     const status = e.statusCode ?? 500
+
+    // Déconnexion client en cours d'upload — pas une erreur serveur
+    if (e.message === 'Premature close' || e.code === 'ERR_STREAM_PREMATURE_CLOSE') {
+      req.log.warn({ req: { method: req.method, url: req.url }, user: (req as any).user?.id ?? null }, 'Client disconnected mid-upload')
+      if (!reply.sent) void reply.code(499).send()
+      return
+    }
+
     if (status >= 500) {
       req.log.error({
         err: { message: e.message, stack: e.stack, name: e.name },

@@ -82,7 +82,7 @@ export default function RequestUploadPage() {
 
   // Scanner localStorage pour les uploads interrompus
   useEffect(() => {
-    if (status !== 'ready' || !token || !settings.uploadChunkSizeMb) return
+    if (status !== 'ready' || !token) return
     const prefix = `filyo-upload-${token}-`
     const found: Omit<PendingResume, 'receivedChunks' | 'totalChunks'>[] = []
     for (let i = 0; i < localStorage.length; i++) {
@@ -110,7 +110,7 @@ export default function RequestUploadPage() {
         }
       })
     ).then(results => setPendingResumes(results.filter(Boolean) as PendingResume[]))
-  }, [status, token, settings.uploadChunkSizeMb])
+  }, [status, token])
 
   // Bloquer navigation pendant upload en cours
   useEffect(() => {
@@ -172,8 +172,8 @@ export default function RequestUploadPage() {
     const chunkSizeMb = settings.uploadChunkSizeMb
     const chunkSizeBytes = chunkSizeMb ? chunkSizeMb * 1024 * 1024 : null
 
-    // Upload chunked si activé et AU MOINS un fichier dépasse la taille d'un chunk
-    if (chunkSizeBytes && files.some(f => f.size > chunkSizeBytes)) {
+    // Upload chunked si activé et AU MOINS un fichier atteint ou dépasse la taille d'un chunk
+    if (chunkSizeBytes && files.some(f => f.size >= chunkSizeBytes)) {
       try {
         for (let fi = 0; fi < files.length; fi++) {
           const file = files[fi]
