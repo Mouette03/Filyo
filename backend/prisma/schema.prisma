@@ -24,6 +24,7 @@ model User {
   resetTokenExpiry   DateTime?
   files          File[]
   uploadRequests UploadRequest[]
+  fileChunkedUploads FileChunkedUpload[]
 }
 
 model AppSettings {
@@ -112,7 +113,23 @@ model ReceivedFile {
   uploadedAt      DateTime      @default(now())
 }
 
-// Upload en morceaux (chunked resumable upload)
+// Upload chunked (admin — dépôt de fichiers perso)
+model FileChunkedUpload {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  originalName   String
+  mimeType       String
+  totalSize      BigInt
+  totalChunks    Int
+  receivedChunks Int      @default(0)
+  expiresIn      Int?     // secondes, null = sans expiration
+  maxDownloads   Int?
+  password       String?  // haché bcrypt
+  batchToken     String?
+  hideFilenames  Boolean  @default(false)
+  createdAt      DateTime @default(now())
+}
 model ChunkedUpload {
   id              String        @id @default(cuid())
   uploadRequestId String

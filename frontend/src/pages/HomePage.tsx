@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { Upload, X, Copy, Check, Lock, Clock, Download, Plus, Trash2, Share2, Mail, Send, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { uploadFiles, sendShareByEmail, getMyQuota } from '../api/client'
+import { uploadFiles, sendShareByEmail, getMyQuota, initFileChunkedUpload, getFileChunkUploadStatus, uploadFileChunk, finalizeFileChunkedUpload } from '../api/client'
 import { formatBytes, getFileIcon, copyToClipboard, isValidEmail } from '../lib/utils'
 import { useT } from '../i18n'
 import { useAppSettingsStore } from '../stores/useAppSettingsStore'
@@ -82,6 +82,88 @@ export default function HomePage() {
     setUploading(true)
     setProgress(0)
 
+    const chunkSizeMb = settings.uploadChunkSizeMb
+    const chunkSizeBytes = chunkSizeMb ? chunkSizeMb * 1024 * 1024 : null
+
+    // Chemin chunked si activé et au moins un fichier atteint la taille du chunk
+    if (chunkSizeBytes && files.some(f => f.size >= chunkSizeBytes)) {
+      // batchToken partagé entre tous les fichiers du lot (null si fichier unique)
+      const sessionBatchToken = files.length > 1 ? (Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)).slice(0, 16) : null
+
+      try {
+        const accumulated: UploadedResult[] = []
+        for (let fi = 0; fi < files.length; fi++) {
+          const file = files[fi]
+          const totalChunks = Math.ceil(file.size / chunkSizeBytes)
+          const RESUME_KEY = `filyo-file-${file.name}-${file.size}`
+
+          // Placeholder avant init pour survivre à un refresh
+          if (!localStorage.getItem(RESUME_KEY)) {
+            localStorage.setItem(RESUME_KEY, 'pending')
+          }
+
+          let uploadId: string | null = localStorage.getItem(RESUME_KEY)
+          let startChunk = 0
+
+          if (uploadId && uploadId !== 'pending') {
+            try {
+              const statusRes = await getFileChunkUploadStatus(uploadId)
+              startChunk = statusRes.data.receivedChunks
+            } catch {
+              uploadId = null
+              startChunk = 0
+            }
+          } else {
+            uploadId = null
+          }
+
+          if (!uploadId) {
+            const initRes = await initFileChunkedUpload({
+              filename: file.name,
+              mimeType: file.type || 'application/octet-stream',
+              totalSize: file.size,
+              totalChunks,
+              expiresIn: expiresIn || undefined,
+              maxDownloads: maxDownloads || undefined,
+              password: password || undefined,
+              hideFilenames: hideFilenames || undefined,
+              batchToken: sessionBatchToken || undefined
+            })
+            uploadId = initRes.data.uploadId as string
+            localStorage.setItem(RESUME_KEY, uploadId)
+          }
+
+          for (let ci = startChunk; ci < totalChunks; ci++) {
+            const start = ci * chunkSizeBytes
+            const chunk = file.slice(start, start + chunkSizeBytes)
+            await uploadFileChunk(uploadId, ci, chunk, pct => {
+              const filePct = (ci + pct / 100) / totalChunks
+              const globalPct = ((fi + filePct) / files.length) * 100
+              setProgress(Math.round(globalPct))
+            })
+          }
+
+          const finalRes = await finalizeFileChunkedUpload(uploadId)
+          localStorage.removeItem(RESUME_KEY)
+          accumulated.push(finalRes.data)
+        }
+
+        setResults(accumulated)
+        setFiles([])
+        setShowShareModal(true)
+        toast.success(t('toast.uploadSuccess', { count: String(accumulated.length) }))
+      } catch (err: any) {
+        const code = err?.response?.data?.code
+        if (code === 'QUOTA_EXCEEDED') toast.error(t('error.quotaExceeded'))
+        else if (code === 'FILE_TOO_LARGE') toast.error(t('error.fileTooLarge'))
+        else toast.error(t('toast.uploadFailed'))
+      } finally {
+        setUploading(false)
+      }
+      return
+    }
+
+    // Chemin classique (chunked désactivé ou tous les fichiers < seuil)
     const formData = new FormData()
     files.forEach(f => formData.append('files', f))
     if (password) formData.append('password', password)

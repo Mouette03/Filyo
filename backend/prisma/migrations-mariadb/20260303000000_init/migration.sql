@@ -132,3 +132,23 @@ CREATE TABLE `ChunkedUpload` (
 
 ALTER TABLE `ChunkedUpload` ADD CONSTRAINT `ChunkedUpload_uploadRequestId_fkey`
     FOREIGN KEY (`uploadRequestId`) REFERENCES `UploadRequest`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+CREATE TABLE `FileChunkedUpload` (
+    `id` VARCHAR(191) NOT NULL,
+    `userId` VARCHAR(191) NOT NULL,
+    `originalName` VARCHAR(191) NOT NULL,
+    `mimeType` VARCHAR(191) NOT NULL,
+    `totalSize` BIGINT NOT NULL,
+    `totalChunks` INTEGER NOT NULL,
+    `receivedChunks` INTEGER NOT NULL DEFAULT 0,
+    `expiresIn` INTEGER NULL,
+    `maxDownloads` INTEGER NULL,
+    `password` VARCHAR(191) NULL,
+    `batchToken` VARCHAR(191) NULL,
+    `hideFilenames` BOOLEAN NOT NULL DEFAULT false,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+ALTER TABLE `FileChunkedUpload` ADD CONSTRAINT `FileChunkedUpload_userId_fkey`
+    FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;

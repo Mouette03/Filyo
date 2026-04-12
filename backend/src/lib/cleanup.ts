@@ -71,11 +71,12 @@ export async function runScheduledCleanup(): Promise<{ deletedFiles: number; del
 }
 
 /**
- * Nettoyage des uploads chunked orphelins (> 24h sans finalisation).
- * Indépendant du paramètre cleanupAfterDays — toujours actif pour éviter l'accumulation de chunks temporaires.
+ * Nettoyage des uploads chunked orphelins (> 4h sans finalisation).
+ * Couvre à la fois ChunkedUpload (dépôt public) et FileChunkedUpload (admin).
  */
 export async function cleanupOrphanedChunks(): Promise<number> {
   const cutoff = new Date(Date.now() - 4 * 60 * 60 * 1000)
+
   const orphans = await prisma.chunkedUpload.findMany({
     where: { createdAt: { lt: cutoff } }
   })
@@ -85,7 +86,18 @@ export async function cleanupOrphanedChunks(): Promise<number> {
   if (orphans.length) {
     await prisma.chunkedUpload.deleteMany({ where: { id: { in: orphans.map(c => c.id) } } })
   }
-  return orphans.length
+
+  const fileOrphans = await prisma.fileChunkedUpload.findMany({
+    where: { createdAt: { lt: cutoff } }
+  })
+  for (const c of fileOrphans) {
+    await fs.remove(path.join(UPLOAD_DIR, 'chunks', c.id)).catch(() => {})
+  }
+  if (fileOrphans.length) {
+    await prisma.fileChunkedUpload.deleteMany({ where: { id: { in: fileOrphans.map(c => c.id) } } })
+  }
+
+  return orphans.length + fileOrphans.length
 }
 
 /**

@@ -149,6 +149,37 @@ export const uploadChunk = (
 export const finalizeChunkedUpload = (token: string, uploadId: string) =>
   api.post(`/upload-requests/${token}/upload-finalize`, { uploadId })
 
+// ---- Chunked upload admin (dépôt de fichiers perso) ----
+export const initFileChunkedUpload = (data: {
+  filename: string; mimeType: string; totalSize: number; totalChunks: number
+  expiresIn?: string; maxDownloads?: string; password?: string
+  hideFilenames?: boolean; batchToken?: string
+}) => api.post('/files/upload-init', data)
+
+export const getFileChunkUploadStatus = (uploadId: string) =>
+  api.get(`/files/upload-status/${uploadId}`)
+
+export const uploadFileChunk = (
+  uploadId: string,
+  chunkIndex: number,
+  chunk: Blob,
+  onProgress?: (pct: number) => void
+) => {
+  const form = new FormData()
+  form.append('uploadId', uploadId)
+  form.append('chunkIndex', String(chunkIndex))
+  form.append('chunk', chunk)
+  return api.post('/files/upload-chunk', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    onUploadProgress: e => {
+      if (onProgress && e.total) onProgress(Math.round((e.loaded / e.total) * 100))
+    }
+  })
+}
+
+export const finalizeFileChunkedUpload = (uploadId: string) =>
+  api.post('/files/upload-finalize', { uploadId })
+
 export const updateChunkSize = (mb: number | null) =>
   api.patch('/settings/chunk-size', { uploadChunkSizeMb: mb })
 

@@ -505,8 +505,7 @@ export default function RequestUploadPage() {
                       <p className="text-sm font-medium truncate">{f.name}</p>
                       <p className="text-xs [color:var(--text-40)]">{formatBytes(f.size)}</p>
                       {resume && (
-                        <p className="text-xs text-amber-400/80 mt-0.5 flex items-center gap-1">
-                          <RotateCcw size={10} />
+                        <p className="text-xs text-amber-400/80 mt-0.5">
                           {t('request.resumeMatched', { done: String(resume.receivedChunks), total: String(resume.totalChunks) })}
                         </p>
                       )}
@@ -543,9 +542,6 @@ export default function RequestUploadPage() {
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     {t('request.uploading', { pct: String(progress) })}
                   </div>
-                  {progressLabel && (
-                    <span className="text-xs text-white/60 font-normal">{progressLabel}</span>
-                  )}
                 </>
               ) : (
                 <>

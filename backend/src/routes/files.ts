@@ -161,6 +161,247 @@ export async function fileRoutes(app: FastifyInstance) {
     )
   })
 
+  // POST /api/files/upload-init — Initialise un upload chunked (authentifié)
+  app.post<{
+    Body: {
+      filename: string; mimeType: string; totalSize: number; totalChunks: number
+      expiresIn?: string; maxDownloads?: string; password?: string
+      hideFilenames?: boolean; batchToken?: string
+    }
+  }>('/upload-init', auth, async (req, reply) => {
+    const userId = req.user.id
+    const { filename, mimeType, totalSize, totalChunks, expiresIn, maxDownloads, password: rawPassword, hideFilenames, batchToken } = req.body
+
+    const appSettings = await getAppSettings()
+    const globalMaxBytes = appSettings.maxFileSizeBytes ?? null
+    if (globalMaxBytes !== null && BigInt(totalSize) > globalMaxBytes) {
+      return reply.code(413).send({ code: 'FILE_TOO_LARGE', maxBytes: globalMaxBytes.toString() })
+    }
+
+    const userRecord = await prisma.user.findUnique({ where: { id: userId }, select: { storageQuotaBytes: true } })
+    const quotaBytes = userRecord?.storageQuotaBytes ?? null
+    if (quotaBytes !== null) {
+      const [filesAgg, receivedAgg] = await Promise.all([
+        prisma.file.aggregate({ _sum: { size: true }, where: { userId } }),
+        prisma.receivedFile.aggregate({ _sum: { size: true }, where: { uploadRequest: { userId } } })
+      ])
+      const usedBytes = (filesAgg._sum.size ?? BigInt(0)) + (receivedAgg._sum.size ?? BigInt(0))
+      if (usedBytes + BigInt(totalSize) > quotaBytes) {
+        return reply.code(413).send({ code: 'QUOTA_EXCEEDED' })
+      }
+    }
+
+    const hashedPassword = rawPassword ? await bcrypt.hash(rawPassword, 10) : null
+
+    const chunked = await prisma.fileChunkedUpload.create({
+      data: {
+        userId,
+        originalName: filename,
+        mimeType: mimeType || 'application/octet-stream',
+        totalSize: BigInt(totalSize),
+        totalChunks,
+        expiresIn: expiresIn ? parseInt(expiresIn) : null,
+        maxDownloads: maxDownloads ? parseInt(maxDownloads) : null,
+        password: hashedPassword,
+        hideFilenames: hideFilenames || false,
+        batchToken: batchToken || null
+      }
+    })
+
+    const chunksDir = path.join(UPLOAD_DIR, 'chunks', chunked.id)
+    await fs.ensureDir(chunksDir)
+
+    req.log.info({ uploadId: chunked.id, filename, totalChunks }, 'File chunked upload initialized')
+    return reply.code(201).send({ uploadId: chunked.id, receivedChunks: 0 })
+  })
+
+  // GET /api/files/upload-status/:uploadId — Statut d'un upload chunked (authentifié)
+  app.get<{ Params: { uploadId: string } }>('/upload-status/:uploadId', auth, async (req, reply) => {
+    const chunked = await prisma.fileChunkedUpload.findFirst({
+      where: { id: req.params.uploadId, userId: req.user.id }
+    })
+    if (!chunked) return reply.code(404).send({ code: 'UPLOAD_NOT_FOUND' })
+    return { uploadId: chunked.id, receivedChunks: chunked.receivedChunks, totalChunks: chunked.totalChunks }
+  })
+
+  // POST /api/files/upload-chunk — Reçoit un chunk (authentifié)
+  app.post<{ Params: Record<string, never> }>('/upload-chunk', auth, async (req, reply) => {
+    let uploadId: string | undefined
+    let chunkIndex: number | undefined
+    let chunkSaved = false
+
+    const parts = req.parts()
+    for await (const part of parts) {
+      if (part.type === 'field') {
+        if (part.fieldname === 'uploadId') uploadId = part.value as string
+        if (part.fieldname === 'chunkIndex') chunkIndex = parseInt(part.value as string, 10)
+      } else if (part.type === 'file' && part.fieldname === 'chunk') {
+        if (uploadId === undefined || chunkIndex === undefined) {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          for await (const _ of part.file) { /* drain */ }
+          return reply.code(400).send({ code: 'MISSING_FIELDS' })
+        }
+
+        const chunked = await prisma.fileChunkedUpload.findFirst({
+          where: { id: uploadId, userId: req.user.id }
+        })
+        if (!chunked) {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          for await (const _ of part.file) { /* drain */ }
+          return reply.code(404).send({ code: 'UPLOAD_NOT_FOUND' })
+        }
+
+        const chunksDir = path.join(UPLOAD_DIR, 'chunks', chunked.id)
+        const chunkPath = path.join(chunksDir, `chunk_${chunkIndex}`)
+        if (await fs.pathExists(chunkPath)) {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          for await (const _ of part.file) { /* drain */ }
+          chunkSaved = true
+          continue
+        }
+
+        await fs.ensureDir(chunksDir)
+        const writeStream = fs.createWriteStream(chunkPath)
+        writeStream.on('error', () => {})
+        try {
+          for await (const data of part.file) {
+            if (!writeStream.write(data)) {
+              await new Promise<void>((resolve, reject) => {
+                const onDrain = () => { writeStream.off('error', onError); resolve() }
+                const onError = (err: Error) => { writeStream.off('drain', onDrain); reject(err) }
+                writeStream.once('drain', onDrain)
+                writeStream.once('error', onError)
+              })
+            }
+          }
+          await new Promise<void>((resolve, reject) => {
+            const onFinish = () => { writeStream.off('error', onError); resolve() }
+            const onError = (err: Error) => { writeStream.off('finish', onFinish); reject(err) }
+            writeStream.once('finish', onFinish)
+            writeStream.once('error', onError)
+            writeStream.end()
+          })
+        } catch (err) {
+          writeStream.destroy()
+          await fs.remove(chunkPath).catch(() => {})
+          throw err
+        }
+
+        await prisma.fileChunkedUpload.update({
+          where: { id: chunked.id },
+          data: { receivedChunks: { increment: 1 } }
+        })
+        chunkSaved = true
+      }
+    }
+
+    if (!chunkSaved) return reply.code(400).send({ code: 'NO_CHUNK_DATA' })
+    const updated = await prisma.fileChunkedUpload.findUnique({ where: { id: uploadId! } })
+    return { receivedChunks: updated?.receivedChunks ?? 0, totalChunks: updated?.totalChunks ?? 0 }
+  })
+
+  // POST /api/files/upload-finalize — Fusionne les chunks, crée File + Share (authentifié)
+  app.post<{ Body: { uploadId: string } }>('/upload-finalize', auth, async (req, reply) => {
+    const { uploadId } = req.body
+    const userId = req.user.id
+
+    const chunked = await prisma.fileChunkedUpload.findFirst({
+      where: { id: uploadId, userId }
+    })
+    if (!chunked) return reply.code(404).send({ code: 'UPLOAD_NOT_FOUND' })
+    if (chunked.receivedChunks < chunked.totalChunks) {
+      return reply.code(400).send({ code: 'INCOMPLETE_UPLOAD', receivedChunks: chunked.receivedChunks, totalChunks: chunked.totalChunks })
+    }
+
+    const appSettings = await getAppSettings()
+    const globalMaxBytes = appSettings.maxFileSizeBytes ?? null
+    if (globalMaxBytes !== null && chunked.totalSize > globalMaxBytes) {
+      await fs.remove(path.join(UPLOAD_DIR, 'chunks', chunked.id)).catch(() => {})
+      await prisma.fileChunkedUpload.delete({ where: { id: chunked.id } })
+      return reply.code(413).send({ code: 'FILE_TOO_LARGE' })
+    }
+
+    const ext = path.extname(chunked.originalName) || ''
+    const filename = `${nanoid(12)}${ext}`
+    const filePath = path.join(UPLOAD_DIR, filename)
+    await fs.ensureDir(UPLOAD_DIR)
+    const chunksDir = path.join(UPLOAD_DIR, 'chunks', chunked.id)
+
+    const writeStream = fs.createWriteStream(filePath)
+    writeStream.on('error', () => {})
+    try {
+      for (let i = 0; i < chunked.totalChunks; i++) {
+        const chunkPath = path.join(chunksDir, `chunk_${i}`)
+        if (!(await fs.pathExists(chunkPath))) {
+          writeStream.destroy()
+          await fs.remove(filePath).catch(() => {})
+          return reply.code(400).send({ code: 'CHUNK_MISSING', chunkIndex: i })
+        }
+        const data = await fs.readFile(chunkPath)
+        if (!writeStream.write(data)) {
+          await new Promise<void>((resolve, reject) => {
+            const onDrain = () => { writeStream.off('error', onError); resolve() }
+            const onError = (err: Error) => { writeStream.off('drain', onDrain); reject(err) }
+            writeStream.once('drain', onDrain)
+            writeStream.once('error', onError)
+          })
+        }
+      }
+      await new Promise<void>((resolve, reject) => {
+        const onFinish = () => { writeStream.off('error', onError); resolve() }
+        const onError = (err: Error) => { writeStream.off('finish', onFinish); reject(err) }
+        writeStream.once('finish', onFinish)
+        writeStream.once('error', onError)
+        writeStream.end()
+      })
+    } catch (err) {
+      writeStream.destroy()
+      await fs.remove(filePath).catch(() => {})
+      throw err
+    }
+
+    const expiresAt = chunked.expiresIn ? new Date(Date.now() + chunked.expiresIn * 1000) : null
+
+    const file = await prisma.file.create({
+      data: {
+        filename,
+        originalName: chunked.originalName,
+        mimeType: chunked.mimeType,
+        size: chunked.totalSize,
+        path: filePath,
+        userId,
+        expiresAt,
+        maxDownloads: chunked.maxDownloads,
+        password: chunked.password,
+        batchToken: chunked.batchToken,
+        hideFilenames: chunked.hideFilenames,
+        shares: {
+          create: {
+            token: nanoid(16),
+            expiresAt,
+            maxDownloads: chunked.maxDownloads,
+            password: chunked.password
+          }
+        }
+      },
+      include: { shares: true }
+    })
+
+    await fs.remove(chunksDir).catch(() => {})
+    await prisma.fileChunkedUpload.delete({ where: { id: chunked.id } })
+
+    req.log.info({ uploadId, filename, size: chunked.totalSize.toString() }, 'File chunked upload finalized')
+    return reply.code(201).send({
+      id: file.id,
+      originalName: file.originalName,
+      mimeType: file.mimeType,
+      size: file.size.toString(),
+      expiresAt: file.expiresAt,
+      shareToken: file.shares[0]?.token,
+      batchToken: file.batchToken
+    })
+  })
+
   // GET /api/files - Fichiers de l utilisateur courant
   app.get('/', auth, async (req) => {
     const files = await prisma.file.findMany({

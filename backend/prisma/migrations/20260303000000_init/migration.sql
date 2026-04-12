@@ -127,3 +127,21 @@ CREATE TABLE "ChunkedUpload" (
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "ChunkedUpload_uploadRequestId_fkey" FOREIGN KEY ("uploadRequestId") REFERENCES "UploadRequest" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
+
+-- CreateTable
+CREATE TABLE "FileChunkedUpload" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "userId" TEXT NOT NULL,
+    "originalName" TEXT NOT NULL,
+    "mimeType" TEXT NOT NULL,
+    "totalSize" BIGINT NOT NULL,
+    "totalChunks" INTEGER NOT NULL,
+    "receivedChunks" INTEGER NOT NULL DEFAULT 0,
+    "expiresIn" INTEGER,
+    "maxDownloads" INTEGER,
+    "password" TEXT,
+    "batchToken" TEXT,
+    "hideFilenames" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "FileChunkedUpload_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
