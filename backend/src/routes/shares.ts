@@ -85,7 +85,15 @@ export async function shareRoutes(app: FastifyInstance) {
   app.post<{
     Params: { token: string }
     Body: { password?: string }
-  }>('/:token/download', async (req, reply) => {
+  }>('/:token/download', {
+    config: {
+      rateLimit: {
+        max: 3,
+        timeWindow: '1 minute',
+        keyGenerator: (req) => `${req.ip}:${(req.params as any).token}`,
+      },
+    },
+  }, async (req, reply) => {
     const share = await prisma.share.findUnique({
       where: { token: req.params.token },
       include: { file: true }
@@ -101,7 +109,16 @@ export async function shareRoutes(app: FastifyInstance) {
 
     if (share.password) {
       const ok = await bcrypt.compare(req.body?.password || '', share.password)
-      if (!ok) return reply.code(401).send({ code: 'WRONG_PASSWORD' })
+      if (!ok) {
+        req.log.warn(
+          {
+            tokenPrefix: req.params.token.substring(0, 8) + '…',
+            ipMasked: req.ip.replace(/(\.\d+)$/, '.***').replace(/(:[0-9a-f]+)$/i, ':****'),
+          },
+          'Share download: wrong password attempt'
+        )
+        return reply.code(401).send({ code: 'WRONG_PASSWORD' })
+      }
     }
 
     const fileExists = await fs.pathExists(share.file.path)

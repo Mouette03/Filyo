@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Trash2, Download, RefreshCw, Copy, Check, Eye, ToggleLeft, ToggleRight, HardDrive, Clock, Mail, Send, ExternalLink, User, TimerOff, AlertTriangle, MessageSquare, Package, EyeOff, ChevronDown, ChevronUp } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '../stores/useAuthStore'
@@ -46,6 +46,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [copiedToken, setCopiedToken] = useState<string | null>(null)
   const [expandedRequest, setExpandedRequest] = useState<string | null>(null)
+  const expandedRequestRef = useRef<string | null>(null)
   const [receivedFiles, setReceivedFiles] = useState<Record<string, ReceivedFile[]>>({})
   const [emailingFileId, setEmailingFileId] = useState<string | null>(null)
   const [emailToFile, setEmailToFile] = useState('')
@@ -61,7 +62,7 @@ export default function DashboardPage() {
     | { type: 'single'; file: FileItem }
     | { type: 'batch'; batchToken: string; files: FileItem[] }
 
-  const displayItems: DisplayItem[] = (() => {
+  const displayItems = useMemo<DisplayItem[]>(() => {
     const batchMap = new Map<string, FileItem[]>()
     for (const f of files) {
       if (f.batchToken) {
@@ -82,10 +83,12 @@ export default function DashboardPage() {
       }
     }
     return result
-  })()
+  }, [files])
 
   const load = async () => {
     setLoading(true)
+    // On vide le cache local puis on refetch pour les panels déjà ouverts
+    setReceivedFiles({})
     try {
       const [filesRes, reqRes, statsRes] = await Promise.all([
         listFiles(), listUploadRequests(), ...(isAdmin ? [getStats()] : [Promise.resolve(null)])
@@ -93,7 +96,31 @@ export default function DashboardPage() {
       setFiles(filesRes.data)
       setRequests(reqRes.data)
       if (statsRes) setStats((statsRes as any).data)
-    } catch { toast.error(t('toast.loadError')) }
+      // Refetch uniquement si la demande ouverte existe toujours
+      const currentExpanded = expandedRequestRef.current
+      const expandedStillExists =
+        !!currentExpanded &&
+        reqRes.data.some((r: UploadRequest) => r.id === currentExpanded)
+
+      if (expandedStillExists && currentExpanded) {
+        const requestId = currentExpanded
+        try {
+          const res = await getReceivedFiles(requestId)
+          setReceivedFiles(prev => ({ ...prev, [requestId]: res.data }))
+        } catch (err: any) {
+          console.error('Failed to fetch received files for request', requestId, err)
+          setReceivedFiles(prev => ({ ...prev, [requestId]: [] }))
+          toast.error(t('toast.cannotLoadReceived'))
+        }
+      } else if (currentExpanded) {
+        setExpandedRequest(null)
+        expandedRequestRef.current = null
+      }
+    } catch {
+      toast.error(t('toast.loadError'))
+      setExpandedRequest(null)
+      expandedRequestRef.current = null
+    }
     setLoading(false)
   }
 
@@ -102,25 +129,24 @@ export default function DashboardPage() {
   const handleDeleteFile = async (id: string) => {
     try {
       await deleteFile(id)
-      setFiles(prev => prev.filter(f => f.id !== id))
       toast.success(t('toast.fileDeleted'))
+      await load()
     } catch { toast.error(t('toast.deleteError')) }
   }
 
   const handleDeleteBatch = async (batchFiles: FileItem[]) => {
     try {
       await Promise.all(batchFiles.map(f => deleteFile(f.id)))
-      const ids = new Set(batchFiles.map(f => f.id))
-      setFiles(prev => prev.filter(f => !ids.has(f.id)))
       toast.success(t('toast.fileDeleted'))
+      await load()
     } catch { toast.error(t('toast.deleteError')) }
   }
 
   const handleDeleteRequest = async (id: string) => {
     try {
       await deleteUploadRequest(id)
-      setRequests(prev => prev.filter(r => r.id !== id))
       toast.success(t('toast.requestDeleted'))
+      await load()
     } catch { toast.error(t('toast.deleteError')) }
   }
 
@@ -141,13 +167,20 @@ export default function DashboardPage() {
   }
 
   const toggleExpandRequest = async (id: string) => {
-    if (expandedRequest === id) { setExpandedRequest(null); return }
+    if (expandedRequest === id) { setExpandedRequest(null); expandedRequestRef.current = null; return }
     setExpandedRequest(id)
+    expandedRequestRef.current = id
     if (!receivedFiles[id]) {
+      const requestId = id
       try {
-        const res = await getReceivedFiles(id)
-        setReceivedFiles(prev => ({ ...prev, [id]: res.data }))
-      } catch { toast.error(t('toast.cannotLoadReceived')) }
+        const res = await getReceivedFiles(requestId)
+        if (expandedRequestRef.current !== requestId) return
+        setReceivedFiles(prev => ({ ...prev, [requestId]: res.data }))
+      } catch {
+        if (expandedRequestRef.current !== requestId) return
+        setReceivedFiles(prev => ({ ...prev, [requestId]: [] }))
+        toast.error(t('toast.cannotLoadReceived'))
+      }
     }
   }
 
@@ -235,7 +268,7 @@ export default function DashboardPage() {
     try {
       const res = await runCleanup()
       toast.success(t('toast.cleanupDone', { count: String(res.data.deletedFiles) }))
-      load()
+      await load()
     } catch { toast.error(t('common.error')) }
   }
 

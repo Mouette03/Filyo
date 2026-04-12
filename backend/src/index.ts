@@ -123,6 +123,20 @@ async function bootstrap() {
   // Servir les fichiers statiques uploadés (logos…)
   await app.register(staticFiles, { root: UPLOAD_DIR, prefix: '/uploads/' })
 
+  // ── Gestionnaire d'erreurs global ──────────────────────────────────────────
+  app.setErrorHandler((err, req, reply) => {
+    const e = err as Error & { statusCode?: number }
+    const status = e.statusCode ?? 500
+    if (status >= 500) {
+      req.log.error({
+        err: { message: e.message, stack: e.stack, name: e.name },
+        req: { method: req.method, url: req.url, id: req.id },
+        user: (req as any).user?.id ?? null
+      }, `Unhandled error: ${e.message}`)
+    }
+    void reply.code(status).send({ error: e.message || 'Internal server error' })
+  })
+
   // ── Routes ──
   await app.register(authRoutes,          { prefix: '/api/auth' })
   await app.register(userRoutes,          { prefix: '/api/users' })

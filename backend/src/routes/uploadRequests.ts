@@ -116,7 +116,7 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
 
   // POST /api/upload-requests/:token/upload - Deposer des fichiers (public)
   app.post<{ Params: { token: string } }>('/:token/upload', {
-    config: { rateLimit: { max: 5, timeWindow: '1 minute' } }
+    config: { rateLimit: { max: 3, timeWindow: '1 minute', keyGenerator: (req) => `${req.ip}:${(req.params as any).token}` } }
   }, async (req, reply) => {
     // Drainer le stream brut pour éviter de corrompre la connexion sur les retours anticipés
     const drainBody = () => new Promise<void>((resolve) => {
