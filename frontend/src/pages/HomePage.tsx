@@ -35,6 +35,7 @@ export default function HomePage() {
   const [maxDownloads, setMaxDownloads] = useState('')
   const [uploading, setUploading] = useState(false)
   const [progress, setProgress] = useState(0)
+  const [progressLabel, setProgressLabel] = useState('')
   const [results, setResults] = useState<UploadedResult[]>([])
   const [hideFilenames, setHideFilenames] = useState(false)
   const [copiedToken, setCopiedToken] = useState<string | null>(null)
@@ -138,6 +139,7 @@ export default function HomePage() {
 
     setUploading(true)
     setProgress(0)
+    setProgressLabel('')
 
     const chunkSizeMb = settings.uploadChunkSizeMb
     const chunkSizeBytes = chunkSizeMb ? chunkSizeMb * 1024 * 1024 : null
@@ -164,6 +166,7 @@ export default function HomePage() {
 
           if (uploadId && uploadId !== 'pending') {
             try {
+              setProgressLabel(t('request.chunkResuming'))
               const statusRes = await getFileChunkUploadStatus(uploadId)
               startChunk = statusRes.data.receivedChunks
             } catch {
@@ -193,7 +196,9 @@ export default function HomePage() {
           for (let ci = startChunk; ci < totalChunks; ci++) {
             const start = ci * chunkSizeBytes
             const chunk = file.slice(start, start + chunkSizeBytes)
+            setProgressLabel(t('request.uploadingChunk', { current: String(ci + 1), total: String(totalChunks), pct: '0' }))
             await uploadFileChunk(uploadId, ci, chunk, pct => {
+              setProgressLabel(t('request.uploadingChunk', { current: String(ci + 1), total: String(totalChunks), pct: String(pct) }))
               const filePct = (ci + pct / 100) / totalChunks
               const globalPct = ((fi + filePct) / files.length) * 100
               setProgress(Math.round(globalPct))
@@ -217,6 +222,7 @@ export default function HomePage() {
         else toast.error(t('toast.uploadFailed'))
       } finally {
         setUploading(false)
+        setProgressLabel('')
       }
       return
     }
@@ -589,7 +595,12 @@ export default function HomePage() {
                   style={{ width: `${progress}%` }}
                 />
               </div>
-              <p className="text-xs text-white/40 mt-1 text-right">{progress}%</p>
+              {progressLabel && (
+                <p className="text-xs text-brand-300/80 mt-1.5 text-center font-medium">{progressLabel}</p>
+              )}
+              {!progressLabel && (
+                <p className="text-xs text-white/40 mt-1 text-right">{progress}%</p>
+              )}
             </div>
           )}
 
@@ -599,10 +610,15 @@ export default function HomePage() {
             className="btn-primary w-full flex items-center justify-center gap-2 mt-2"
           >
             {uploading ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                {t('home.uploading')}
-              </>
+              <div className="flex flex-col items-center gap-1">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  {progressLabel ? `${progress}%` : t('home.uploading')}
+                </div>
+                {progressLabel && (
+                  <span className="text-xs opacity-70">{progressLabel}</span>
+                )}
+              </div>
             ) : (
               <>
                 <Upload size={16} />
