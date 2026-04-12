@@ -74,7 +74,7 @@ export const en = {
   'home.passwordLabel': 'Password (optional)',
   'home.expiryLabel': 'Expiry',
   'home.maxDlLabel': 'Max downloads (optional)',
-  'home.uploading': 'Uploading…',
+  'home.uploading': 'Uploading… {{pct}}%',
   'home.uploadBtnMultiple': 'Upload {{count}} files',
   'home.uploadBtnSingle': 'Upload file',
   'home.modal.title': 'Files sent!',

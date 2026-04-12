@@ -589,7 +589,7 @@ export default function HomePage() {
           {/* Barre de progression */}
           {uploading && (
             <div className="pt-2">
-              <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+              <div className="h-1.5 [background:var(--surface-600)] rounded-full overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-brand-600 to-brand-400 rounded-full transition-all duration-300"
                   style={{ width: `${progress}%` }}
@@ -598,27 +598,21 @@ export default function HomePage() {
               {progressLabel && (
                 <p className="text-xs text-brand-300/80 mt-1.5 text-center font-medium">{progressLabel}</p>
               )}
-              {!progressLabel && (
-                <p className="text-xs text-white/40 mt-1 text-right">{progress}%</p>
-              )}
             </div>
           )}
 
           <button
             onClick={handleUpload}
             disabled={uploading}
-            className="btn-primary w-full flex items-center justify-center gap-2 mt-2"
+            className="btn-primary w-full flex flex-col items-center justify-center gap-1 py-3 mt-2"
           >
             {uploading ? (
-              <div className="flex flex-col items-center gap-1">
+              <>
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  {progressLabel ? `${progress}%` : t('home.uploading')}
+                  {t('home.uploading', { pct: String(progress) })}
                 </div>
-                {progressLabel && (
-                  <span className="text-xs opacity-70">{progressLabel}</span>
-                )}
-              </div>
+              </>
             ) : (
               <>
                 <Upload size={16} />

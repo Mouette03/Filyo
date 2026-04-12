@@ -74,7 +74,7 @@ export const fr = {
   'home.passwordLabel': 'Mot de passe (optionnel)',
   'home.expiryLabel': 'Expiration',
   'home.maxDlLabel': 'Téléchargements max (optionnel)',
-  'home.uploading': 'Envoi en cours…',
+  'home.uploading': 'Envoi en cours… {{pct}}%',
   'home.uploadBtnMultiple': 'Envoyer {{count}} fichiers',
   'home.uploadBtnSingle': 'Envoyer le fichier',
   'home.modal.title': 'Fichiers envoyés !',
