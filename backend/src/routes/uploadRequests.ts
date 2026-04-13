@@ -472,6 +472,14 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
   }, async (req, reply) => {
     const { filename, mimeType, totalSize, totalChunks, uploaderName, uploaderEmail, message, password } = req.body
 
+    // Validation des champs numériques avant tout traitement
+    if (!Number.isInteger(totalSize) || totalSize <= 0) {
+      return reply.code(400).send({ code: 'INVALID_TOTAL_SIZE' })
+    }
+    if (!Number.isInteger(totalChunks) || totalChunks <= 0 || totalChunks > 10000) {
+      return reply.code(400).send({ code: 'INVALID_TOTAL_CHUNKS' })
+    }
+
     const request = await prisma.uploadRequest.findUnique({
       where: { token: req.params.token },
       include: { _count: { select: { receivedFiles: true } } }
