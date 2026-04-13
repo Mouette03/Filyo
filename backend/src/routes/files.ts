@@ -178,6 +178,18 @@ export async function fileRoutes(app: FastifyInstance) {
     if (!Number.isInteger(totalChunks) || totalChunks <= 0 || totalChunks > 10000) {
       return reply.code(400).send({ code: 'INVALID_TOTAL_CHUNKS' })
     }
+    if (expiresIn !== undefined) {
+      const v = parseInt(expiresIn, 10)
+      if (!Number.isInteger(v) || v <= 0 || String(v) !== expiresIn.trim()) {
+        return reply.code(400).send({ code: 'INVALID_EXPIRES_IN' })
+      }
+    }
+    if (maxDownloads !== undefined) {
+      const v = parseInt(maxDownloads, 10)
+      if (!Number.isInteger(v) || v <= 0 || String(v) !== maxDownloads.trim()) {
+        return reply.code(400).send({ code: 'INVALID_MAX_DOWNLOADS' })
+      }
+    }
 
     const appSettings = await getAppSettings()
     const globalMaxBytes = appSettings.maxFileSizeBytes ?? null

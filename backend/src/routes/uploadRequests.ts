@@ -786,6 +786,10 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
           uploaderEmail: chunked.uploaderEmail,
           message: chunked.message
         }
+      }).catch(async (err: unknown) => {
+        await fs.remove(finalPath).catch(() => {})
+        await prisma.chunkedUpload.delete({ where: { id: chunked.id } }).catch(() => {})
+        throw err
       })
 
       // Nettoyer les chunks temporaires
