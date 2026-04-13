@@ -490,9 +490,7 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
 
     // Vérification mot de passe
     if (request.password) {
-      let provided = ''
-      try { provided = Buffer.from(password ?? '', 'base64').toString('utf8') } catch { provided = password ?? '' }
-      const ok = await bcrypt.compare(provided, request.password)
+      const ok = await bcrypt.compare(password ?? '', request.password)
       if (!ok) return reply.code(401).send({ code: 'WRONG_PASSWORD' })
     }
 
