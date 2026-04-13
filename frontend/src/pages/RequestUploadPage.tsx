@@ -190,6 +190,9 @@ export default function RequestUploadPage() {
     // Upload chunked si activé et AU MOINS un fichier atteint ou dépasse la taille d'un chunk
     if (chunkSizeBytes && files.some(f => f.size >= chunkSizeBytes)) {
       try {
+        const globalStartTime = Date.now()
+        let globalUploadedBytes = 0
+        const totalBytes = files.reduce((acc, f) => acc + f.size, 0)
         for (let fi = 0; fi < files.length; fi++) {
           const file = files[fi]
           const totalChunks = Math.ceil(file.size / chunkSizeBytes)
@@ -230,18 +233,25 @@ export default function RequestUploadPage() {
 
           }
 
+          if (startChunk > 0) globalUploadedBytes += startChunk * chunkSizeBytes
           for (let ci = startChunk; ci < totalChunks; ci++) {
             const start = ci * chunkSizeBytes
-            const chunk = file.slice(start, start + chunkSizeBytes)
+            const chunkBlob = file.slice(start, start + chunkSizeBytes)
+            const chunkStart = globalUploadedBytes
             setProgressLabel(t('request.uploadingChunk', { current: String(ci + 1), total: String(totalChunks), pct: '0' }))
-            await uploadChunk(token, uploadId, ci, chunk, (pct, speed) => {
-              const speedStr = speed > 0 ? ` · ${formatSpeed(speed)}` : ''
+            await uploadChunk(token, uploadId, ci, chunkBlob, (pct) => {
+              const chunkLoaded = Math.round((chunkBlob.size * pct) / 100)
+              const totalLoaded = chunkStart + chunkLoaded
+              const elapsed = (Date.now() - globalStartTime) / 1000
+              const avgSpeed = elapsed > 0.5 ? totalLoaded / elapsed : 0
+              const speedStr = avgSpeed > 0 ? ` · ${formatSpeed(avgSpeed)}` : ''
               setProgressLabel(t('request.uploadingChunk', { current: String(ci + 1), total: String(totalChunks), pct: String(pct) }) + speedStr)
               // Progression globale inter-fichiers
               const filePct = (ci + pct / 100) / totalChunks
               const globalPct = ((fi + filePct) / files.length) * 100
               setProgress(Math.round(globalPct))
             })
+            globalUploadedBytes += chunkBlob.size
           }
 
           setProgressLabel(t('home.finalizing'))

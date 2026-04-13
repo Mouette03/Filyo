@@ -66,16 +66,13 @@ export const uploadFiles = (
   formData: FormData,
   onProgress?: (pct: number, speed: number) => void
 ) => {
-  let prevLoaded = 0
-  let prevTime = Date.now()
+  const startTime = Date.now()
   return api.post('/files', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
     onUploadProgress: e => {
       if (onProgress && e.total) {
-        const now = Date.now()
-        const dt = (now - prevTime) / 1000
-        const speed = dt > 0.1 ? (e.loaded - prevLoaded) / dt : 0
-        if (dt > 0.1) { prevLoaded = e.loaded; prevTime = now }
+        const elapsed = (Date.now() - startTime) / 1000
+        const speed = elapsed > 0.5 ? e.loaded / elapsed : 0
         onProgress(Math.round((e.loaded * 100) / e.total), speed)
       }
     }
@@ -132,8 +129,7 @@ export const submitToUploadRequest = (
   onProgress?: (pct: number, speed: number) => void,
   password?: string
 ) => {
-  let prevLoaded = 0
-  let prevTime = Date.now()
+  const startTime = Date.now()
   return api.post(`/upload-requests/${token}/upload`, formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
@@ -141,10 +137,8 @@ export const submitToUploadRequest = (
     },
     onUploadProgress: e => {
       if (onProgress && e.total) {
-        const now = Date.now()
-        const dt = (now - prevTime) / 1000
-        const speed = dt > 0.1 ? (e.loaded - prevLoaded) / dt : 0
-        if (dt > 0.1) { prevLoaded = e.loaded; prevTime = now }
+        const elapsed = (Date.now() - startTime) / 1000
+        const speed = elapsed > 0.5 ? e.loaded / elapsed : 0
         onProgress(Math.round((e.loaded * 100) / e.total), speed)
       }
     }
