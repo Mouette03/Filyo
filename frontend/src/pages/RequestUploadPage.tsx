@@ -43,6 +43,7 @@ export default function RequestUploadPage() {
   const [password, setPassword] = useState('')
   const [progress, setProgress] = useState(0)
   const [progressLabel, setProgressLabel] = useState('')
+  const [uploadSpeed, setUploadSpeed] = useState(0)
   const [pendingResumes, setPendingResumes] = useState<PendingResume[]>([])
   const [nameReq, setNameReq] = useState<FieldReq>('optional')
   const [emailReq, setEmailReq] = useState<FieldReq>('optional')
@@ -244,8 +245,8 @@ export default function RequestUploadPage() {
               const totalLoaded = chunkStart + chunkLoaded
               const elapsed = (Date.now() - globalStartTime) / 1000
               const avgSpeed = elapsed > 0.5 ? totalLoaded / elapsed : 0
-              const speedStr = avgSpeed > 0 ? ` · ${formatSpeed(avgSpeed)}` : ''
-              setProgressLabel(t('request.uploadingChunk', { current: String(ci + 1), total: String(totalChunks), pct: String(pct) }) + speedStr)
+              if (avgSpeed > 0) setUploadSpeed(avgSpeed)
+              setProgressLabel(t('request.uploadingChunk', { current: String(ci + 1), total: String(totalChunks), pct: String(pct) }))
               // Progression globale inter-fichiers
               const filePct = (ci + pct / 100) / totalChunks
               const globalPct = ((fi + filePct) / files.length) * 100
@@ -270,6 +271,7 @@ export default function RequestUploadPage() {
         else if (err.response?.status === 429) toast.error(t('toast.tooManyRequests'))
         else toast.error(t('toast.sendError'))
         setStatus('ready')
+        setUploadSpeed(0)
       }
       return
     }
@@ -538,7 +540,9 @@ export default function RequestUploadPage() {
                   />
                 </div>
                 {progressLabel && (
-                  <p className="text-xs text-brand-300/80 mt-1.5 text-center font-medium">{progressLabel}</p>
+                  <p className="text-xs text-brand-300/80 mt-1.5 text-center font-medium">
+                    {progressLabel}{uploadSpeed > 0 ? ` · ${formatSpeed(uploadSpeed)}` : ''}
+                  </p>
                 )}
               </div>
             )}
