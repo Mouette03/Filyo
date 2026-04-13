@@ -278,10 +278,18 @@ export async function fileRoutes(app: FastifyInstance) {
 
         const chunksDir = path.join(UPLOAD_DIR, 'chunks', chunked.id)
         const chunkPath = path.join(chunksDir, `chunk_${chunkIndex}`)
+        const chunkTmp  = path.join(chunksDir, `chunk_${chunkIndex}.tmp`)
         await fs.ensureDir(chunksDir)
-        // Ouverture exclusive (flag 'wx') : atomique — élimine la race condition
-        // si deux requêtes arrivent simultanément pour le même chunk
-        const writeStream = fs.createWriteStream(chunkPath, { flags: 'wx' })
+
+        // Si le fichier final existe déjà, le chunk est durablement enregistré → idempotent
+        if (await fs.pathExists(chunkPath)) {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          for await (const _ of part.file) { /* drain */ }
+          chunkSaved = true; continue
+        }
+
+        // Écriture dans un fichier temporaire (flag 'wx' : exclusif)
+        const writeStream = fs.createWriteStream(chunkTmp, { flags: 'wx' })
         const openError = await new Promise<(Error & { code?: string }) | null>(resolve => {
           writeStream.once('open', () => resolve(null))
           writeStream.once('error', (err: Error & { code?: string }) => resolve(err))
@@ -290,7 +298,8 @@ export async function fileRoutes(app: FastifyInstance) {
           writeStream.destroy()
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           for await (const _ of part.file) { /* drain */ }
-          if (openError.code === 'EEXIST') { chunkSaved = true; continue }
+          // Une autre requête écrit ce chunk en ce moment — pas encore commité
+          if (openError.code === 'EEXIST') continue
           throw openError
         }
         writeStream.on('error', () => {})
@@ -312,9 +321,11 @@ export async function fileRoutes(app: FastifyInstance) {
             writeStream.once('error', onError)
             writeStream.end()
           })
+          // Rename atomique : le fichier final n'existe que si l'écriture est complète
+          await fs.rename(chunkTmp, chunkPath)
         } catch (err) {
           writeStream.destroy()
-          await fs.remove(chunkPath).catch(() => {})
+          await fs.remove(chunkTmp).catch(() => {})
           throw err
         }
 
