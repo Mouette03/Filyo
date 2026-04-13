@@ -93,10 +93,14 @@ export default function RequestUploadPage() {
       const uploadId = localStorage.getItem(key)
       if (!uploadId) continue
       const rest = key.slice(prefix.length)
-      const lastDash = rest.lastIndexOf('-')
+      // Format : ${fi}-${file.name}-${file.size}
+      const firstDash = rest.indexOf('-')
+      if (firstDash === -1) continue
+      const restAfterIndex = rest.slice(firstDash + 1)
+      const lastDash = restAfterIndex.lastIndexOf('-')
       if (lastDash === -1) continue
-      const filename = rest.slice(0, lastDash)
-      const fileSize = parseInt(rest.slice(lastDash + 1))
+      const filename = restAfterIndex.slice(0, lastDash)
+      const fileSize = parseInt(restAfterIndex.slice(lastDash + 1))
       if (isNaN(fileSize)) continue
       console.debug('[Filyo resume] found pending:', { key, filename, fileSize, uploadId })
       found.push({ key, filename, fileSize, uploadId })
@@ -201,7 +205,7 @@ export default function RequestUploadPage() {
         for (let fi = 0; fi < files.length; fi++) {
           const file = files[fi]
           const totalChunks = Math.ceil(file.size / chunkSizeBytes)
-          const RESUME_KEY = `filyo-upload-${token}-${file.name}-${file.size}`
+          const RESUME_KEY = `filyo-upload-${token}-${fi}-${file.name}-${file.size}`
 
           // Écrire un placeholder avant l'init pour survivre à un refresh pendant l'appel réseau
           if (!localStorage.getItem(RESUME_KEY)) {
