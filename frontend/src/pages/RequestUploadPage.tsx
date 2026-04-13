@@ -297,9 +297,9 @@ export default function RequestUploadPage() {
       else if (err.response?.status === 429) toast.error(t('toast.tooManyRequests'))
       else toast.error(t('toast.sendError'))
       setStatus('ready')
-      setUploadSpeed(0)
     } finally {
       setProgressLabel('')
+      setUploadSpeed(0)
     }
   }
 
