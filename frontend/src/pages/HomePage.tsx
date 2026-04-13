@@ -242,7 +242,11 @@ export default function HomePage() {
     if (hideFilenames) formData.append('hideFilenames', 'true')
 
     try {
-      const res = await uploadFiles(formData, setProgress)
+      const res = await uploadFiles(formData, (pct, speed) => {
+        setProgress(pct)
+        const speedStr = speed > 0 ? ` · ${formatSpeed(speed)}` : ''
+        setProgressLabel(`${pct}%${speedStr}`)
+      })
       setResults(res.data)
       setFiles([])
       setShowShareModal(true)
@@ -254,6 +258,7 @@ export default function HomePage() {
       else toast.error(t('toast.uploadFailed'))
     } finally {
       setUploading(false)
+      setProgressLabel('')
     }
   }
 

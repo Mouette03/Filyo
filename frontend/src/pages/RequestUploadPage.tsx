@@ -272,7 +272,11 @@ export default function RequestUploadPage() {
     files.forEach(f => formData.append('files', f))
 
     try {
-      await submitToUploadRequest(token, formData, setProgress, password || undefined)
+      await submitToUploadRequest(token, formData, (pct, speed) => {
+        setProgress(pct)
+        const speedStr = speed > 0 ? ` · ${formatSpeed(speed)}` : ''
+        setProgressLabel(`${pct}%${speedStr}`)
+      }, password || undefined)
       setStatus('done')
       toast.success(t('toast.filesDeposited'))
     } catch (err: any) {

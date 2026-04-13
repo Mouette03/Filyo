@@ -64,14 +64,23 @@ export const deleteLogo = () => api.delete('/settings/logo')
 // ---- Fichiers ----
 export const uploadFiles = (
   formData: FormData,
-  onProgress?: (pct: number) => void
-) =>
-  api.post('/files', formData, {
+  onProgress?: (pct: number, speed: number) => void
+) => {
+  let prevLoaded = 0
+  let prevTime = Date.now()
+  return api.post('/files', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
     onUploadProgress: e => {
-      if (onProgress && e.total) onProgress(Math.round((e.loaded * 100) / e.total))
+      if (onProgress && e.total) {
+        const now = Date.now()
+        const dt = (now - prevTime) / 1000
+        const speed = dt > 0.1 ? (e.loaded - prevLoaded) / dt : 0
+        if (dt > 0.1) { prevLoaded = e.loaded; prevTime = now }
+        onProgress(Math.round((e.loaded * 100) / e.total), speed)
+      }
     }
   })
+}
 
 export const listFiles = () => api.get('/files')
 export const deleteFile = (id: string) => api.delete(`/files/${id}`)
@@ -120,18 +129,27 @@ export const getReceivedFiles = (id: string) => api.get(`/upload-requests/${id}/
 export const submitToUploadRequest = (
   token: string,
   formData: FormData,
-  onProgress?: (pct: number) => void,
+  onProgress?: (pct: number, speed: number) => void,
   password?: string
-) =>
-  api.post(`/upload-requests/${token}/upload`, formData, {
+) => {
+  let prevLoaded = 0
+  let prevTime = Date.now()
+  return api.post(`/upload-requests/${token}/upload`, formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
       ...(password ? { 'X-Upload-Password': btoa(unescape(encodeURIComponent(password))) } : {})
     },
     onUploadProgress: e => {
-      if (onProgress && e.total) onProgress(Math.round((e.loaded * 100) / e.total))
+      if (onProgress && e.total) {
+        const now = Date.now()
+        const dt = (now - prevTime) / 1000
+        const speed = dt > 0.1 ? (e.loaded - prevLoaded) / dt : 0
+        if (dt > 0.1) { prevLoaded = e.loaded; prevTime = now }
+        onProgress(Math.round((e.loaded * 100) / e.total), speed)
+      }
     }
   })
+}
 
 export const initChunkedUpload = (
   token: string,
