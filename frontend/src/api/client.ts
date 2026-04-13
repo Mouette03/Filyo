@@ -78,11 +78,16 @@ export const deleteFile = (id: string) => api.delete(`/files/${id}`)
 
 // ---- Partages (téléchargement) ----
 export const getShareInfo = (token: string) => api.get(`/shares/${token}/info`)
-export const downloadShare = (token: string, password?: string) =>
+export const downloadShare = (token: string, password?: string, onProgress?: (pct: number) => void) =>
   api.post(
     `/shares/${token}/download`,
     { password },
-    { responseType: 'blob' }
+    {
+      responseType: 'blob',
+      onDownloadProgress: onProgress
+        ? (e: any) => { if (e.total) onProgress(Math.round((e.loaded / e.total) * 100)) }
+        : undefined,
+    }
   )
 
 // ---- Partage inversé (Upload Request) ----

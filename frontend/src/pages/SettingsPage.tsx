@@ -238,6 +238,8 @@ export default function SettingsPage() {
         </div>
         <div className="flex gap-3">
           <input
+            id="settings-app-name"
+            name="appName"
             value={appName}
             onChange={e => setAppName(e.target.value)}
             className="input flex-1"
@@ -315,7 +317,7 @@ export default function SettingsPage() {
 
         {/* Thème */}
         <div className="mb-6">
-          <label className="text-xs text-white/50 mb-3 block uppercase tracking-wider">{t('settings.themeLabel')}</label>
+          <p className="text-xs text-white/50 mb-3 block uppercase tracking-wider">{t('settings.themeLabel')}</p>
           <div className="grid grid-cols-3 gap-2">
             {THEME_OPTIONS.map(opt => {
               const Icon = opt.icon
@@ -343,7 +345,7 @@ export default function SettingsPage() {
 
         {/* Couleur d'accent */}
         <div>
-          <label className="text-xs text-white/50 mb-3 block uppercase tracking-wider">{t('settings.accentLabel')}</label>
+          <p className="text-xs text-white/50 mb-3 block uppercase tracking-wider">{t('settings.accentLabel')}</p>
           <div className="flex flex-wrap gap-3">
             {(Object.entries(ACCENT_PRESETS) as [AccentKey, typeof ACCENT_PRESETS[AccentKey]][]).map(([key, preset]) => {
               const active = accentColor === key
@@ -373,7 +375,7 @@ export default function SettingsPage() {
 
         {/* Couleur de fond */}
         <div className="mt-6">
-          <label className="text-xs text-white/50 mb-3 block uppercase tracking-wider">{t('settings.bgLabel')}</label>
+          <p className="text-xs text-white/50 mb-3 block uppercase tracking-wider">{t('settings.bgLabel')}</p>
           <div className="flex flex-wrap gap-3 mb-3">
             <button
               onClick={() => setBgColor(null)}
@@ -418,6 +420,8 @@ export default function SettingsPage() {
         </div>
         <div className="flex gap-3">
           <input
+            id="settings-site-url"
+            name="siteUrl"
             value={siteUrl}
             onChange={e => setSiteUrl(e.target.value)}
             className="input flex-1"
@@ -515,9 +519,10 @@ export default function SettingsPage() {
         </div>
         <div className="flex items-center gap-3">
           <input
+            id="settings-max-file-size"
+            name="maxFileSizeMb"
             type="number"
             min="1"
-            value={maxFileSizeMb}
             onChange={e => setMaxFileSizeMb(e.target.value)}
             placeholder={t('settings.maxFileSizePlaceholder')}
             className="input w-40"
@@ -644,8 +649,10 @@ export default function SettingsPage() {
 
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div className="col-span-2 sm:col-span-1">
-            <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('settings.smtpHost')}</label>
+            <label htmlFor="smtp-host" className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('settings.smtpHost')}</label>
             <input
+              id="smtp-host"
+              name="smtpHost"
               value={smtpHost}
               onChange={e => setSmtpHost(e.target.value)}
               placeholder="smtp.example.com"
@@ -653,8 +660,10 @@ export default function SettingsPage() {
             />
           </div>
           <div className="col-span-2 sm:col-span-1">
-            <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('settings.smtpPort')}</label>
+            <label htmlFor="smtp-port" className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('settings.smtpPort')}</label>
             <input
+              id="smtp-port"
+              name="smtpPort"
               value={smtpPort}
               onChange={e => setSmtpPort(e.target.value)}
               placeholder="587"
@@ -682,8 +691,10 @@ export default function SettingsPage() {
             </button>
           </div>
           <div className="col-span-2">
-            <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('settings.smtpFrom')}</label>
+            <label htmlFor="smtp-from" className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('settings.smtpFrom')}</label>
             <input
+              id="smtp-from"
+              name="smtpFrom"
               value={smtpFrom}
               onChange={e => setSmtpFrom(e.target.value)}
               placeholder="noreply@mondomaine.fr"
@@ -692,8 +703,10 @@ export default function SettingsPage() {
             />
           </div>
           <div>
-            <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('settings.smtpUser')}</label>
+            <label htmlFor="smtp-user" className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('settings.smtpUser')}</label>
             <input
+              id="smtp-user"
+              name="smtpUser"
               value={smtpUser}
               onChange={e => setSmtpUser(e.target.value)}
               placeholder="smtp_user"
@@ -702,9 +715,11 @@ export default function SettingsPage() {
             />
           </div>
           <div>
-            <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('settings.smtpPassword')}</label>
+            <label htmlFor="smtp-password" className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('settings.smtpPassword')}</label>
             <div className="relative">
               <input
+                id="smtp-password"
+                name="smtpPassword"
                 value={smtpPass}
                 onChange={e => setSmtpPass(e.target.value)}
                 placeholder="••••••••"

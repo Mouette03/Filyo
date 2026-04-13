@@ -167,19 +167,19 @@ export default function LoginPage() {
               {t('login.setupNotice')}
             </div>
             <div>
-              <label className="text-xs [color:var(--text-50)] mb-1.5 block font-medium uppercase tracking-wider">{t('login.fullName')}</label>
-              <input type="text" value={name} onChange={e => setName(e.target.value)}
+              <label htmlFor="setup-name" className="text-xs [color:var(--text-50)] mb-1.5 block font-medium uppercase tracking-wider">{t('login.fullName')}</label>
+              <input id="setup-name" name="name" type="text" value={name} onChange={e => setName(e.target.value)}
                 placeholder={t('login.fullNamePlaceholder')} className="input" autoFocus required />
             </div>
             <div>
-              <label className="text-xs [color:var(--text-50)] mb-1.5 block font-medium uppercase tracking-wider">{t('login.email')}</label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+              <label htmlFor="setup-email" className="text-xs [color:var(--text-50)] mb-1.5 block font-medium uppercase tracking-wider">{t('login.email')}</label>
+              <input id="setup-email" name="email" type="email" value={email} onChange={e => setEmail(e.target.value)}
                 placeholder={t('login.emailPlaceholder')} className="input" required />
             </div>
             <div>
-              <label className="text-xs [color:var(--text-50)] mb-1.5 block font-medium uppercase tracking-wider">{t('login.password')}</label>
+              <label htmlFor="setup-password" className="text-xs [color:var(--text-50)] mb-1.5 block font-medium uppercase tracking-wider">{t('login.password')}</label>
               <div className="relative">
-                <input type={showPwd ? 'text' : 'password'} value={password}
+                <input id="setup-password" name="new-password" type={showPwd ? 'text' : 'password'} value={password}
                   onChange={e => setPassword(e.target.value)}
                   placeholder={t('login.passwordPlaceholder')} className="input pr-11" required minLength={8} />
                 <button type="button" onClick={() => setShowPwd(!showPwd)}
@@ -189,8 +189,8 @@ export default function LoginPage() {
               </div>
             </div>
             <div>
-              <label className="text-xs [color:var(--text-50)] mb-1.5 block font-medium uppercase tracking-wider">{t('login.confirmPassword')}</label>
-              <input type={showPwd ? 'text' : 'password'} value={confirmPwd}
+              <label htmlFor="setup-confirm-password" className="text-xs [color:var(--text-50)] mb-1.5 block font-medium uppercase tracking-wider">{t('login.confirmPassword')}</label>
+              <input id="setup-confirm-password" name="confirm-password" type={showPwd ? 'text' : 'password'} value={confirmPwd}
                 onChange={e => setConfirmPwd(e.target.value)}
                 placeholder={t('login.confirmPasswordPlaceholder')} className="input" required />
             </div>
@@ -224,8 +224,8 @@ export default function LoginPage() {
               <form onSubmit={handleForgot} className="space-y-4">
                 <p className="text-sm [color:var(--text-50)]">{t('login.forgotSubtitle')}</p>
                 <div>
-                  <label className="text-xs [color:var(--text-50)] mb-1.5 block font-medium uppercase tracking-wider">{t('login.email')}</label>
-                  <input type="email" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)}
+                  <label htmlFor="forgot-email" className="text-xs [color:var(--text-50)] mb-1.5 block font-medium uppercase tracking-wider">{t('login.email')}</label>
+                  <input id="forgot-email" name="email" type="email" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)}
                     placeholder={t('login.emailPlaceholder')} className="input" autoFocus required />
                 </div>
                 <button type="submit" disabled={loadingForgot}
@@ -247,14 +247,14 @@ export default function LoginPage() {
           /* ── Connexion ── */
           <form onSubmit={handleLogin} className="card space-y-4">
             <div>
-              <label className="text-xs [color:var(--text-50)] mb-1.5 block font-medium uppercase tracking-wider">{t('login.email')}</label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+              <label htmlFor="login-email" className="text-xs [color:var(--text-50)] mb-1.5 block font-medium uppercase tracking-wider">{t('login.email')}</label>
+              <input id="login-email" name="email" type="email" value={email} onChange={e => setEmail(e.target.value)}
                 placeholder={t('login.emailPlaceholder')} className="input" autoFocus required />
             </div>
             <div>
-              <label className="text-xs [color:var(--text-50)] mb-1.5 block font-medium uppercase tracking-wider">{t('login.password')}</label>
+              <label htmlFor="login-password" className="text-xs [color:var(--text-50)] mb-1.5 block font-medium uppercase tracking-wider">{t('login.password')}</label>
               <div className="relative">
-                <input type={showPwd ? 'text' : 'password'} value={password}
+                <input id="login-password" name="password" type={showPwd ? 'text' : 'password'} value={password}
                   onChange={e => setPassword(e.target.value)}
                   placeholder="••••••••" className="input pr-11" required />
                 <button type="button" onClick={() => setShowPwd(!showPwd)}
@@ -288,19 +288,19 @@ export default function LoginPage() {
           /* ── Inscription libre ── */
           <form onSubmit={handleRegister} className="card space-y-4">
             <div>
-              <label className="text-xs [color:var(--text-50)] mb-1.5 block font-medium uppercase tracking-wider">{t('login.fullName')}</label>
-              <input type="text" value={name} onChange={e => setName(e.target.value)}
+              <label htmlFor="register-name" className="text-xs [color:var(--text-50)] mb-1.5 block font-medium uppercase tracking-wider">{t('login.fullName')}</label>
+              <input id="register-name" name="name" type="text" value={name} onChange={e => setName(e.target.value)}
                 placeholder={t('login.fullNamePlaceholder')} className="input" autoFocus required />
             </div>
             <div>
-              <label className="text-xs [color:var(--text-50)] mb-1.5 block font-medium uppercase tracking-wider">{t('login.email')}</label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+              <label htmlFor="register-email" className="text-xs [color:var(--text-50)] mb-1.5 block font-medium uppercase tracking-wider">{t('login.email')}</label>
+              <input id="register-email" name="email" type="email" value={email} onChange={e => setEmail(e.target.value)}
                 placeholder={t('login.emailPlaceholder')} className="input" required />
             </div>
             <div>
-              <label className="text-xs [color:var(--text-50)] mb-1.5 block font-medium uppercase tracking-wider">{t('login.password')}</label>
+              <label htmlFor="register-password" className="text-xs [color:var(--text-50)] mb-1.5 block font-medium uppercase tracking-wider">{t('login.password')}</label>
               <div className="relative">
-                <input type={showPwd ? 'text' : 'password'} value={password}
+                <input id="register-password" name="new-password" type={showPwd ? 'text' : 'password'} value={password}
                   onChange={e => setPassword(e.target.value)}
                   placeholder={t('login.passwordPlaceholder')} className="input pr-11" required minLength={8} />
                 <button type="button" onClick={() => setShowPwd(!showPwd)}
@@ -310,8 +310,8 @@ export default function LoginPage() {
               </div>
             </div>
             <div>
-              <label className="text-xs [color:var(--text-50)] mb-1.5 block font-medium uppercase tracking-wider">{t('login.confirmPassword')}</label>
-              <input type={showPwd ? 'text' : 'password'} value={confirmPwd}
+              <label htmlFor="register-confirm-password" className="text-xs [color:var(--text-50)] mb-1.5 block font-medium uppercase tracking-wider">{t('login.confirmPassword')}</label>
+              <input id="register-confirm-password" name="confirm-password" type={showPwd ? 'text' : 'password'} value={confirmPwd}
                 onChange={e => setConfirmPwd(e.target.value)}
                 placeholder={t('login.confirmPasswordPlaceholder')} className="input" required />
             </div>

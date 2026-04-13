@@ -380,11 +380,13 @@ export default function HomePage() {
 
             {/* Envoi par email */}
             <div className="pt-4 border-t border-white/10 mb-4">
-              <label className="text-xs text-white/50 mb-2 flex items-center gap-1.5 uppercase tracking-wider">
+              <label htmlFor="home-modal-email" className="text-xs text-white/50 mb-2 flex items-center gap-1.5 uppercase tracking-wider">
                 <Mail size={11} /> {t('home.modal.emailLabel')}
               </label>
               <div className="flex gap-2">
                 <input
+                  id="home-modal-email"
+                  name="email"
                   type="email"
                   value={emailTo}
                   onChange={e => { setEmailTo(e.target.value); setEmailSent(false) }}
@@ -529,10 +531,12 @@ export default function HomePage() {
           {/* Options */}
           <div className="pt-3 border-t border-white/10 grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
+              <label htmlFor="home-password" className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
                 <Lock size={11} /> {t('home.passwordLabel')}
               </label>
               <input
+                id="home-password"
+                name="password"
                 type="password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
@@ -541,10 +545,12 @@ export default function HomePage() {
               />
             </div>
             <div>
-              <label className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
+              <label htmlFor="home-expiry" className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
                 <Clock size={11} /> {t('home.expiryLabel')}
               </label>
               <select
+                id="home-expiry"
+                name="expiresIn"
                 value={expiresIn}
                 onChange={e => setExpiresIn(e.target.value)}
                 className="input text-sm py-2 bg-surface-700"
@@ -557,10 +563,12 @@ export default function HomePage() {
               </select>
             </div>
             <div className="col-span-2">
-              <label className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
+              <label htmlFor="home-max-downloads" className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
                 <Download size={11} /> {t('home.maxDlLabel')}
               </label>
               <input
+                id="home-max-downloads"
+                name="maxDownloads"
                 type="number"
                 min="1"
                 value={maxDownloads}
@@ -570,7 +578,7 @@ export default function HomePage() {
               />
             </div>
             <div className="col-span-2">
-              <label className="flex items-center gap-3 cursor-pointer group">
+              <div className="flex items-center gap-3 cursor-pointer group">
                 <div className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0
                   ${hideFilenames ? 'bg-brand-500' : 'bg-white/10'}`}
                   onClick={() => setHideFilenames(v => !v)}>
@@ -583,7 +591,7 @@ export default function HomePage() {
                   </p>
                   <p className="text-xs text-white/40 mt-0.5">{t('home.hideFilenamesHint')}</p>
                 </div>
-              </label>
+              </div>
             </div>
           </div>
 

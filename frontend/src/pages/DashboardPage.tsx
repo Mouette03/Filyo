@@ -515,6 +515,8 @@ export default function DashboardPage() {
                       <Clock size={13} className="text-white/30 flex-shrink-0" />
                       <input
                         type="date"
+                        id="dash-expiry-date"
+                        name="expiresAt"
                         value={expiryValue}
                         onChange={e => setExpiryValue(e.target.value)}
                         min={new Date().toISOString().substring(0, 10)}
@@ -544,6 +546,8 @@ export default function DashboardPage() {
                       <Mail size={13} className="text-white/30 flex-shrink-0" />
                       <input
                         type="email"
+                        id="dash-batch-email"
+                        name="emailTo"
                         value={emailToFile}
                         onChange={e => setEmailToFile(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && handleSendFileEmail(firstShare.token)}
@@ -711,6 +715,8 @@ export default function DashboardPage() {
                     <Mail size={13} className="text-white/30 flex-shrink-0" />
                     <input
                       type="email"
+                      id="dash-file-email"
+                      name="emailTo"
                       value={emailToFile}
                       onChange={e => setEmailToFile(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && handleSendFileEmail(share.token)}
@@ -737,6 +743,8 @@ export default function DashboardPage() {
                     <Clock size={13} className="text-white/30 flex-shrink-0" />
                     <input
                       type="date"
+                      id="dash-file-expiry"
+                      name="expiresAt"
                       value={expiryValue}
                       onChange={e => setExpiryValue(e.target.value)}
                       min={new Date().toISOString().substring(0, 10)}

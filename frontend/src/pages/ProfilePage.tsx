@@ -203,10 +203,12 @@ export default function ProfilePage() {
         <div className="space-y-4">
           {/* Nom */}
           <div>
-            <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('profile.displayName')}</label>
+            <label htmlFor="profile-name" className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('profile.displayName')}</label>
             {editingName ? (
               <div className="flex gap-2">
                 <input
+                  id="profile-name"
+                  name="name"
                   value={newName}
                   onChange={e => setNewName(e.target.value)}
                   className="input flex-1"
@@ -231,14 +233,14 @@ export default function ProfilePage() {
 
           {/* Email (lecture seule) */}
           <div>
-            <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('profile.emailLabel')}</label>
+            <p className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('profile.emailLabel')}</p>
             <p className="text-white/60 text-sm">{user?.email}</p>
             <p className="text-xs text-white/30 mt-0.5">{t('profile.emailReadonly')}</p>
           </div>
 
           {/* Rôle */}
           <div>
-            <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('profile.roleLabel')}</label>
+            <p className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('profile.roleLabel')}</p>
             <span className={`badge ${user?.role === 'ADMIN' ? 'badge-blue' : 'badge-green'}`}>
               {user?.role === 'ADMIN' ? t('role.admin') : t('role.user')}
             </span>
@@ -255,8 +257,10 @@ export default function ProfilePage() {
 
         <div className="space-y-4">
           <div>
-            <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('profile.currentPassword')}</label>
+            <label htmlFor="profile-current-pwd" className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('profile.currentPassword')}</label>
             <input
+              id="profile-current-pwd"
+              name="current-password"
               type="password"
               value={currentPwd}
               onChange={e => setCurrentPwd(e.target.value)}
@@ -265,20 +269,22 @@ export default function ProfilePage() {
             />
           </div>
           <div>
-            <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('profile.newPassword')}</label>
+            <label htmlFor="profile-new-pwd" className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('profile.newPassword')}</label>
             <input
+              id="profile-new-pwd"
+              name="new-password"
               type="password"
-              value={newPwd}
               onChange={e => setNewPwd(e.target.value)}
               placeholder={t('login.passwordPlaceholder')}
               className="input"
             />
           </div>
           <div>
-            <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('profile.confirmNewPassword')}</label>
+            <label htmlFor="profile-confirm-pwd" className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('profile.confirmNewPassword')}</label>
             <input
+              id="profile-confirm-pwd"
+              name="confirm-new-password"
               type="password"
-              value={confirmPwd}
               onChange={e => setConfirmPwd(e.target.value)}
               placeholder={t('login.confirmPasswordPlaceholder')}
               className="input"
