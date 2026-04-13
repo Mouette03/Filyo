@@ -190,7 +190,6 @@ export default function RequestUploadPage() {
       try {
         const globalStartTime = Date.now()
         let globalUploadedBytes = 0
-        const totalBytes = files.reduce((acc, f) => acc + f.size, 0)
         for (let fi = 0; fi < files.length; fi++) {
           const file = files[fi]
           const totalChunks = Math.ceil(file.size / chunkSizeBytes)

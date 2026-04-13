@@ -154,7 +154,6 @@ export default function HomePage() {
       try {
         const globalStartTime = Date.now()
         let globalUploadedBytes = 0
-        const totalBytes = files.reduce((acc, f) => acc + f.size, 0)
         const accumulated: UploadedResult[] = []
         for (let fi = 0; fi < files.length; fi++) {
           const file = files[fi]
