@@ -546,6 +546,7 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
     async (req, reply) => {
       const request = await prisma.uploadRequest.findUnique({ where: { token: req.params.token } })
       if (!request || !request.active) return reply.code(404).send({ code: 'REQUEST_NOT_FOUND' })
+      if (request.expiresAt && request.expiresAt < new Date()) return reply.code(410).send({ code: 'REQUEST_EXPIRED' })
 
       const chunked = await prisma.chunkedUpload.findFirst({
         where: { id: req.params.uploadId, uploadRequestId: request.id }
@@ -581,6 +582,10 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
     if (!request || !request.active) {
       await drainBody()
       return reply.code(404).send({ code: 'REQUEST_NOT_FOUND' })
+    }
+    if (request.expiresAt && request.expiresAt < new Date()) {
+      await drainBody()
+      return reply.code(410).send({ code: 'REQUEST_EXPIRED' })
     }
 
     let uploadId: string | undefined
@@ -687,6 +692,7 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
         include: { _count: { select: { receivedFiles: true } } }
       })
       if (!request || !request.active) return reply.code(404).send({ code: 'REQUEST_NOT_FOUND' })
+      if (request.expiresAt && request.expiresAt < new Date()) return reply.code(410).send({ code: 'REQUEST_EXPIRED' })
 
       const chunked = await prisma.chunkedUpload.findFirst({
         where: { id: uploadId, uploadRequestId: request.id }
