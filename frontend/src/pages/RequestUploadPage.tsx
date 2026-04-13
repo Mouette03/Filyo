@@ -181,6 +181,7 @@ export default function RequestUploadPage() {
     setStatus('uploading')
     setProgress(0)
     setProgressLabel('')
+    setUploadSpeed(0)
 
     const chunkSizeMb = settings.uploadChunkSizeMb
     const chunkSizeBytes = chunkSizeMb ? chunkSizeMb * 1024 * 1024 : null
@@ -296,6 +297,9 @@ export default function RequestUploadPage() {
       else if (err.response?.status === 429) toast.error(t('toast.tooManyRequests'))
       else toast.error(t('toast.sendError'))
       setStatus('ready')
+      setUploadSpeed(0)
+    } finally {
+      setProgressLabel('')
     }
   }
 

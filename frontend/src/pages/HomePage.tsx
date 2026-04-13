@@ -142,6 +142,7 @@ export default function HomePage() {
     setUploading(true)
     setProgress(0)
     setProgressLabel('')
+    setUploadSpeed(0)
 
     const chunkSizeMb = settings.uploadChunkSizeMb
     const chunkSizeBytes = chunkSizeMb ? chunkSizeMb * 1024 * 1024 : null
@@ -267,6 +268,7 @@ export default function HomePage() {
     } finally {
       setUploading(false)
       setProgressLabel('')
+      setUploadSpeed(0)
     }
   }
 
