@@ -613,18 +613,24 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
           for await (const _ of part.file) { /* drain */ }
           return reply.code(400).send({ code: 'INVALID_CHUNK_INDEX' })
         }
-        // Chunk déjà reçu → idempotent, on draine et on confirme
         const chunksDir = path.join(UPLOAD_DIR, 'chunks', chunked.id)
         const chunkPath = path.join(chunksDir, `chunk_${chunkIndex}`)
-        if (await fs.pathExists(chunkPath)) {
+        await fs.ensureDir(chunksDir)
+        // Ouverture exclusive (flag 'wx') : atomique — élimine la race condition
+        // si deux requêtes arrivent simultanément pour le même chunk
+        const writeStream = fs.createWriteStream(chunkPath, { flags: 'wx' })
+        const openError = await new Promise<(Error & { code?: string }) | null>(resolve => {
+          writeStream.once('open', () => resolve(null))
+          writeStream.once('error', (err: Error & { code?: string }) => resolve(err))
+        })
+        // Chunk déjà reçu (ou écriture concurrente en cours) → idempotent, on draine et on confirme
+        if (openError) {
+          writeStream.destroy()
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           for await (const _ of part.file) { /* drain */ }
-          chunkSaved = true
-          continue
+          if (openError.code === 'EEXIST') { chunkSaved = true; continue }
+          throw openError
         }
-
-        await fs.ensureDir(chunksDir)
-        const writeStream = fs.createWriteStream(chunkPath)
         writeStream.on('error', () => {})
         try {
           for await (const data of part.file) {
