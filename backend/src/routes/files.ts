@@ -172,6 +172,13 @@ export async function fileRoutes(app: FastifyInstance) {
     const userId = req.user.id
     const { filename, mimeType, totalSize, totalChunks, expiresIn, maxDownloads, password: rawPassword, hideFilenames, batchToken } = req.body
 
+    if (!Number.isInteger(totalSize) || totalSize <= 0) {
+      return reply.code(400).send({ code: 'INVALID_TOTAL_SIZE' })
+    }
+    if (!Number.isInteger(totalChunks) || totalChunks <= 0 || totalChunks > 10000) {
+      return reply.code(400).send({ code: 'INVALID_TOTAL_CHUNKS' })
+    }
+
     const appSettings = await getAppSettings()
     const globalMaxBytes = appSettings.maxFileSizeBytes ?? null
     if (globalMaxBytes !== null && BigInt(totalSize) > globalMaxBytes) {
@@ -376,6 +383,21 @@ export async function fileRoutes(app: FastifyInstance) {
 
     const expiresAt = chunked.expiresIn ? new Date(Date.now() + chunked.expiresIn * 1000) : null
 
+    // Re-vérifier le quota juste avant l'insertion (d'autres uploads peuvent avoir finalisé entre-temps)
+    const userQuotaCheck = await prisma.user.findUnique({ where: { id: userId }, select: { storageQuotaBytes: true } })
+    if (userQuotaCheck?.storageQuotaBytes != null) {
+      const [filesAgg2, receivedAgg2] = await Promise.all([
+        prisma.file.aggregate({ _sum: { size: true }, where: { userId } }),
+        prisma.receivedFile.aggregate({ _sum: { size: true }, where: { uploadRequest: { userId } } })
+      ])
+      const usedBytes2 = (filesAgg2._sum.size ?? BigInt(0)) + (receivedAgg2._sum.size ?? BigInt(0))
+      if (usedBytes2 + chunked.totalSize > userQuotaCheck.storageQuotaBytes) {
+        await fs.remove(filePath).catch(() => {})
+        await prisma.fileChunkedUpload.delete({ where: { id: chunked.id } }).catch(() => {})
+        return reply.code(413).send({ code: 'QUOTA_EXCEEDED' })
+      }
+    }
+
     const file = await prisma.file.create({
       data: {
         filename,
@@ -399,6 +421,10 @@ export async function fileRoutes(app: FastifyInstance) {
         }
       },
       include: { shares: true }
+    }).catch(async (err: unknown) => {
+      await fs.remove(filePath).catch(() => {})
+      await prisma.fileChunkedUpload.delete({ where: { id: chunked.id } }).catch(() => {})
+      throw err
     })
 
     await fs.remove(chunksDir).catch(() => {})

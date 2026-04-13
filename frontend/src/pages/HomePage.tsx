@@ -55,10 +55,14 @@ export default function HomePage() {
       const uploadId = localStorage.getItem(key)
       if (!uploadId) continue
       const rest = key.slice(prefix.length)
-      const lastDash = rest.lastIndexOf('-')
+      // Format : ${fi}-${file.name}-${file.size}
+      const firstDash = rest.indexOf('-')
+      if (firstDash === -1) continue
+      const restAfterIndex = rest.slice(firstDash + 1)
+      const lastDash = restAfterIndex.lastIndexOf('-')
       if (lastDash === -1) continue
-      const filename = rest.slice(0, lastDash)
-      const fileSize = parseInt(rest.slice(lastDash + 1))
+      const filename = restAfterIndex.slice(0, lastDash)
+      const fileSize = parseInt(restAfterIndex.slice(lastDash + 1))
       if (isNaN(fileSize)) continue
       found.push({ key, filename, fileSize, uploadId })
     }
@@ -154,7 +158,7 @@ export default function HomePage() {
         for (let fi = 0; fi < files.length; fi++) {
           const file = files[fi]
           const totalChunks = Math.ceil(file.size / chunkSizeBytes)
-          const RESUME_KEY = `filyo-file-${file.name}-${file.size}`
+          const RESUME_KEY = `filyo-file-${fi}-${file.name}-${file.size}`
 
           // Placeholder avant init pour survivre à un refresh
           if (!localStorage.getItem(RESUME_KEY)) {

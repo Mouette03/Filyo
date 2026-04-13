@@ -523,6 +523,7 @@ export default function SettingsPage() {
             name="maxFileSizeMb"
             type="number"
             min="1"
+            value={maxFileSizeMb}
             onChange={e => setMaxFileSizeMb(e.target.value)}
             placeholder={t('settings.maxFileSizePlaceholder')}
             className="input w-40"

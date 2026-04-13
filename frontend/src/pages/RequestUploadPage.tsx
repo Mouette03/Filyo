@@ -85,10 +85,8 @@ export default function RequestUploadPage() {
     if (status !== 'ready' || !token) return
     const prefix = `filyo-upload-${token}-`
     const found: Omit<PendingResume, 'receivedChunks' | 'totalChunks'>[] = []
-    console.debug('[Filyo resume] scan prefix:', prefix, '— localStorage keys:', localStorage.length)
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i)
-      console.debug('[Filyo resume] key:', key)
       if (!key?.startsWith(prefix)) continue
       const uploadId = localStorage.getItem(key)
       if (!uploadId) continue
@@ -102,35 +100,29 @@ export default function RequestUploadPage() {
       const filename = restAfterIndex.slice(0, lastDash)
       const fileSize = parseInt(restAfterIndex.slice(lastDash + 1))
       if (isNaN(fileSize)) continue
-      console.debug('[Filyo resume] found pending:', { key, filename, fileSize, uploadId })
       found.push({ key, filename, fileSize, uploadId })
     }
-    if (!found.length) { console.debug('[Filyo resume] nothing found in localStorage'); return }
+    if (!found.length) return
     Promise.all(
       found.map(async item => {
         // Placeholder "pending" = init démarré mais pas encore terminé (ou serveur relancé)
         if (item.uploadId === 'pending') {
-          console.debug('[Filyo resume] pending placeholder found (init never completed):', item.key)
           return { ...item, receivedChunks: 0, totalChunks: 0 } as PendingResume
         }
         try {
           const res = await getChunkUploadStatus(token, item.uploadId)
-          console.debug('[Filyo resume] status OK:', res.data)
           return { ...item, receivedChunks: res.data.receivedChunks, totalChunks: res.data.totalChunks } as PendingResume
         } catch (e: any) {
           // Supprimer la clé UNIQUEMENT si le serveur confirme que l'upload n'existe plus (404)
           // Pour les erreurs réseau ou erreurs serveur transitoires, conserver la clé et afficher le bandeau
           if (e?.response?.status === 404) {
-            console.debug('[Filyo resume] upload not found (404), removing key:', item.key)
             localStorage.removeItem(item.key)
             return null
           }
-          console.debug('[Filyo resume] transient error, keeping key:', item.key, e?.message)
           return { ...item, receivedChunks: 0, totalChunks: 0 } as PendingResume
         }
       })
     ).then(results => {
-      console.debug('[Filyo resume] pendingResumes set:', results)
       setPendingResumes(results.filter(Boolean) as PendingResume[])
     })
   }, [status, token])
@@ -195,10 +187,6 @@ export default function RequestUploadPage() {
     const chunkSizeMb = settings.uploadChunkSizeMb
     const chunkSizeBytes = chunkSizeMb ? chunkSizeMb * 1024 * 1024 : null
 
-    console.debug('[Filyo chunk] chunkSizeMb:', chunkSizeMb, 'chunkSizeBytes:', chunkSizeBytes)
-    console.debug('[Filyo chunk] files:', files.map(f => ({ name: f.name, size: f.size })))
-    console.debug('[Filyo chunk] will use chunked path:', !!(chunkSizeBytes && files.some(f => f.size >= chunkSizeBytes)))
-
     // Upload chunked si activé et AU MOINS un fichier atteint ou dépasse la taille d'un chunk
     if (chunkSizeBytes && files.some(f => f.size >= chunkSizeBytes)) {
       try {
@@ -210,7 +198,6 @@ export default function RequestUploadPage() {
           // Écrire un placeholder avant l'init pour survivre à un refresh pendant l'appel réseau
           if (!localStorage.getItem(RESUME_KEY)) {
             localStorage.setItem(RESUME_KEY, 'pending')
-            console.debug('[Filyo chunk] localStorage placeholder set:', RESUME_KEY)
           }
 
           // Vérifier si un upload est en cours pour ce fichier
@@ -222,7 +209,6 @@ export default function RequestUploadPage() {
               setProgressLabel(t('request.chunkResuming'))
               const statusRes = await getChunkUploadStatus(token, uploadId)
               startChunk = statusRes.data.receivedChunks
-              console.debug('[Filyo chunk] resuming from chunk', startChunk, '/', totalChunks)
             } catch {
               // Upload introuvable — recommencer
               uploadId = null
@@ -241,7 +227,7 @@ export default function RequestUploadPage() {
             )
             uploadId = initRes.data.uploadId as string
             localStorage.setItem(RESUME_KEY, uploadId)
-            console.debug('[Filyo chunk] init OK, uploadId:', uploadId, '— localStorage updated')
+
           }
 
           for (let ci = startChunk; ci < totalChunks; ci++) {
