@@ -77,8 +77,14 @@ export async function runScheduledCleanup(): Promise<{ deletedFiles: number; del
 export async function cleanupOrphanedChunks(): Promise<number> {
   const cutoff = new Date(Date.now() - 1 * 60 * 60 * 1000)
 
+  // Un upload est orphelin si ni lastChunkAt ni createdAt n'est récent
   const orphans = await prisma.chunkedUpload.findMany({
-    where: { createdAt: { lt: cutoff } }
+    where: {
+      AND: [
+        { createdAt: { lt: cutoff } },
+        { OR: [{ lastChunkAt: null }, { lastChunkAt: { lt: cutoff } }] }
+      ]
+    }
   })
   for (const c of orphans) {
     await fs.remove(path.join(UPLOAD_DIR, 'chunks', c.id)).catch(() => {})
@@ -88,7 +94,12 @@ export async function cleanupOrphanedChunks(): Promise<number> {
   }
 
   const fileOrphans = await prisma.fileChunkedUpload.findMany({
-    where: { createdAt: { lt: cutoff } }
+    where: {
+      AND: [
+        { createdAt: { lt: cutoff } },
+        { OR: [{ lastChunkAt: null }, { lastChunkAt: { lt: cutoff } }] }
+      ]
+    }
   })
   for (const c of fileOrphans) {
     await fs.remove(path.join(UPLOAD_DIR, 'chunks', c.id)).catch(() => {})

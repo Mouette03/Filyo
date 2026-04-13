@@ -125,6 +125,7 @@ CREATE TABLE "ChunkedUpload" (
     "uploaderEmail" TEXT,
     "message" TEXT,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "lastChunkAt" DATETIME,
     CONSTRAINT "ChunkedUpload_uploadRequestId_fkey" FOREIGN KEY ("uploadRequestId") REFERENCES "UploadRequest" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
@@ -143,5 +144,6 @@ CREATE TABLE "FileChunkedUpload" (
     "batchToken" TEXT,
     "hideFilenames" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "lastChunkAt" DATETIME,
     CONSTRAINT "FileChunkedUpload_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );

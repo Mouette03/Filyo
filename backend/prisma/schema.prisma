@@ -129,6 +129,7 @@ model FileChunkedUpload {
   batchToken     String?
   hideFilenames  Boolean  @default(false)
   createdAt      DateTime @default(now())
+  lastChunkAt    DateTime?
 }
 model ChunkedUpload {
   id              String        @id @default(cuid())
@@ -144,4 +145,5 @@ model ChunkedUpload {
   uploaderEmail   String?
   message         String?
   createdAt       DateTime      @default(now())
+  lastChunkAt     DateTime?
 }

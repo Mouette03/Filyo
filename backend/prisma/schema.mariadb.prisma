@@ -127,8 +127,7 @@ model ChunkedUpload {
   uploaderName    String?
   uploaderEmail   String?
   message         String?
-  createdAt       DateTime      @default(now())
-}
+  createdAt       DateTime      @default(now())  lastChunkAt     DateTime?}
 
 // Upload chunked (admin — dépôt de fichiers perso)
 model FileChunkedUpload {
@@ -146,4 +145,5 @@ model FileChunkedUpload {
   batchToken     String?
   hideFilenames  Boolean  @default(false)
   createdAt      DateTime @default(now())
+  lastChunkAt    DateTime?
 }

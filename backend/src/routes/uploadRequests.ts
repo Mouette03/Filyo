@@ -647,7 +647,7 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
 
         await prisma.chunkedUpload.update({
           where: { id: chunked.id },
-          data: { receivedChunks: { increment: 1 } }
+          data: { receivedChunks: { increment: 1 }, lastChunkAt: new Date() }
         })
         chunkSaved = true
       }
