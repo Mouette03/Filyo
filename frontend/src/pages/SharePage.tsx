@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { Download, Lock, AlertTriangle, ArrowDownUp, Clock, Shield, EyeOff, Package } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { getShareInfo, downloadShare, getSettings } from '../api/client'
-import { formatBytes, formatDate, getFileIcon, downloadBlob } from '../lib/utils'
+import { formatBytes, formatDate, getFileIcon, downloadBlob, formatSpeed } from '../lib/utils'
 import { useT } from '../i18n'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import { useAppSettingsStore } from '../stores/useAppSettingsStore'
@@ -54,6 +54,7 @@ export default function SharePage() {
   const [downloaded, setDownloaded] = useState<Record<string, boolean>>({})
   const [downloadingAll, setDownloadingAll] = useState(false)
   const [downloadProgress, setDownloadProgress] = useState<Record<string, number>>({})
+  const [downloadSpeed, setDownloadSpeed] = useState<Record<string, number>>({})
 
   useEffect(() => {
     if (!token) return
@@ -85,7 +86,10 @@ export default function SharePage() {
     setDownloadProgress(p => ({ ...p, [token]: 0 }))
     try {
       const res = await downloadShare(token, password || undefined,
-        pct => setDownloadProgress(p => ({ ...p, [token]: pct }))
+        (pct, speed) => {
+          setDownloadProgress(p => ({ ...p, [token]: pct }))
+          setDownloadSpeed(p => ({ ...p, [token]: speed }))
+        }
       )
       downloadBlob(res.data, info.filename)
       setDownloaded(p => ({ ...p, [token]: true }))
@@ -110,7 +114,10 @@ export default function SharePage() {
     setDownloadProgress(p => ({ ...p, [shareToken]: 0 }))
     try {
       const res = await downloadShare(shareToken, password || undefined,
-        pct => setDownloadProgress(p => ({ ...p, [shareToken]: pct }))
+        (pct, speed) => {
+          setDownloadProgress(p => ({ ...p, [shareToken]: pct }))
+          setDownloadSpeed(p => ({ ...p, [shareToken]: speed }))
+        }
       )
       downloadBlob(res.data, filename)
       setDownloaded(p => ({ ...p, [shareToken]: true }))
@@ -142,7 +149,10 @@ export default function SharePage() {
       setDownloadProgress(p => ({ ...p, [bf.shareToken]: 0 }))
       try {
         const res = await downloadShare(bf.shareToken, password || undefined,
-          pct => setDownloadProgress(p => ({ ...p, [bf.shareToken]: pct }))
+          (pct, speed) => {
+            setDownloadProgress(p => ({ ...p, [bf.shareToken]: pct }))
+            setDownloadSpeed(p => ({ ...p, [bf.shareToken]: speed }))
+          }
         )
         downloadBlob(res.data, info.hideFilenames ? `fichier-${i + 1}` : bf.filename)
         setDownloaded(p => ({ ...p, [bf.shareToken]: true }))
@@ -346,7 +356,7 @@ export default function SharePage() {
                               ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                               : <Download size={13} />}
                             {downloading[bf.shareToken]
-                              ? `${downloadProgress[bf.shareToken] ?? 0}%`
+                              ? `${downloadProgress[bf.shareToken] ?? 0}%${downloadSpeed[bf.shareToken] > 0 ? ` · ${formatSpeed(downloadSpeed[bf.shareToken])}` : ''}`
                               : t('share.batchDownloadBtn')}
                           </button>
                         )}
@@ -435,7 +445,9 @@ export default function SharePage() {
                       {downloading[token!] ? (
                         <>
                           <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          {downloadProgress[token!] > 0 ? `${downloadProgress[token!]}%` : t('share.downloading')}
+                          {downloadProgress[token!] > 0
+                            ? `${downloadProgress[token!]}%${downloadSpeed[token!] > 0 ? ` · ${formatSpeed(downloadSpeed[token!])}` : ''}`
+                            : t('share.downloading')}
                         </>
                       ) : (
                         <>

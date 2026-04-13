@@ -4,7 +4,7 @@ import { useDropzone } from 'react-dropzone'
 import { Upload, ArrowDownUp, AlertTriangle, Clock, Check, Lock, User, Mail, MessageSquare, RotateCcw, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { getUploadRequestInfo, submitToUploadRequest, getSettings, initChunkedUpload, getChunkUploadStatus, uploadChunk, finalizeChunkedUpload } from '../api/client'
-import { formatBytes, formatDate, getFileIcon } from '../lib/utils'
+import { formatBytes, formatDate, getFileIcon, formatSpeed } from '../lib/utils'
 import { useT } from '../i18n'
 import { useAppSettingsStore } from '../stores/useAppSettingsStore'
 import LanguageSwitcher from '../components/LanguageSwitcher'
@@ -234,8 +234,9 @@ export default function RequestUploadPage() {
             const start = ci * chunkSizeBytes
             const chunk = file.slice(start, start + chunkSizeBytes)
             setProgressLabel(t('request.uploadingChunk', { current: String(ci + 1), total: String(totalChunks), pct: '0' }))
-            await uploadChunk(token, uploadId, ci, chunk, pct => {
-              setProgressLabel(t('request.uploadingChunk', { current: String(ci + 1), total: String(totalChunks), pct: String(pct) }))
+            await uploadChunk(token, uploadId, ci, chunk, (pct, speed) => {
+              const speedStr = speed > 0 ? ` · ${formatSpeed(speed)}` : ''
+              setProgressLabel(t('request.uploadingChunk', { current: String(ci + 1), total: String(totalChunks), pct: String(pct) }) + speedStr)
               // Progression globale inter-fichiers
               const filePct = (ci + pct / 100) / totalChunks
               const globalPct = ((fi + filePct) / files.length) * 100
