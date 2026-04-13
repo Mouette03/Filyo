@@ -274,6 +274,7 @@ export default function ProfilePage() {
               id="profile-new-pwd"
               name="new-password"
               type="password"
+              value={newPwd}
               onChange={e => setNewPwd(e.target.value)}
               placeholder={t('login.passwordPlaceholder')}
               className="input"
@@ -285,6 +286,7 @@ export default function ProfilePage() {
               id="profile-confirm-pwd"
               name="confirm-new-password"
               type="password"
+              value={confirmPwd}
               onChange={e => setConfirmPwd(e.target.value)}
               placeholder={t('login.confirmPasswordPlaceholder')}
               className="input"
