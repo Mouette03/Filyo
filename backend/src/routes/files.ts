@@ -349,14 +349,16 @@ export async function fileRoutes(app: FastifyInstance) {
           await fs.remove(filePath).catch(() => {})
           return reply.code(400).send({ code: 'CHUNK_MISSING', chunkIndex: i })
         }
-        const data = await fs.readFile(chunkPath)
-        if (!writeStream.write(data)) {
-          await new Promise<void>((resolve, reject) => {
-            const onDrain = () => { writeStream.off('error', onError); resolve() }
-            const onError = (err: Error) => { writeStream.off('drain', onDrain); reject(err) }
-            writeStream.once('drain', onDrain)
-            writeStream.once('error', onError)
-          })
+        const readStream = fs.createReadStream(chunkPath)
+        for await (const data of readStream) {
+          if (!writeStream.write(data)) {
+            await new Promise<void>((resolve, reject) => {
+              const onDrain = () => { writeStream.off('error', onError); resolve() }
+              const onError = (err: Error) => { writeStream.off('drain', onDrain); reject(err) }
+              writeStream.once('drain', onDrain)
+              writeStream.once('error', onError)
+            })
+          }
         }
       }
       await new Promise<void>((resolve, reject) => {
