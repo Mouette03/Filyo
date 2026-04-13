@@ -251,6 +251,12 @@ export async function fileRoutes(app: FastifyInstance) {
           return reply.code(404).send({ code: 'UPLOAD_NOT_FOUND' })
         }
 
+        if (chunkIndex < 0 || chunkIndex >= chunked.totalChunks) {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          for await (const _ of part.file) { /* drain */ }
+          return reply.code(400).send({ code: 'INVALID_CHUNK_INDEX' })
+        }
+
         const chunksDir = path.join(UPLOAD_DIR, 'chunks', chunked.id)
         const chunkPath = path.join(chunksDir, `chunk_${chunkIndex}`)
         if (await fs.pathExists(chunkPath)) {
