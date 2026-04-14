@@ -109,6 +109,7 @@ export const en = {
   'dash.expires': 'Expires',
   'dash.expiresNow': 'Expire now',
   'dash.expiryEdit': 'Edit expiry',
+  'dash.sendEmail': 'Send link by email',
   'dash.dl': 'dl.',
   'dash.emailPlaceholder': 'email@example.com, other@example.com',
   'dash.batchHideFilenames': 'Hidden filenames',
@@ -381,6 +382,11 @@ export const en = {
   'dash.disable': 'Disable',
   'dash.enable': 'Enable',
   'dash.filesBtn': 'Files',
+  'dash.maxDlEdit': 'Edit download limit',
+  'dash.expiresIn': 'in',
+  'toast.maxDlUpdated': 'Download limit updated',
+  'toast.maxDlRemoved': 'Download limit removed',
+  'share.expiresIn': 'in',
 
   // ── Settings (additions) ───────────────────────────────────
   'settings.smtpHint': 'Used to send share links by email',

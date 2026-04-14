@@ -79,6 +79,28 @@ export async function copyToClipboard(text: string): Promise<void> {
   }
 }
 
+/** Returns a countdown string like "2j 4h" / "3h 20m" / "45m" until expiresAt. Returns null if already expired or no date. */
+export function formatCountdown(expiresAt: string | Date | null | undefined, lang = 'fr'): string | null {
+  if (!expiresAt) return null
+  const diff = new Date(expiresAt).getTime() - Date.now()
+  if (diff <= 0) return null
+  const totalMin = Math.floor(diff / 60000)
+  const h = Math.floor(totalMin / 60)
+  const d = Math.floor(h / 24)
+  const m = totalMin % 60
+  const dUnit = lang === 'fr' ? 'j' : 'd'
+  if (d > 0) return `${d}${dUnit} ${h % 24}h`
+  if (h > 0) return `${h}h ${m}m`
+  return `${m}m`
+}
+
+/** Converts a UTC ISO string to a value suitable for <input type="datetime-local"> (local time, YYYY-MM-DDTHH:mm). */
+export function toLocalDatetimeValue(isoStr: string): string {
+  const d = new Date(isoStr)
+  const offset = d.getTimezoneOffset() * 60000
+  return new Date(d.getTime() - offset).toISOString().substring(0, 16)
+}
+
 /** Formats a bytes-per-second speed into a human-readable string (e.g. "1.4 MB/s"). */
 export function formatSpeed(bps: number): string {
   if (bps <= 0) return ''

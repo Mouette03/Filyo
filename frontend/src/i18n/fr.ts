@@ -109,6 +109,7 @@ export const fr = {
   'dash.expires': 'Expire',
   'dash.expiresNow': 'Expirer maintenant',
   'dash.expiryEdit': 'Modifier expiration',
+  'dash.sendEmail': 'Envoyer le lien par email',
   'dash.dl': 'télécharg.',
   'dash.emailPlaceholder': 'email@exemple.fr, autre@exemple.fr',
   'dash.batchHideFilenames': 'Noms masqués',
@@ -381,6 +382,11 @@ export const fr = {
   'dash.disable': 'Désactiver',
   'dash.enable': 'Activer',
   'dash.filesBtn': 'Fichiers',
+  'dash.maxDlEdit': 'Modifier la limite de téléchargements',
+  'dash.expiresIn': 'dans',
+  'toast.maxDlUpdated': 'Limite de téléchargements mise à jour',
+  'toast.maxDlRemoved': 'Limite de téléchargements supprimée',
+  'share.expiresIn': 'dans',
 
   // ── Settings (suppléments) ───────────────────────────────────
   'settings.smtpHint': "Utilisé pour l'envoi des liens de partage par email",

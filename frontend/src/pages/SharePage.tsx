@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { Download, Lock, AlertTriangle, ArrowDownUp, Clock, Shield, EyeOff, Package } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { getShareInfo, getShareDlToken, getSettings } from '../api/client'
-import { formatBytes, formatDate, getFileIcon } from '../lib/utils'
+import { formatBytes, formatDate, getFileIcon, formatCountdown } from '../lib/utils'
 import { useT } from '../i18n'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import { useAppSettingsStore } from '../stores/useAppSettingsStore'
@@ -35,7 +35,7 @@ type Status = 'loading' | 'ready' | 'error' | 'expired'
 
 export default function SharePage() {
   const { token } = useParams<{ token: string }>()
-  const { t } = useT()
+  const { t, lang } = useT()
   const { settings, setSettings } = useAppSettingsStore()
   const appName = settings.appName || 'Filyo'
 
@@ -245,6 +245,9 @@ export default function SharePage() {
                           <Clock size={10} /> {t('share.expires')}
                         </p>
                         <p className="text-sm font-medium">{formatDate(info.expiresAt)}</p>
+                        {formatCountdown(info.expiresAt, lang) && (
+                          <p className="text-xs [color:var(--text-40)] mt-0.5">{t('share.expiresIn')} {formatCountdown(info.expiresAt, lang)}</p>
+                        )}
                       </div>
                     )}
                     {info.maxDownloads && (
@@ -361,6 +364,9 @@ export default function SharePage() {
                         <Clock size={10} /> {t('share.expires')}
                       </p>
                       <p className="text-sm font-medium">{formatDate(info.expiresAt)}</p>
+                      {formatCountdown(info.expiresAt, lang) && (
+                        <p className="text-xs [color:var(--text-40)] mt-0.5">{t('share.expiresIn')} {formatCountdown(info.expiresAt, lang)}</p>
+                      )}
                     </div>
                   )}
                   {info.maxDownloads && (

@@ -223,6 +223,12 @@ export const sendRequestByEmail = (id: string, to: string, lang: string = 'fr') 
 export const updateFileExpiry = (id: string, expiresAt: string | null) =>
   api.patch(`/files/${id}/expiry`, { expiresAt })
 
+export const updateFileMaxDownloads = (id: string, maxDownloads: number | null) =>
+  api.patch(`/files/${id}/max-downloads`, { maxDownloads })
+
+export const updateRequestExpiry = (id: string, expiresAt: string | null) =>
+  api.patch(`/upload-requests/${id}/expiry`, { expiresAt })
+
 // ---- Champs formulaire déposant ----
 export const updateUploaderFields = (data: {
   uploaderNameReq?: string
