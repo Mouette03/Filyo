@@ -1161,7 +1161,7 @@ export default function DashboardPage() {
                   />
                   <button
                     onClick={() => handleSendRequestEmail(r.id)}
-                    disabled={emailSendingRequestId === r.id || !isValidEmail(emailToRequest)}
+                    disabled={emailSendingRequestId === r.id || (() => { const addrs = emailToRequest.split(',').map(s => s.trim()).filter(Boolean); return addrs.length === 0 || addrs.some(a => !isValidEmail(a)) })()}
                     className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1.5 disabled:opacity-40">
                     {emailSendingRequestId === r.id
                       ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
