@@ -8,6 +8,14 @@ import { prisma } from '../lib/prisma'
 import { UPLOAD_DIR } from '../lib/config'
 import { getAppSettings } from '../lib/appSettings'
 
+async function getUsedBytes(userId: string): Promise<bigint> {
+  const [filesAgg, receivedAgg] = await Promise.all([
+    prisma.file.aggregate({ _sum: { size: true }, where: { userId } }),
+    prisma.receivedFile.aggregate({ _sum: { size: true }, where: { uploadRequest: { userId } } })
+  ])
+  return (filesAgg._sum.size ?? BigInt(0)) + (receivedAgg._sum.size ?? BigInt(0))
+}
+
 export async function fileRoutes(app: FastifyInstance) {
   const auth = { onRequest: [app.authenticate] }
 
@@ -28,11 +36,7 @@ export async function fileRoutes(app: FastifyInstance) {
     const quotaBytes = userRecord?.storageQuotaBytes ?? null
     let usedBytes = BigInt(0)
     if (quotaBytes !== null) {
-      const [filesAgg, receivedAgg] = await Promise.all([
-        prisma.file.aggregate({ _sum: { size: true }, where: { userId } }),
-        prisma.receivedFile.aggregate({ _sum: { size: true }, where: { uploadRequest: { userId } } })
-      ])
-      usedBytes = (filesAgg._sum.size ?? BigInt(0)) + (receivedAgg._sum.size ?? BigInt(0))
+      usedBytes = await getUsedBytes(userId)
       if (usedBytes >= quotaBytes) {
         return reply.code(413).send({ code: 'QUOTA_EXCEEDED' })
       }
@@ -114,7 +118,7 @@ export async function fileRoutes(app: FastifyInstance) {
     }
 
     const expiresAt = expiresIn
-      ? new Date(Date.now() + parseInt(expiresIn) * 1000)
+      ? new Date(Date.now() + parseInt(expiresIn, 10) * 1000)
       : null
 
     const hashedPassword = rawPassword ? await bcrypt.hash(rawPassword, 10) : null
@@ -129,7 +133,7 @@ export async function fileRoutes(app: FastifyInstance) {
             ...f,
             userId,
             expiresAt,
-            maxDownloads: maxDownloads ? parseInt(maxDownloads) : null,
+            maxDownloads: maxDownloads ? parseInt(maxDownloads, 10) : null,
             password: hashedPassword,
             batchToken,
             hideFilenames,
@@ -137,7 +141,7 @@ export async function fileRoutes(app: FastifyInstance) {
               create: {
                 token: nanoid(16),
                 expiresAt,
-                maxDownloads: maxDownloads ? parseInt(maxDownloads) : null,
+                maxDownloads: maxDownloads ? parseInt(maxDownloads, 10) : null,
                 password: hashedPassword
               }
             }
@@ -200,11 +204,7 @@ export async function fileRoutes(app: FastifyInstance) {
     const userRecord = await prisma.user.findUnique({ where: { id: userId }, select: { storageQuotaBytes: true } })
     const quotaBytes = userRecord?.storageQuotaBytes ?? null
     if (quotaBytes !== null) {
-      const [filesAgg, receivedAgg] = await Promise.all([
-        prisma.file.aggregate({ _sum: { size: true }, where: { userId } }),
-        prisma.receivedFile.aggregate({ _sum: { size: true }, where: { uploadRequest: { userId } } })
-      ])
-      const usedBytes = (filesAgg._sum.size ?? BigInt(0)) + (receivedAgg._sum.size ?? BigInt(0))
+      const usedBytes = await getUsedBytes(userId)
       if (usedBytes + BigInt(totalSize) > quotaBytes) {
         return reply.code(413).send({ code: 'QUOTA_EXCEEDED' })
       }
@@ -219,8 +219,8 @@ export async function fileRoutes(app: FastifyInstance) {
         mimeType: mimeType || 'application/octet-stream',
         totalSize: BigInt(totalSize),
         totalChunks,
-        expiresIn: expiresIn ? parseInt(expiresIn) : null,
-        maxDownloads: maxDownloads ? parseInt(maxDownloads) : null,
+        expiresIn: expiresIn ? parseInt(expiresIn, 10) : null,
+        maxDownloads: maxDownloads ? parseInt(maxDownloads, 10) : null,
         password: hashedPassword,
         hideFilenames: hideFilenames || false,
         batchToken: batchToken || null
@@ -409,11 +409,7 @@ export async function fileRoutes(app: FastifyInstance) {
     // Re-vérifier le quota juste avant l'insertion (d'autres uploads peuvent avoir finalisé entre-temps)
     const userQuotaCheck = await prisma.user.findUnique({ where: { id: userId }, select: { storageQuotaBytes: true } })
     if (userQuotaCheck?.storageQuotaBytes != null) {
-      const [filesAgg2, receivedAgg2] = await Promise.all([
-        prisma.file.aggregate({ _sum: { size: true }, where: { userId } }),
-        prisma.receivedFile.aggregate({ _sum: { size: true }, where: { uploadRequest: { userId } } })
-      ])
-      const usedBytes2 = (filesAgg2._sum.size ?? BigInt(0)) + (receivedAgg2._sum.size ?? BigInt(0))
+      const usedBytes2 = await getUsedBytes(userId)
       if (usedBytes2 + chunked.totalSize > userQuotaCheck.storageQuotaBytes) {
         await fs.remove(filePath).catch(() => {})
         await prisma.fileChunkedUpload.delete({ where: { id: chunked.id } }).catch(() => {})

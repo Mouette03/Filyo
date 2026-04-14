@@ -105,7 +105,7 @@ export async function shareRoutes(app: FastifyInstance) {
       const ok = await bcrypt.compare(req.body?.password || '', share.password)
       if (!ok) {
         req.log.warn(
-          { tokenPrefix: req.params.token.substring(0, 8) + '…', ipMasked: req.ip.replace(/(\.(\d+))$/, '.***').replace(/(:([0-9a-f]+))$/i, ':****') },
+          { tokenPrefix: req.params.token.substring(0, 8) + '…', ipMasked: req.ip.replace(/\.\d+$/, '.***').replace(/:[0-9a-f]+$/i, ':****') },
           'Share dl-token: wrong password attempt'
         )
         return reply.code(401).send({ code: 'WRONG_PASSWORD' })
