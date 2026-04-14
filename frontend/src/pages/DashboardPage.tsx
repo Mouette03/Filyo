@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Trash2, Download, RefreshCw, Copy, Check, Eye, ToggleLeft, ToggleRight, HardDrive, Clock, Mail, Send, ExternalLink, User, TimerOff, AlertTriangle, MessageSquare, Package, EyeOff, ChevronDown, ChevronUp } from 'lucide-react'
+import { Trash2, Download, RefreshCw, Copy, Check, Eye, ToggleLeft, ToggleRight, HardDrive, Clock, Mail, Send, ExternalLink, User, TimerOff, AlertTriangle, MessageSquare, Package, EyeOff, ChevronDown, ChevronUp, Hash } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '../stores/useAuthStore'
 import {
   listFiles, deleteFile, listUploadRequests,
   deleteUploadRequest, toggleUploadRequest, getStats,
   runCleanup, getReceivedFiles, getReceivedFileDlToken,
-  sendShareByEmail, updateFileExpiry
+  sendShareByEmail, sendRequestByEmail, updateFileExpiry,
+  updateFileMaxDownloads, updateRequestExpiry
 } from '../api/client'
-import { formatBytes, formatDate, getFileIcon, copyToClipboard, isValidEmail } from '../lib/utils'
+import { formatBytes, formatDate, getFileIcon, copyToClipboard, isValidEmail, formatCountdown, toLocalDatetimeValue } from '../lib/utils'
 import { useT } from '../i18n'
 
 interface FileItem {
@@ -57,6 +58,15 @@ export default function DashboardPage() {
   const [expiringNowId, setExpiringNowId] = useState<string | null>(null)
   const [expandedBatches, setExpandedBatches] = useState<Set<string>>(new Set())
   const [downloadingReceived, setDownloadingReceived] = useState<Record<string, boolean>>({})
+  const [maxDlEditId, setMaxDlEditId] = useState<string | null>(null)
+  const [maxDlValue, setMaxDlValue] = useState('')
+  const [savingMaxDlId, setSavingMaxDlId] = useState<string | null>(null)
+  const [requestExpiryEditId, setRequestExpiryEditId] = useState<string | null>(null)
+  const [requestExpiryValue, setRequestExpiryValue] = useState('')
+  const [savingRequestExpiryId, setSavingRequestExpiryId] = useState<string | null>(null)
+  const [emailingRequestId, setEmailingRequestId] = useState<string | null>(null)
+  const [emailToRequest, setEmailToRequest] = useState('')
+  const [emailSendingRequestId, setEmailSendingRequestId] = useState<string | null>(null)
 
   // Grouper les fichiers par batchToken pour l'affichage
   type DisplayItem =
@@ -279,6 +289,73 @@ export default function DashboardPage() {
     } catch { toast.error(t('common.error')) }
   }
 
+  const handleSaveMaxDl = async (fileId: string, clear = false) => {
+    setSavingMaxDlId(fileId)
+    try {
+      const maxDownloads = (!clear && maxDlValue) ? parseInt(maxDlValue, 10) : null
+      if (maxDownloads !== null && (isNaN(maxDownloads) || maxDownloads < 1)) {
+        toast.error(t('common.error')); setSavingMaxDlId(null); return
+      }
+      await updateFileMaxDownloads(fileId, maxDownloads)
+      setFiles(prev => prev.map(f => f.id === fileId ? { ...f, maxDownloads } : f))
+      setMaxDlEditId(null)
+      toast.success(maxDownloads !== null ? t('toast.maxDlUpdated') : t('toast.maxDlRemoved'))
+    } catch { toast.error(t('toast.updateError')) }
+    setSavingMaxDlId(null)
+  }
+
+  const handleSaveBatchMaxDl = async (batchFiles: FileItem[], clear = false) => {
+    const key = batchFiles[0]?.batchToken || batchFiles[0]?.id
+    setSavingMaxDlId(key)
+    try {
+      const maxDownloads = (!clear && maxDlValue) ? parseInt(maxDlValue, 10) : null
+      if (maxDownloads !== null && (isNaN(maxDownloads) || maxDownloads < 1)) {
+        toast.error(t('common.error')); setSavingMaxDlId(null); return
+      }
+      await Promise.all(batchFiles.map(f => updateFileMaxDownloads(f.id, maxDownloads)))
+      const ids = new Set(batchFiles.map(f => f.id))
+      setFiles(prev => prev.map(f => ids.has(f.id) ? { ...f, maxDownloads } : f))
+      setMaxDlEditId(null)
+      toast.success(maxDownloads !== null ? t('toast.maxDlUpdated') : t('toast.maxDlRemoved'))
+    } catch { toast.error(t('toast.updateError')) }
+    setSavingMaxDlId(null)
+  }
+
+  const handleSaveRequestExpiry = async (requestId: string, clear = false) => {
+    setSavingRequestExpiryId(requestId)
+    try {
+      const expiresAt = (!clear && requestExpiryValue) ? new Date(requestExpiryValue).toISOString() : null
+      await updateRequestExpiry(requestId, expiresAt)
+      setRequests(prev => prev.map(r => r.id === requestId ? { ...r, expiresAt } : r))
+      setRequestExpiryEditId(null)
+      toast.success(expiresAt ? t('toast.expiryUpdated') : t('toast.expiryRemoved'))
+    } catch { toast.error(t('toast.updateError')) }
+    setSavingRequestExpiryId(null)
+  }
+
+  const handleSendRequestEmail = async (requestId: string) => {
+    const addresses = emailToRequest.split(',').map((s: string) => s.trim()).filter(Boolean)
+    if (addresses.length === 0) return toast.error(t('toast.emailRequired'))
+    if (addresses.some(a => !isValidEmail(a))) return toast.error(t('toast.emailInvalid'))
+    setEmailSendingRequestId(requestId)
+    try {
+      await sendRequestByEmail(requestId, addresses.join(','), lang)
+      if (addresses.length === 1) {
+        toast.success(t('toast.linkEmailSent', { email: addresses[0] }))
+      } else {
+        toast.success(t('toast.requestEmailsSent', { count: String(addresses.length) }))
+      }
+      setEmailingRequestId(null)
+      setEmailToRequest('')
+    } catch (err: any) {
+      const code = err.response?.data?.code
+      if (code === 'SMTP_NOT_CONFIGURED') toast.error(t('toast.smtpNotConfigured'))
+      else if (code === 'EMAIL_SEND_FAILED') toast.error(t('toast.emailSendFailed', { detail: err.response?.data?.detail || '' }))
+      else toast.error(t('toast.emailSendError'))
+    }
+    setEmailSendingRequestId(null)
+  }
+
   return (
     <div className="max-w-5xl mx-auto px-4 py-10">
       {/* Header */}
@@ -413,7 +490,7 @@ export default function DashboardPage() {
                         {firstFile.expiresAt
                           ? new Date(firstFile.expiresAt) <= new Date()
                             ? <span className="text-red-400"> · {t('dash.expired')}</span>
-                            : ` · ${t('dash.expires')} ${formatDate(firstFile.expiresAt)}`
+                            : ` · ${t('dash.expires')} ${formatDate(firstFile.expiresAt)}${formatCountdown(firstFile.expiresAt, lang) ? ` (${t('dash.expiresIn')} ${formatCountdown(firstFile.expiresAt, lang)})` : ''}`
                           : ` · ${t('dash.noExpiry')}`}
                       </p>
                     </div>
@@ -431,19 +508,28 @@ export default function DashboardPage() {
                             className={`flex items-center gap-1.5 px-2.5 h-8 rounded-lg text-xs font-medium transition-all flex-shrink-0
                               ${copiedToken === firstShare.token ? 'bg-emerald-500/20 text-emerald-400' : 'btn-secondary'}`}>
                             {copiedToken === firstShare.token ? <Check size={12} /> : <Copy size={12} />}
-                            {t('common.copy')}
+                            {t('dash.link')}
                           </button>
                           <button
                             onClick={() => { setEmailingFileId(emailingFileId === batchToken ? null : batchToken); setEmailToFile('') }}
                             className={`btn-icon ${emailingFileId === batchToken ? '!bg-brand-500/20 !text-brand-400 !border-brand-500/30' : ''}`}>
                             <Mail size={13} />
                           </button>
+                          <button
+                            onClick={() => {
+                              setMaxDlEditId(maxDlEditId === batchToken ? null : batchToken)
+                              setMaxDlValue(firstFile.shares?.[0]?.maxDownloads != null ? String(firstFile.shares[0].maxDownloads) : '')
+                            }}
+                            className={`btn-icon ${maxDlEditId === batchToken ? '!bg-brand-500/20 !text-brand-400 !border-brand-500/30' : ''}`}
+                            title={t('dash.maxDlEdit')}>
+                            <Hash size={13} />
+                          </button>
                         </>
                       )}
                       <button
                         onClick={() => {
                           setExpiryEditId(expiryEditId === batchToken ? null : batchToken)
-                          setExpiryValue(firstFile.expiresAt ? firstFile.expiresAt.substring(0, 10) : '')
+                          setExpiryValue(firstFile.expiresAt ? toLocalDatetimeValue(firstFile.expiresAt) : '')
                         }}
                         className={`btn-icon ${expiryEditId === batchToken ? '!bg-brand-500/20 !text-brand-400 !border-brand-500/30' : ''}`}
                         title={t('dash.expiryEdit')}>
@@ -484,15 +570,21 @@ export default function DashboardPage() {
                         </button>
                         <button
                           onClick={() => copyLink('s', firstShare.token)}
-                          className={`flex items-center gap-1.5 px-2.5 h-8 rounded-lg text-xs font-medium transition-all flex-shrink-0
-                            ${copiedToken === firstShare.token ? 'bg-emerald-500/20 text-emerald-400' : 'btn-secondary'}`}>
+                          className={`btn-icon flex-shrink-0 ${copiedToken === firstShare.token ? '!bg-emerald-500/20 !text-emerald-400 !border-emerald-500/30' : ''}`}>
                           {copiedToken === firstShare.token ? <Check size={12} /> : <Copy size={12} />}
-                          {t('common.copy')}
                         </button>
                         <button
                           onClick={() => { setEmailingFileId(emailingFileId === batchToken ? null : batchToken); setEmailToFile('') }}
                           className={`btn-icon flex-shrink-0 ${emailingFileId === batchToken ? '!bg-brand-500/20 !text-brand-400 !border-brand-500/30' : ''}`}>
                           <Mail size={13} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setMaxDlEditId(maxDlEditId === batchToken ? null : batchToken)
+                            setMaxDlValue(firstFile.shares?.[0]?.maxDownloads != null ? String(firstFile.shares[0].maxDownloads) : '')
+                          }}
+                          className={`btn-icon flex-shrink-0 ${maxDlEditId === batchToken ? '!bg-brand-500/20 !text-brand-400 !border-brand-500/30' : ''}`}>
+                          <Hash size={13} />
                         </button>
                         <button onClick={() => handleDeleteBatch(bf)} className="btn-icon-danger flex-shrink-0">
                           <Trash2 size={13} />
@@ -502,7 +594,7 @@ export default function DashboardPage() {
                     <button
                       onClick={() => {
                         setExpiryEditId(expiryEditId === batchToken ? null : batchToken)
-                        setExpiryValue(firstFile.expiresAt ? firstFile.expiresAt.substring(0, 10) : '')
+                        setExpiryValue(firstFile.expiresAt ? toLocalDatetimeValue(firstFile.expiresAt) : '')
                       }}
                       className={`btn-icon flex-shrink-0 ${expiryEditId === batchToken ? '!bg-brand-500/20 !text-brand-400 !border-brand-500/30' : ''}`}>
                       <Clock size={13} />
@@ -521,12 +613,12 @@ export default function DashboardPage() {
                     <div className="mt-3 pt-3 border-t border-white/10 flex flex-wrap gap-2 items-center">
                       <Clock size={13} className="text-white/30 flex-shrink-0" />
                       <input
-                        type="date"
+                        type="datetime-local"
                         id="dash-expiry-date"
                         name="expiresAt"
                         value={expiryValue}
                         onChange={e => setExpiryValue(e.target.value)}
-                        min={new Date().toISOString().substring(0, 10)}
+                        min={new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().substring(0, 16)}
                         className="input text-sm py-1.5 flex-1 min-w-36"
                       />
                       <button
@@ -545,6 +637,36 @@ export default function DashboardPage() {
                         {t('dash.noExpiry')}
                       </button>
                       <button onClick={() => setExpiryEditId(null)} className="btn-secondary text-xs px-2.5 py-1.5">✕</button>
+                    </div>
+                  )}
+                  {maxDlEditId === batchToken && (
+                    <div className="mt-3 pt-3 border-t border-white/10 flex flex-wrap gap-2 items-center">
+                      <Hash size={13} className="text-white/30 flex-shrink-0" />
+                      <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={maxDlValue}
+                        onChange={e => setMaxDlValue(e.target.value)}
+                        placeholder={t('common.unlimited')}
+                        className="input text-sm py-1.5 flex-1 min-w-24"
+                      />
+                      <button
+                        onClick={() => handleSaveBatchMaxDl(bf)}
+                        disabled={savingMaxDlId === batchToken || !maxDlValue}
+                        className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1.5 disabled:opacity-40">
+                        {savingMaxDlId === batchToken
+                          ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          : <Check size={12} />}
+                        {t('common.save')}
+                      </button>
+                      <button
+                        onClick={() => handleSaveBatchMaxDl(bf, true)}
+                        disabled={savingMaxDlId === batchToken}
+                        className="btn-secondary text-xs px-2.5 py-1.5 disabled:opacity-40">
+                        {t('common.unlimited')}
+                      </button>
+                      <button onClick={() => setMaxDlEditId(null)} className="btn-secondary text-xs px-2.5 py-1.5">✕</button>
                     </div>
                   )}
                   {/* Email inline lot */}
@@ -619,7 +741,7 @@ export default function DashboardPage() {
                       {f.expiresAt
                         ? new Date(f.expiresAt) <= new Date()
                           ? <span className="text-red-400"> · {t('dash.expired')}</span>
-                          : ` · ${t('dash.expires')} ${formatDate(f.expiresAt)}`
+                          : ` · ${t('dash.expires')} ${formatDate(f.expiresAt)}${formatCountdown(f.expiresAt, lang) ? ` (${t('dash.expiresIn')} ${formatCountdown(f.expiresAt, lang)})` : ''}`
                         : ` · ${t('dash.noExpiry')}`}
                     </p>
                   </div>
@@ -638,7 +760,7 @@ export default function DashboardPage() {
                           className={`flex items-center gap-1.5 px-2.5 h-8 rounded-lg text-xs font-medium transition-all flex-shrink-0
                             ${copiedToken === share.token ? 'bg-emerald-500/20 text-emerald-400' : 'btn-secondary'}`}>
                           {copiedToken === share.token ? <Check size={12} /> : <Copy size={12} />}
-                          {t('common.copy')}
+                          {t('dash.link')}
                         </button>
                         <button
                           onClick={() => { setEmailingFileId(emailingFileId === f.id ? null : f.id); setEmailToFile('') }}
@@ -646,12 +768,21 @@ export default function DashboardPage() {
                           title="Envoyer par email">
                           <Mail size={13} />
                         </button>
+                        <button
+                          onClick={() => {
+                            setMaxDlEditId(maxDlEditId === f.id ? null : f.id)
+                            setMaxDlValue(f.shares?.[0]?.maxDownloads != null ? String(f.shares[0].maxDownloads) : '')
+                          }}
+                          className={`btn-icon ${maxDlEditId === f.id ? '!bg-brand-500/20 !text-brand-400 !border-brand-500/30' : ''}`}
+                          title={t('dash.maxDlEdit')}>
+                          <Hash size={13} />
+                        </button>
                       </>
                     )}
                     <button
                       onClick={() => {
                         setExpiryEditId(expiryEditId === f.id ? null : f.id)
-                        setExpiryValue(f.expiresAt ? f.expiresAt.substring(0, 10) : '')
+                        setExpiryValue(f.expiresAt ? toLocalDatetimeValue(f.expiresAt) : '')
                       }}
                       className={`btn-icon ${expiryEditId === f.id ? '!bg-brand-500/20 !text-brand-400 !border-brand-500/30' : ''}`}
                       title="Modifier l'expiration">
@@ -683,22 +814,28 @@ export default function DashboardPage() {
                       </button>
                       <button
                         onClick={() => copyLink('s', share.token)}
-                        className={`flex items-center gap-1.5 px-2.5 h-8 rounded-lg text-xs font-medium transition-all flex-shrink-0
-                          ${copiedToken === share.token ? 'bg-emerald-500/20 text-emerald-400' : 'btn-secondary'}`}>
+                        className={`btn-icon flex-shrink-0 ${copiedToken === share.token ? '!bg-emerald-500/20 !text-emerald-400 !border-emerald-500/30' : ''}`}>
                         {copiedToken === share.token ? <Check size={12} /> : <Copy size={12} />}
-                        {t('common.copy')}
                       </button>
                       <button
                         onClick={() => { setEmailingFileId(emailingFileId === f.id ? null : f.id); setEmailToFile('') }}
                         className={`btn-icon flex-shrink-0 ${emailingFileId === f.id ? '!bg-brand-500/20 !text-brand-400 !border-brand-500/30' : ''}`}>
                         <Mail size={13} />
                       </button>
+                      <button
+                        onClick={() => {
+                          setMaxDlEditId(maxDlEditId === f.id ? null : f.id)
+                          setMaxDlValue(f.shares?.[0]?.maxDownloads != null ? String(f.shares[0].maxDownloads) : '')
+                        }}
+                        className={`btn-icon flex-shrink-0 ${maxDlEditId === f.id ? '!bg-brand-500/20 !text-brand-400 !border-brand-500/30' : ''}`}>
+                        <Hash size={13} />
+                      </button>
                     </>
                   )}
                   <button
                     onClick={() => {
                       setExpiryEditId(expiryEditId === f.id ? null : f.id)
-                      setExpiryValue(f.expiresAt ? f.expiresAt.substring(0, 10) : '')
+                      setExpiryValue(f.expiresAt ? toLocalDatetimeValue(f.expiresAt) : '')
                     }}
                     className={`btn-icon flex-shrink-0 ${expiryEditId === f.id ? '!bg-brand-500/20 !text-brand-400 !border-brand-500/30' : ''}`}>
                     <Clock size={13} />
@@ -749,12 +886,12 @@ export default function DashboardPage() {
                   <div className="mt-3 pt-3 border-t border-white/10 flex flex-wrap gap-2 items-center">
                     <Clock size={13} className="text-white/30 flex-shrink-0" />
                     <input
-                      type="date"
+                      type="datetime-local"
                       id="dash-file-expiry"
                       name="expiresAt"
                       value={expiryValue}
                       onChange={e => setExpiryValue(e.target.value)}
-                      min={new Date().toISOString().substring(0, 10)}
+                      min={new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().substring(0, 16)}
                       className="input text-sm py-1.5 flex-1 min-w-36"
                     />
                     <button
@@ -773,6 +910,36 @@ export default function DashboardPage() {
                       {t('dash.noExpiry')}
                     </button>
                     <button onClick={() => setExpiryEditId(null)} className="btn-secondary text-xs px-2.5 py-1.5">✕</button>
+                  </div>
+                )}
+                {maxDlEditId === f.id && (
+                  <div className="mt-3 pt-3 border-t border-white/10 flex flex-wrap gap-2 items-center">
+                    <Hash size={13} className="text-white/30 flex-shrink-0" />
+                    <input
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={maxDlValue}
+                      onChange={e => setMaxDlValue(e.target.value)}
+                      placeholder={t('common.unlimited')}
+                      className="input text-sm py-1.5 flex-1 min-w-24"
+                    />
+                    <button
+                      onClick={() => handleSaveMaxDl(f.id)}
+                      disabled={savingMaxDlId === f.id || !maxDlValue}
+                      className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1.5 disabled:opacity-40">
+                      {savingMaxDlId === f.id
+                        ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        : <Check size={12} />}
+                      {t('common.save')}
+                    </button>
+                    <button
+                      onClick={() => handleSaveMaxDl(f.id, true)}
+                      disabled={savingMaxDlId === f.id}
+                      className="btn-secondary text-xs px-2.5 py-1.5 disabled:opacity-40">
+                      {t('common.unlimited')}
+                    </button>
+                    <button onClick={() => setMaxDlEditId(null)} className="btn-secondary text-xs px-2.5 py-1.5">✕</button>
                   </div>
                 )}
               </div>
@@ -804,7 +971,7 @@ export default function DashboardPage() {
                   </div>
                   <p className="text-xs text-white/40 mt-0.5 leading-relaxed">
                     {t('users.filesCount', { count: String(r.filesCount) })} · {formatDate(r.createdAt)}
-                    {r.expiresAt && <><br className="sm:hidden" /><span>{` · ${t('dash.expires')} ${formatDate(r.expiresAt)}`}</span></>}
+                    {r.expiresAt && <><br className="sm:hidden" /><span>{` · ${t('dash.expires')} ${formatDate(r.expiresAt)}${formatCountdown(r.expiresAt, lang) ? ` (${t('dash.expiresIn')} ${formatCountdown(r.expiresAt, lang)})` : ''}`}</span></>}
                   </p>
                 </div>
                 {/* Boutons desktop */}
@@ -819,10 +986,22 @@ export default function DashboardPage() {
                     {copiedToken === r.token ? <Check size={12} /> : <Copy size={12} />}
                     {t('dash.link')}
                   </button>
+                  <button
+                    onClick={() => { setEmailingRequestId(emailingRequestId === r.id ? null : r.id); setEmailToRequest('') }}
+                    className={`btn-icon ${emailingRequestId === r.id ? '!bg-brand-500/20 !text-brand-400 !border-brand-500/30' : ''}`}
+                    title={t('dash.sendEmail')}>
+                    <Mail size={13} />
+                  </button>
                   <button onClick={() => handleToggleRequest(r.id)}
                     className="btn-icon"
                     title={r.active ? t('dash.disable') : t('dash.enable')}>
                     {r.active ? <ToggleRight size={15} className="text-brand-400" /> : <ToggleLeft size={15} />}
+                  </button>
+                  <button
+                    onClick={() => { setRequestExpiryEditId(requestExpiryEditId === r.id ? null : r.id); setRequestExpiryValue(r.expiresAt ? toLocalDatetimeValue(r.expiresAt) : '') }}
+                    className={`btn-icon ${requestExpiryEditId === r.id ? '!bg-brand-500/20 !text-brand-400 !border-brand-500/30' : ''}`}
+                    title={t('dash.expiryEdit')}>
+                    <Clock size={13} />
                   </button>
                   <button onClick={() => handleDeleteRequest(r.id)} className="btn-icon-danger" title={t('common.delete')}>
                     <Trash2 size={13} />
@@ -837,15 +1016,23 @@ export default function DashboardPage() {
                   <Eye size={12} /> {t('dash.filesBtn')}
                 </button>
                 <button onClick={() => copyLink('r', r.token)}
-                  className={`flex items-center gap-1.5 px-2.5 h-8 rounded-lg text-xs font-medium transition-all flex-1 justify-center
-                    ${copiedToken === r.token ? 'bg-emerald-500/20 text-emerald-400' : 'btn-secondary'}`}>
+                  className={`btn-icon flex-shrink-0 ${copiedToken === r.token ? '!bg-emerald-500/20 !text-emerald-400 !border-emerald-500/30' : ''}`}>
                   {copiedToken === r.token ? <Check size={12} /> : <Copy size={12} />}
-                  {t('dash.link')}
+                </button>
+                <button
+                  onClick={() => { setEmailingRequestId(emailingRequestId === r.id ? null : r.id); setEmailToRequest('') }}
+                  className={`btn-icon flex-shrink-0 ${emailingRequestId === r.id ? '!bg-brand-500/20 !text-brand-400 !border-brand-500/30' : ''}`}>
+                  <Mail size={13} />
                 </button>
                 <button onClick={() => handleToggleRequest(r.id)}
                   className="btn-icon flex-shrink-0"
                   title={r.active ? t('dash.disable') : t('dash.enable')}>
                   {r.active ? <ToggleRight size={15} className="text-brand-400" /> : <ToggleLeft size={15} />}
+                </button>
+                <button
+                  onClick={() => { setRequestExpiryEditId(requestExpiryEditId === r.id ? null : r.id); setRequestExpiryValue(r.expiresAt ? toLocalDatetimeValue(r.expiresAt) : '') }}
+                  className={`btn-icon flex-shrink-0 ${requestExpiryEditId === r.id ? '!bg-brand-500/20 !text-brand-400 !border-brand-500/30' : ''}`}>
+                  <Clock size={13} />
                 </button>
                 <button onClick={() => handleDeleteRequest(r.id)} className="btn-icon-danger flex-shrink-0" title={t('common.delete')}>
                   <Trash2 size={13} />
@@ -928,6 +1115,60 @@ export default function DashboardPage() {
                       </div>
                     ))
                   })()}
+                </div>
+              )}
+
+              {/* Inline : modifier expiration de la request */}
+              {requestExpiryEditId === r.id && (
+                <div className="mt-3 pt-3 border-t border-white/10 flex flex-wrap gap-2 items-center">
+                  <Clock size={13} className="text-white/30 flex-shrink-0" />
+                  <input
+                    type="datetime-local"
+                    value={requestExpiryValue}
+                    onChange={e => setRequestExpiryValue(e.target.value)}
+                    min={new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().substring(0, 16)}
+                    className="input text-sm py-1.5 flex-1 min-w-36"
+                  />
+                  <button
+                    onClick={() => handleSaveRequestExpiry(r.id)}
+                    disabled={savingRequestExpiryId === r.id || !requestExpiryValue}
+                    className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1.5 disabled:opacity-40">
+                    {savingRequestExpiryId === r.id
+                      ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      : <Check size={12} />}
+                    {t('common.save')}
+                  </button>
+                  <button
+                    onClick={() => handleSaveRequestExpiry(r.id, true)}
+                    disabled={savingRequestExpiryId === r.id}
+                    className="btn-secondary text-xs px-2.5 py-1.5 disabled:opacity-40">
+                    {t('dash.noExpiry')}
+                  </button>
+                  <button onClick={() => setRequestExpiryEditId(null)} className="btn-secondary text-xs px-2.5 py-1.5">✕</button>
+                </div>
+              )}
+
+              {/* Inline : envoyer le lien par email */}
+              {emailingRequestId === r.id && (
+                <div className="mt-3 pt-3 border-t border-white/10 flex flex-wrap gap-2 items-center">
+                  <Mail size={13} className="text-white/30 flex-shrink-0" />
+                  <input
+                    type="email"
+                    value={emailToRequest}
+                    onChange={e => setEmailToRequest(e.target.value)}
+                    placeholder={t('dash.emailPlaceholder')}
+                    className="input text-sm py-1.5 flex-1 min-w-48"
+                  />
+                  <button
+                    onClick={() => handleSendRequestEmail(r.id)}
+                    disabled={emailSendingRequestId === r.id || (() => { const addrs = emailToRequest.split(',').map(s => s.trim()).filter(Boolean); return addrs.length === 0 || addrs.some(a => !isValidEmail(a)) })()}
+                    className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1.5 disabled:opacity-40">
+                    {emailSendingRequestId === r.id
+                      ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      : <Send size={12} />}
+                    {t('common.send')}
+                  </button>
+                  <button onClick={() => setEmailingRequestId(null)} className="btn-secondary text-xs px-2.5 py-1.5">✕</button>
                 </div>
               )}
             </div>

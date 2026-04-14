@@ -375,6 +375,25 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
     return { active: updated.active }
   })
 
+  // PATCH /api/upload-requests/:id/expiry (propriétaire ou admin)
+  app.patch<{ Params: { id: string }; Body: { expiresAt: string | null } }>(
+    '/:id/expiry',
+    auth,
+    async (req, reply) => {
+      const where = ownerWhere(req, req.params.id)
+      const request = await prisma.uploadRequest.findFirst({ where })
+      if (!request) return reply.code(404).send({ code: 'REQUEST_NOT_FOUND' })
+      let expiresAt: Date | null = null
+      if (req.body.expiresAt) {
+        expiresAt = new Date(req.body.expiresAt)
+        if (isNaN(expiresAt.getTime())) return reply.code(400).send({ code: 'INVALID_DATE' })
+      }
+      await prisma.uploadRequest.update({ where: { id: req.params.id }, data: { expiresAt } })
+      req.log.info({ id: req.params.id }, 'Upload request expiry updated')
+      return { expiresAt }
+    }
+  )
+
   // POST /api/upload-requests/:id/send-email (proprietaire ou admin)
   app.post<{ Params: { id: string }; Body: { to: string; lang?: string } }>(
     '/:id/send-email',

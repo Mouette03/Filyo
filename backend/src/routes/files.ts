@@ -515,4 +515,23 @@ export async function fileRoutes(app: FastifyInstance) {
       return { expiresAt }
     }
   )
+
+  // PATCH /api/files/:id/max-downloads - Modifier la limite de téléchargements
+  app.patch<{ Params: { id: string }; Body: { maxDownloads: number | null } }>(
+    '/:id/max-downloads',
+    auth,
+    async (req, reply) => {
+      const file = await prisma.file.findFirst({
+        where: { id: req.params.id, userId: req.user.id }
+      })
+      if (!file) return reply.code(404).send({ code: 'FILE_NOT_FOUND' })
+      const { maxDownloads } = req.body
+      if (maxDownloads !== null && (!Number.isInteger(maxDownloads) || maxDownloads < 1)) {
+        return reply.code(400).send({ code: 'INVALID_MAX_DOWNLOADS' })
+      }
+      await prisma.file.update({ where: { id: req.params.id }, data: { maxDownloads: maxDownloads ?? null } })
+      await prisma.share.updateMany({ where: { fileId: req.params.id }, data: { maxDownloads: maxDownloads ?? null } })
+      return { maxDownloads }
+    }
+  )
 }
