@@ -92,8 +92,7 @@ async function bootstrap() {
   // CORS — en production (NODE_ENV=production), le frontend est servi par ce même serveur
   // (même origine), donc CORS n'est pas nécessaire.
   // En développement, on autorise explicitement l'origine du dev server Vite.
-  const isProduction = process.env.NODE_ENV === 'production'
-  const corsOrigin = isProduction
+  const corsOrigin = !isDev
     ? false
     : (process.env.FRONTEND_URL || 'http://localhost:5173')
   await app.register(cors, {
