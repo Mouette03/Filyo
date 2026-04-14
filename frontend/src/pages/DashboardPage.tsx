@@ -8,7 +8,7 @@ import {
   runCleanup, getReceivedFiles, downloadReceivedFile,
   sendShareByEmail, updateFileExpiry
 } from '../api/client'
-import { formatBytes, formatDate, getFileIcon, downloadBlob, copyToClipboard, isValidEmail } from '../lib/utils'
+import { formatBytes, formatDate, getFileIcon, downloadBlob, copyToClipboard, isValidEmail, formatSpeed } from '../lib/utils'
 import { useT } from '../i18n'
 
 interface FileItem {
@@ -56,6 +56,7 @@ export default function DashboardPage() {
   const [savingExpiryId, setSavingExpiryId] = useState<string | null>(null)
   const [expiringNowId, setExpiringNowId] = useState<string | null>(null)
   const [expandedBatches, setExpandedBatches] = useState<Set<string>>(new Set())
+  const [downloadReceivedProgress, setDownloadReceivedProgress] = useState<Record<string, { pct: number; speed: number }>>({})
 
   // Grouper les fichiers par batchToken pour l'affichage
   type DisplayItem =
@@ -185,10 +186,15 @@ export default function DashboardPage() {
   }
 
   const handleDownloadReceived = async (requestId: string, fileId: string, filename: string) => {
+    const key = `${requestId}:${fileId}`
+    setDownloadReceivedProgress(p => ({ ...p, [key]: { pct: 0, speed: 0 } }))
     try {
-      const res = await downloadReceivedFile(requestId, fileId)
+      const res = await downloadReceivedFile(requestId, fileId, (pct, speed) => {
+        setDownloadReceivedProgress(p => ({ ...p, [key]: { pct, speed } }))
+      })
       downloadBlob(res.data, filename)
     } catch { toast.error(t('toast.loadError')) }
+    finally { setDownloadReceivedProgress(p => { const next = { ...p }; delete next[key]; return next }) }
   }
 
   const handleSendFileEmail = async (token: string) => {
@@ -515,6 +521,8 @@ export default function DashboardPage() {
                       <Clock size={13} className="text-white/30 flex-shrink-0" />
                       <input
                         type="date"
+                        id="dash-expiry-date"
+                        name="expiresAt"
                         value={expiryValue}
                         onChange={e => setExpiryValue(e.target.value)}
                         min={new Date().toISOString().substring(0, 10)}
@@ -544,6 +552,8 @@ export default function DashboardPage() {
                       <Mail size={13} className="text-white/30 flex-shrink-0" />
                       <input
                         type="email"
+                        id="dash-batch-email"
+                        name="emailTo"
                         value={emailToFile}
                         onChange={e => setEmailToFile(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && handleSendFileEmail(firstShare.token)}
@@ -711,6 +721,8 @@ export default function DashboardPage() {
                     <Mail size={13} className="text-white/30 flex-shrink-0" />
                     <input
                       type="email"
+                      id="dash-file-email"
+                      name="emailTo"
                       value={emailToFile}
                       onChange={e => setEmailToFile(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && handleSendFileEmail(share.token)}
@@ -737,6 +749,8 @@ export default function DashboardPage() {
                     <Clock size={13} className="text-white/30 flex-shrink-0" />
                     <input
                       type="date"
+                      id="dash-file-expiry"
+                      name="expiresAt"
                       value={expiryValue}
                       onChange={e => setExpiryValue(e.target.value)}
                       min={new Date().toISOString().substring(0, 10)}
@@ -887,19 +901,38 @@ export default function DashboardPage() {
                           </div>
                         )}
                         {/* Fichiers du groupe */}
-                        {group.files.map((f, i) => (
+                        {group.files.map((f, i) => {
+                          const dlKey = `${r.id}:${f.id}`
+                          const dlProg = downloadReceivedProgress[dlKey]
+                          return (
                           <div key={f.id} className={`flex items-center gap-3 px-3 py-2.5 ${i < group.files.length - 1 ? 'border-b border-white/5' : ''}`}>
                             <span className="text-lg flex-shrink-0">{getFileIcon(f.originalName.split('.').pop() || '')}</span>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium truncate">{f.originalName}</p>
                               <p className="text-xs text-white/40">{formatBytes(f.size)} · {formatDate(f.uploadedAt)}</p>
                             </div>
-                            <button onClick={() => handleDownloadReceived(r.id, f.id, f.originalName)}
-                              className="btn-secondary flex items-center gap-1.5 text-xs px-2.5 py-1.5 flex-shrink-0">
-                              <Download size={12} /> {t('common.download')}
-                            </button>
+                            <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                              <button
+                                onClick={() => !dlProg && handleDownloadReceived(r.id, f.id, f.originalName)}
+                                disabled={!!dlProg}
+                                className="btn-secondary flex items-center gap-1.5 text-xs px-2.5 py-1.5 disabled:opacity-60">
+                                {dlProg
+                                  ? <><div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> {dlProg.pct}%</>
+                                  : <><Download size={12} /> {t('common.download')}</>}
+                              </button>
+                              {dlProg && (
+                                <>
+                                  <div className="w-24 h-1 [background:var(--surface-600)] rounded-full overflow-hidden">
+                                    <div className="h-full bg-gradient-to-r from-brand-600 to-brand-400 rounded-full transition-all duration-200"
+                                      style={{ width: `${dlProg.pct}%` }} />
+                                  </div>
+                                  {dlProg.speed > 0 && <span className="text-xs text-white/40">{formatSpeed(dlProg.speed)}</span>}
+                                </>
+                              )}
+                            </div>
                           </div>
-                        ))}
+                          )
+                        })}
                       </div>
                     ))
                   })()}

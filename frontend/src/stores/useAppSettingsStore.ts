@@ -12,6 +12,7 @@ interface AppSettings {
   uploaderMsgReq: FieldReq
   cleanupAfterDays: number | null
   maxFileSizeBytes: string | null
+  uploadChunkSizeMb: number | null
 }
 
 interface AppSettingsStore {
@@ -31,7 +32,8 @@ export const useAppSettingsStore = create<AppSettingsStore>()(
         uploaderEmailReq: 'optional',
         uploaderMsgReq: 'optional',
         cleanupAfterDays: null,
-        maxFileSizeBytes: null
+        maxFileSizeBytes: null,
+        uploadChunkSizeMb: null
       },
       setSettings: (s) => set(prev => ({ settings: { ...prev.settings, ...s } }))
     }),

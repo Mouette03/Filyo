@@ -64,26 +64,47 @@ export const deleteLogo = () => api.delete('/settings/logo')
 // ---- Fichiers ----
 export const uploadFiles = (
   formData: FormData,
-  onProgress?: (pct: number) => void
-) =>
-  api.post('/files', formData, {
+  onProgress?: (pct: number, speed: number) => void
+) => {
+  const startTime = Date.now()
+  return api.post('/files', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
     onUploadProgress: e => {
-      if (onProgress && e.total) onProgress(Math.round((e.loaded * 100) / e.total))
+      if (onProgress && e.total) {
+        const elapsed = (Date.now() - startTime) / 1000
+        const speed = elapsed > 0.5 ? e.loaded / elapsed : 0
+        onProgress(Math.round((e.loaded * 100) / e.total), speed)
+      }
     }
   })
+}
 
 export const listFiles = () => api.get('/files')
 export const deleteFile = (id: string) => api.delete(`/files/${id}`)
 
 // ---- Partages (téléchargement) ----
 export const getShareInfo = (token: string) => api.get(`/shares/${token}/info`)
-export const downloadShare = (token: string, password?: string) =>
-  api.post(
+export const downloadShare = (token: string, password?: string, onProgress?: (pct: number, speed: number) => void) => {
+  let prevLoaded = 0
+  let prevTime = Date.now()
+  return api.post(
     `/shares/${token}/download`,
     { password },
-    { responseType: 'blob' }
+    {
+      responseType: 'blob',
+      onDownloadProgress: onProgress
+        ? (e: any) => {
+            if (!e.total) return
+            const now = Date.now()
+            const dt = (now - prevTime) / 1000
+            const speed = dt > 0.1 ? (e.loaded - prevLoaded) / dt : 0
+            if (dt > 0.1) { prevLoaded = e.loaded; prevTime = now }
+            onProgress(Math.round((e.loaded / e.total) * 100), speed)
+          }
+        : undefined,
+    }
   )
+}
 
 // ---- Partage inversé (Upload Request) ----
 export const createUploadRequest = (data: {
@@ -105,23 +126,123 @@ export const getReceivedFiles = (id: string) => api.get(`/upload-requests/${id}/
 export const submitToUploadRequest = (
   token: string,
   formData: FormData,
-  onProgress?: (pct: number) => void,
+  onProgress?: (pct: number, speed: number) => void,
   password?: string
-) =>
-  api.post(`/upload-requests/${token}/upload`, formData, {
+) => {
+  const startTime = Date.now()
+  return api.post(`/upload-requests/${token}/upload`, formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
       ...(password ? { 'X-Upload-Password': btoa(unescape(encodeURIComponent(password))) } : {})
     },
     onUploadProgress: e => {
-      if (onProgress && e.total) onProgress(Math.round((e.loaded * 100) / e.total))
+      if (onProgress && e.total) {
+        const elapsed = (Date.now() - startTime) / 1000
+        const speed = elapsed > 0.5 ? e.loaded / elapsed : 0
+        onProgress(Math.round((e.loaded * 100) / e.total), speed)
+      }
     }
   })
+}
 
-export const downloadReceivedFile = (requestId: string, fileId: string) =>
-  api.get(`/upload-requests/${requestId}/received/${fileId}/download`, {
-    responseType: 'blob'
+export const initChunkedUpload = (
+  token: string,
+  data: { filename: string; mimeType: string; totalSize: number; totalChunks: number; uploaderName?: string; uploaderEmail?: string; message?: string; password?: string }
+) =>
+  api.post(`/upload-requests/${token}/upload-init`, data)
+
+export const getChunkUploadStatus = (token: string, uploadId: string) =>
+  api.get(`/upload-requests/${token}/upload-status/${uploadId}`)
+
+export const uploadChunk = (
+  token: string,
+  uploadId: string,
+  chunkIndex: number,
+  blob: Blob,
+  onProgress?: (pct: number, speed: number) => void
+) => {
+  let prevLoaded = 0
+  let prevTime = Date.now()
+  const form = new FormData()
+  form.append('uploadId', uploadId)
+  form.append('chunkIndex', String(chunkIndex))
+  form.append('chunk', blob)
+  return api.post(`/upload-requests/${token}/upload-chunk`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    onUploadProgress: e => {
+      if (onProgress && e.total) {
+        const now = Date.now()
+        const dt = (now - prevTime) / 1000
+        const speed = dt > 0.1 ? (e.loaded - prevLoaded) / dt : 0
+        if (dt > 0.1) { prevLoaded = e.loaded; prevTime = now }
+        onProgress(Math.round((e.loaded * 100) / e.total), speed)
+      }
+    }
   })
+}
+
+export const finalizeChunkedUpload = (token: string, uploadId: string) =>
+  api.post(`/upload-requests/${token}/upload-finalize`, { uploadId })
+
+// ---- Chunked upload admin (dépôt de fichiers perso) ----
+export const initFileChunkedUpload = (data: {
+  filename: string; mimeType: string; totalSize: number; totalChunks: number
+  expiresIn?: string; maxDownloads?: string; password?: string
+  hideFilenames?: boolean; batchToken?: string
+}) => api.post('/files/upload-init', data)
+
+export const getFileChunkUploadStatus = (uploadId: string) =>
+  api.get(`/files/upload-status/${uploadId}`)
+
+export const uploadFileChunk = (
+  uploadId: string,
+  chunkIndex: number,
+  chunk: Blob,
+  onProgress?: (pct: number, speed: number) => void
+) => {
+  let prevLoaded = 0
+  let prevTime = Date.now()
+  const form = new FormData()
+  form.append('uploadId', uploadId)
+  form.append('chunkIndex', String(chunkIndex))
+  form.append('chunk', chunk)
+  return api.post('/files/upload-chunk', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    onUploadProgress: e => {
+      if (onProgress && e.total) {
+        const now = Date.now()
+        const dt = (now - prevTime) / 1000
+        const speed = dt > 0.1 ? (e.loaded - prevLoaded) / dt : 0
+        if (dt > 0.1) { prevLoaded = e.loaded; prevTime = now }
+        onProgress(Math.round((e.loaded / e.total) * 100), speed)
+      }
+    }
+  })
+}
+
+export const finalizeFileChunkedUpload = (uploadId: string) =>
+  api.post('/files/upload-finalize', { uploadId })
+
+export const updateChunkSize = (mb: number | null) =>
+  api.patch('/settings/chunk-size', { uploadChunkSizeMb: mb })
+
+export const downloadReceivedFile = (requestId: string, fileId: string, onProgress?: (pct: number, speed: number) => void) => {
+  let prevLoaded = 0
+  let prevTime = Date.now()
+  return api.get(`/upload-requests/${requestId}/received/${fileId}/download`, {
+    responseType: 'blob',
+    onDownloadProgress: onProgress
+      ? (e: any) => {
+          if (!e.total) return
+          const now = Date.now()
+          const dt = (now - prevTime) / 1000
+          const speed = dt > 0.1 ? (e.loaded - prevLoaded) / dt : 0
+          if (dt > 0.1) { prevLoaded = e.loaded; prevTime = now }
+          onProgress(Math.round((e.loaded / e.total) * 100), speed)
+        }
+      : undefined,
+  })
+}
 
 // ---- Envoi email ----
 export const sendShareByEmail = (to: string, tokens: string[], lang: string = 'fr') =>

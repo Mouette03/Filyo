@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { Download, Lock, AlertTriangle, ArrowDownUp, Clock, Shield, EyeOff, Package } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { getShareInfo, downloadShare, getSettings } from '../api/client'
-import { formatBytes, formatDate, getFileIcon, downloadBlob } from '../lib/utils'
+import { formatBytes, formatDate, getFileIcon, downloadBlob, formatSpeed } from '../lib/utils'
 import { useT } from '../i18n'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import { useAppSettingsStore } from '../stores/useAppSettingsStore'
@@ -53,6 +53,8 @@ export default function SharePage() {
   const [downloading, setDownloading] = useState<Record<string, boolean>>({})
   const [downloaded, setDownloaded] = useState<Record<string, boolean>>({})
   const [downloadingAll, setDownloadingAll] = useState(false)
+  const [downloadProgress, setDownloadProgress] = useState<Record<string, number>>({})
+  const [downloadSpeed, setDownloadSpeed] = useState<Record<string, number>>({})
 
   useEffect(() => {
     if (!token) return
@@ -81,8 +83,14 @@ export default function SharePage() {
   const handleDownloadSingle = async () => {
     if (!token || !info) return
     setDownloading(p => ({ ...p, [token]: true }))
+    setDownloadProgress(p => ({ ...p, [token]: 0 }))
     try {
-      const res = await downloadShare(token, password || undefined)
+      const res = await downloadShare(token, password || undefined,
+        (pct, speed) => {
+          setDownloadProgress(p => ({ ...p, [token]: pct }))
+          setDownloadSpeed(p => ({ ...p, [token]: speed }))
+        }
+      )
       downloadBlob(res.data, info.filename)
       setDownloaded(p => ({ ...p, [token]: true }))
       toast.success(t('toast.downloadStarted'))
@@ -103,8 +111,14 @@ export default function SharePage() {
   // Téléchargement d'un fichier dans un lot
   const handleDownloadBatch = async (shareToken: string, filename: string) => {
     setDownloading(p => ({ ...p, [shareToken]: true }))
+    setDownloadProgress(p => ({ ...p, [shareToken]: 0 }))
     try {
-      const res = await downloadShare(shareToken, password || undefined)
+      const res = await downloadShare(shareToken, password || undefined,
+        (pct, speed) => {
+          setDownloadProgress(p => ({ ...p, [shareToken]: pct }))
+          setDownloadSpeed(p => ({ ...p, [shareToken]: speed }))
+        }
+      )
       downloadBlob(res.data, filename)
       setDownloaded(p => ({ ...p, [shareToken]: true }))
       toast.success(t('toast.downloadStarted'))
@@ -132,8 +146,14 @@ export default function SharePage() {
       const bf = files[i]
       if (downloaded[bf.shareToken]) continue
       setDownloading(p => ({ ...p, [bf.shareToken]: true }))
+      setDownloadProgress(p => ({ ...p, [bf.shareToken]: 0 }))
       try {
-        const res = await downloadShare(bf.shareToken, password || undefined)
+        const res = await downloadShare(bf.shareToken, password || undefined,
+          (pct, speed) => {
+            setDownloadProgress(p => ({ ...p, [bf.shareToken]: pct }))
+            setDownloadSpeed(p => ({ ...p, [bf.shareToken]: speed }))
+          }
+        )
         downloadBlob(res.data, info.hideFilenames ? `fichier-${i + 1}` : bf.filename)
         setDownloaded(p => ({ ...p, [bf.shareToken]: true }))
       } catch (err: any) {
@@ -276,42 +296,78 @@ export default function SharePage() {
 
                 {/* Bouton Tout télécharger */}
                 {info.batchFiles!.filter(bf => bf.shareToken && !downloaded[bf.shareToken]).length > 0 && (
-                  <button
-                    onClick={handleDownloadAll}
-                    disabled={downloadingAll}
-                    className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-60">
-                    {downloadingAll
-                      ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> {t('share.downloading')}</>
-                      : <><Download size={16} /> {t('share.batchDownloadAll')}</>}
-                  </button>
+                  <div>
+                    <button
+                      onClick={handleDownloadAll}
+                      disabled={downloadingAll}
+                      className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-60">
+                      {downloadingAll
+                        ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> {t('share.downloading')}</>
+                        : <><Download size={16} /> {t('share.batchDownloadAll')}</>}
+                    </button>
+                    {downloadingAll && (() => {
+                      const allFiles = info.batchFiles!.filter(bf => bf.shareToken)
+                      const doneCount = allFiles.filter(bf => downloaded[bf.shareToken]).length
+                      const currentPct = allFiles.reduce((acc, bf) =>
+                        downloading[bf.shareToken] ? downloadProgress[bf.shareToken] ?? 0 : acc
+                      , 0)
+                      const overallPct = Math.round(((doneCount + currentPct / 100) / allFiles.length) * 100)
+                      return (
+                        <div className="mt-2">
+                          <div className="flex items-center justify-between text-xs [color:var(--text-40)] mb-1">
+                            <span>{doneCount} / {allFiles.length} fichier(s)</span>
+                            <span>{overallPct}%</span>
+                          </div>
+                          <div className="h-1.5 [background:var(--surface-600)] rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-brand-600 to-brand-400 rounded-full transition-all duration-300"
+                              style={{ width: `${overallPct}%` }}
+                            />
+                          </div>
+                        </div>
+                      )
+                    })()}
+                  </div>
                 )}
 
                 {/* Liste des fichiers */}
                 <div className="space-y-2">
                   {info.batchFiles!.filter(bf => bf.shareToken).map((bf, idx) => (
                     <div key={bf.shareToken}
-                      className="flex items-center gap-3 [background:var(--surface-700)] hover:[background:var(--surface-600)] rounded-xl px-3 py-2.5 transition-colors">
-                      <span className="text-xl flex-shrink-0">{getFileIcon(bf.mimeType)}</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
-                          {info.hideFilenames
-                            ? t('share.hiddenFilename', { index: String(idx + 1) })
-                            : bf.filename}
-                        </p>
-                        <p className="text-xs [color:var(--text-40)] mt-0.5">{formatBytes(bf.size)}</p>
+                      className="flex flex-col [background:var(--surface-700)] hover:[background:var(--surface-600)] rounded-xl px-3 py-2.5 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <span className="text-xl flex-shrink-0">{getFileIcon(bf.mimeType)}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">
+                            {info.hideFilenames
+                              ? t('share.hiddenFilename', { index: String(idx + 1) })
+                              : bf.filename}
+                          </p>
+                          <p className="text-xs [color:var(--text-40)] mt-0.5">{formatBytes(bf.size)}</p>
+                        </div>
+                        {downloaded[bf.shareToken] ? (
+                          <span className="text-xs text-emerald-400 flex-shrink-0">✓</span>
+                        ) : (
+                          <button
+                            onClick={() => handleDownloadBatch(bf.shareToken, bf.filename)}
+                            disabled={downloading[bf.shareToken]}
+                            className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1.5 flex-shrink-0 disabled:opacity-50">
+                            {downloading[bf.shareToken]
+                              ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                              : <Download size={13} />}
+                            {downloading[bf.shareToken]
+                              ? `${downloadProgress[bf.shareToken] ?? 0}%${downloadSpeed[bf.shareToken] > 0 ? ` · ${formatSpeed(downloadSpeed[bf.shareToken])}` : ''}`
+                              : t('share.batchDownloadBtn')}
+                          </button>
+                        )}
                       </div>
-                      {downloaded[bf.shareToken] ? (
-                        <span className="text-xs text-emerald-400 flex-shrink-0">✓</span>
-                      ) : (
-                        <button
-                          onClick={() => handleDownloadBatch(bf.shareToken, bf.filename)}
-                          disabled={downloading[bf.shareToken]}
-                          className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1.5 flex-shrink-0 disabled:opacity-50">
-                          {downloading[bf.shareToken]
-                            ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                            : <Download size={13} />}
-                          {t('share.batchDownloadBtn')}
-                        </button>
+                      {downloading[bf.shareToken] && (
+                        <div className="mt-2 h-1 [background:var(--surface-600)] rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-brand-600 to-brand-400 rounded-full transition-all duration-200"
+                            style={{ width: `${downloadProgress[bf.shareToken] ?? 0}%` }}
+                          />
+                        </div>
                       )}
                     </div>
                   ))}
@@ -381,22 +437,36 @@ export default function SharePage() {
                     {t('share.downloadStarted')}
                   </div>
                 ) : (
-                  <button
-                    onClick={handleDownloadSingle}
-                    disabled={downloading[token!]}
-                    className="btn-primary w-full flex items-center justify-center gap-2">
-                    {downloading[token!] ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        {t('share.downloading')}
-                      </>
-                    ) : (
-                      <>
-                        <Download size={16} />
-                        {t('share.downloadBtn')}
-                      </>
+                  <div>
+                    <button
+                      onClick={handleDownloadSingle}
+                      disabled={downloading[token!]}
+                      className="btn-primary w-full flex items-center justify-center gap-2">
+                      {downloading[token!] ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          {downloadProgress[token!] > 0
+                            ? `${downloadProgress[token!]}%${downloadSpeed[token!] > 0 ? ` · ${formatSpeed(downloadSpeed[token!])}` : ''}`
+                            : t('share.downloading')}
+                        </>
+                      ) : (
+                        <>
+                          <Download size={16} />
+                          {t('share.downloadBtn')}
+                        </>
+                      )}
+                    </button>
+                    {downloading[token!] && (
+                      <div className="mt-2">
+                        <div className="h-1.5 [background:var(--surface-600)] rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-brand-600 to-brand-400 rounded-full transition-all duration-300"
+                            style={{ width: `${downloadProgress[token!] ?? 0}%` }}
+                          />
+                        </div>
+                      </div>
                     )}
-                  </button>
+                  </div>
                 )}
               </>
             )}

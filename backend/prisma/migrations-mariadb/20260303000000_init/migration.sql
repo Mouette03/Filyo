@@ -32,6 +32,7 @@ CREATE TABLE `AppSettings` (
     `allowRegistration` BOOLEAN NOT NULL DEFAULT false,
     `cleanupAfterDays` INTEGER NULL,
     `maxFileSizeBytes` BIGINT NULL,
+    `uploadChunkSizeMb` INTEGER NULL,
     `updatedAt` DATETIME(3) NOT NULL,
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -112,3 +113,44 @@ ALTER TABLE `UploadRequest` ADD CONSTRAINT `UploadRequest_userId_fkey`
 
 ALTER TABLE `ReceivedFile` ADD CONSTRAINT `ReceivedFile_uploadRequestId_fkey`
     FOREIGN KEY (`uploadRequestId`) REFERENCES `UploadRequest`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+CREATE TABLE `ChunkedUpload` (
+    `id` VARCHAR(191) NOT NULL,
+    `uploadRequestId` VARCHAR(191) NOT NULL,
+    `originalName` VARCHAR(191) NOT NULL,
+    `mimeType` VARCHAR(191) NOT NULL,
+    `totalSize` BIGINT NOT NULL,
+    `totalChunks` INTEGER NOT NULL,
+    `receivedChunks` INTEGER NOT NULL DEFAULT 0,
+    `password` VARCHAR(191) NULL,
+    `uploaderName` VARCHAR(191) NULL,
+    `uploaderEmail` VARCHAR(191) NULL,
+    `message` VARCHAR(191) NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `lastChunkAt` DATETIME(3) NULL,
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+ALTER TABLE `ChunkedUpload` ADD CONSTRAINT `ChunkedUpload_uploadRequestId_fkey`
+    FOREIGN KEY (`uploadRequestId`) REFERENCES `UploadRequest`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+CREATE TABLE `FileChunkedUpload` (
+    `id` VARCHAR(191) NOT NULL,
+    `userId` VARCHAR(191) NOT NULL,
+    `originalName` VARCHAR(191) NOT NULL,
+    `mimeType` VARCHAR(191) NOT NULL,
+    `totalSize` BIGINT NOT NULL,
+    `totalChunks` INTEGER NOT NULL,
+    `receivedChunks` INTEGER NOT NULL DEFAULT 0,
+    `expiresIn` INTEGER NULL,
+    `maxDownloads` INTEGER NULL,
+    `password` VARCHAR(191) NULL,
+    `batchToken` VARCHAR(191) NULL,
+    `hideFilenames` BOOLEAN NOT NULL DEFAULT false,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `lastChunkAt` DATETIME(3) NULL,
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+ALTER TABLE `FileChunkedUpload` ADD CONSTRAINT `FileChunkedUpload_userId_fkey`
+    FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;

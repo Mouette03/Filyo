@@ -40,6 +40,7 @@ export async function settingsRoutes(app: FastifyInstance) {
       allowRegistration: s.allowRegistration ?? false,
       cleanupAfterDays: s.cleanupAfterDays ?? null,
       maxFileSizeBytes: s.maxFileSizeBytes ? s.maxFileSizeBytes.toString() : null,
+      uploadChunkSizeMb: s.uploadChunkSizeMb ?? null,
       updatedAt: s.updatedAt
     }
   })
@@ -315,6 +316,25 @@ export async function settingsRoutes(app: FastifyInstance) {
       })
       req.log.info('Logo deleted')
       return { appName: result.appName, logoUrl: result.logoUrl }
+    }
+  )
+
+  // PATCH /api/settings/chunk-size — taille des chunks pour upload resumable (admin)
+  app.patch<{ Body: { uploadChunkSizeMb: number | null } }>(
+    '/chunk-size',
+    { onRequest: [app.authenticate, app.adminOnly] },
+    async (req, reply) => {
+      const { uploadChunkSizeMb } = req.body
+      if (uploadChunkSizeMb !== null && (typeof uploadChunkSizeMb !== 'number' || uploadChunkSizeMb < 1 || uploadChunkSizeMb > 100)) {
+        return reply.code(400).send({ code: 'INVALID_VALUE' })
+      }
+      const s = await prisma.appSettings.upsert({
+        where: { id: 'singleton' },
+        update: { uploadChunkSizeMb: uploadChunkSizeMb ?? null },
+        create: { id: 'singleton', appName: 'Filyo', uploadChunkSizeMb: uploadChunkSizeMb ?? null }
+      })
+      req.log.info({ uploadChunkSizeMb }, 'Upload chunk size updated')
+      return { uploadChunkSizeMb: s.uploadChunkSizeMb }
     }
   )
 }

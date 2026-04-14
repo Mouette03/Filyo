@@ -1,11 +1,20 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useDropzone } from 'react-dropzone'
-import { Upload, X, Copy, Check, Lock, Clock, Download, Plus, Trash2, Share2, Mail, Send, EyeOff } from 'lucide-react'
+import { Upload, X, Copy, Check, Lock, Clock, Download, Plus, Trash2, Share2, Mail, Send, EyeOff, RotateCcw } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { uploadFiles, sendShareByEmail, getMyQuota } from '../api/client'
-import { formatBytes, getFileIcon, copyToClipboard, isValidEmail } from '../lib/utils'
+import { uploadFiles, sendShareByEmail, getMyQuota, initFileChunkedUpload, getFileChunkUploadStatus, uploadFileChunk, finalizeFileChunkedUpload } from '../api/client'
+import { formatBytes, getFileIcon, copyToClipboard, isValidEmail, formatSpeed } from '../lib/utils'
 import { useT } from '../i18n'
 import { useAppSettingsStore } from '../stores/useAppSettingsStore'
+
+interface PendingResume {
+  key: string
+  filename: string
+  fileSize: number
+  uploadId: string
+  receivedChunks: number
+  totalChunks: number
+}
 
 interface UploadedResult {
   id: string
@@ -26,13 +35,64 @@ export default function HomePage() {
   const [maxDownloads, setMaxDownloads] = useState('')
   const [uploading, setUploading] = useState(false)
   const [progress, setProgress] = useState(0)
+  const [progressLabel, setProgressLabel] = useState('')
+  const [uploadSpeed, setUploadSpeed] = useState(0)
   const [results, setResults] = useState<UploadedResult[]>([])
   const [hideFilenames, setHideFilenames] = useState(false)
   const [copiedToken, setCopiedToken] = useState<string | null>(null)
   const [showShareModal, setShowShareModal] = useState(false)
+  const [pendingResumes, setPendingResumes] = useState<PendingResume[]>([])
   const [emailTo, setEmailTo] = useState('')
   const [emailSending, setEmailSending] = useState(false)
   const [emailSent, setEmailSent] = useState(false)
+
+  // Scanner localStorage pour les uploads admin interrompus
+  useEffect(() => {
+    const prefix = 'filyo-file-'
+    const found: Omit<PendingResume, 'receivedChunks' | 'totalChunks'>[] = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (!key?.startsWith(prefix)) continue
+      const uploadId = localStorage.getItem(key)
+      if (!uploadId) continue
+      const rest = key.slice(prefix.length)
+      // Format : ${file.name}-${file.size}
+      const lastDash = rest.lastIndexOf('-')
+      if (lastDash === -1) continue
+      const filename = rest.slice(0, lastDash)
+      const fileSize = parseInt(rest.slice(lastDash + 1))
+      if (isNaN(fileSize)) continue
+      found.push({ key, filename, fileSize, uploadId })
+    }
+    if (!found.length) return
+    Promise.all(
+      found.map(async item => {
+        if (item.uploadId === 'pending') {
+          return { ...item, receivedChunks: 0, totalChunks: 0 } as PendingResume
+        }
+        try {
+          const res = await getFileChunkUploadStatus(item.uploadId)
+          return { ...item, receivedChunks: res.data.receivedChunks, totalChunks: res.data.totalChunks } as PendingResume
+        } catch (e: any) {
+          if (e?.response?.status === 404) {
+            localStorage.removeItem(item.key)
+            return null
+          }
+          return { ...item, receivedChunks: 0, totalChunks: 0 } as PendingResume
+        }
+      })
+    ).then(results => {
+      setPendingResumes(results.filter(Boolean) as PendingResume[])
+    })
+  }, [])
+
+  const handleAbandon = (item: PendingResume) => {
+    localStorage.removeItem(item.key)
+    setPendingResumes(prev => prev.filter(r => r.key !== item.key))
+  }
+
+  const getResumeInfo = (file: { name: string; size: number }) =>
+    pendingResumes.find(r => r.filename === file.name && r.fileSize === file.size) ?? null
 
   const onDrop = useCallback((accepted: File[]) => {
     setFiles(prev => [...prev, ...accepted])
@@ -81,7 +141,108 @@ export default function HomePage() {
 
     setUploading(true)
     setProgress(0)
+    setProgressLabel('')
+    setUploadSpeed(0)
 
+    const chunkSizeMb = settings.uploadChunkSizeMb
+    const chunkSizeBytes = chunkSizeMb ? chunkSizeMb * 1024 * 1024 : null
+
+    // Chemin chunked si activé et au moins un fichier atteint la taille du chunk
+    if (chunkSizeBytes && files.some(f => f.size >= chunkSizeBytes)) {
+      // batchToken partagé entre tous les fichiers du lot (null si fichier unique)
+      const sessionBatchToken = files.length > 1 ? (Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)).slice(0, 16) : null
+
+      try {
+        const globalStartTime = Date.now()
+        let globalUploadedBytes = 0
+        const accumulated: UploadedResult[] = []
+        for (let fi = 0; fi < files.length; fi++) {
+          const file = files[fi]
+          const totalChunks = Math.ceil(file.size / chunkSizeBytes)
+          const RESUME_KEY = `filyo-file-${file.name}-${file.size}`
+
+          // Placeholder avant init pour survivre à un refresh
+          if (!localStorage.getItem(RESUME_KEY)) {
+            localStorage.setItem(RESUME_KEY, 'pending')
+          }
+
+          let uploadId: string | null = localStorage.getItem(RESUME_KEY)
+          let startChunk = 0
+
+          if (uploadId && uploadId !== 'pending') {
+            try {
+              setProgressLabel(t('request.chunkResuming'))
+              const statusRes = await getFileChunkUploadStatus(uploadId)
+              startChunk = statusRes.data.receivedChunks
+            } catch {
+              uploadId = null
+              startChunk = 0
+            }
+          } else {
+            uploadId = null
+          }
+
+          if (!uploadId) {
+            const initRes = await initFileChunkedUpload({
+              filename: file.name,
+              mimeType: file.type || 'application/octet-stream',
+              totalSize: file.size,
+              totalChunks,
+              expiresIn: expiresIn || undefined,
+              maxDownloads: maxDownloads || undefined,
+              password: password || undefined,
+              hideFilenames: hideFilenames || undefined,
+              batchToken: sessionBatchToken || undefined
+            })
+            uploadId = initRes.data.uploadId as string
+            localStorage.setItem(RESUME_KEY, uploadId)
+          }
+
+          if (startChunk > 0) globalUploadedBytes += startChunk * chunkSizeBytes
+          for (let ci = startChunk; ci < totalChunks; ci++) {
+            const start = ci * chunkSizeBytes
+            const chunkBlob = file.slice(start, start + chunkSizeBytes)
+            const chunkStart = globalUploadedBytes
+            setProgressLabel(t('request.uploadingChunk', { current: String(ci + 1), total: String(totalChunks), pct: '0' }))
+            await uploadFileChunk(uploadId, ci, chunkBlob, (pct) => {
+              const chunkLoaded = Math.round((chunkBlob.size * pct) / 100)
+              const totalLoaded = chunkStart + chunkLoaded
+              const elapsed = (Date.now() - globalStartTime) / 1000
+              const avgSpeed = elapsed > 0.5 ? totalLoaded / elapsed : 0
+              if (avgSpeed > 0) setUploadSpeed(avgSpeed)
+              setProgressLabel(t('request.uploadingChunk', { current: String(ci + 1), total: String(totalChunks), pct: String(pct) }))
+              const filePct = (ci + pct / 100) / totalChunks
+              const globalPct = ((fi + filePct) / files.length) * 100
+              setProgress(Math.round(globalPct))
+            })
+            globalUploadedBytes += chunkBlob.size
+          }
+
+          setProgressLabel(t('home.finalizing'))
+          const finalRes = await finalizeFileChunkedUpload(uploadId)
+          localStorage.removeItem(RESUME_KEY)
+          setPendingResumes(prev => prev.filter(r => r.key !== RESUME_KEY))
+          accumulated.push(finalRes.data)
+        }
+
+        setResults(accumulated)
+        setFiles([])
+        setShowShareModal(true)
+        toast.success(t('toast.uploadSuccess', { count: String(accumulated.length) }))
+      } catch (err: any) {
+        const code = err?.response?.data?.code
+        if (code === 'QUOTA_EXCEEDED') toast.error(t('error.quotaExceeded'))
+        else if (code === 'FILE_TOO_LARGE') toast.error(t('error.fileTooLarge'))
+        else toast.error(t('toast.uploadFailed'))
+      } finally {
+        setUploading(false)
+        setProgressLabel('')
+        setUploadSpeed(0)
+      }
+      return
+    }
+
+    // Chemin classique (chunked désactivé ou tous les fichiers < seuil)
     const formData = new FormData()
     files.forEach(f => formData.append('files', f))
     if (password) formData.append('password', password)
@@ -90,7 +251,11 @@ export default function HomePage() {
     if (hideFilenames) formData.append('hideFilenames', 'true')
 
     try {
-      const res = await uploadFiles(formData, setProgress)
+      const res = await uploadFiles(formData, (pct, speed) => {
+        setProgress(pct)
+        const speedStr = speed > 0 ? ` · ${formatSpeed(speed)}` : ''
+        setProgressLabel(`${pct}%${speedStr}`)
+      })
       setResults(res.data)
       setFiles([])
       setShowShareModal(true)
@@ -102,6 +267,8 @@ export default function HomePage() {
       else toast.error(t('toast.uploadFailed'))
     } finally {
       setUploading(false)
+      setProgressLabel('')
+      setUploadSpeed(0)
     }
   }
 
@@ -233,11 +400,13 @@ export default function HomePage() {
 
             {/* Envoi par email */}
             <div className="pt-4 border-t border-white/10 mb-4">
-              <label className="text-xs text-white/50 mb-2 flex items-center gap-1.5 uppercase tracking-wider">
+              <label htmlFor="home-modal-email" className="text-xs text-white/50 mb-2 flex items-center gap-1.5 uppercase tracking-wider">
                 <Mail size={11} /> {t('home.modal.emailLabel')}
               </label>
               <div className="flex gap-2">
                 <input
+                  id="home-modal-email"
+                  name="email"
                   type="email"
                   value={emailTo}
                   onChange={e => { setEmailTo(e.target.value); setEmailSent(false) }}
@@ -278,6 +447,35 @@ export default function HomePage() {
           </div>
         </div>
       )}
+      {/* Bandeau uploads admin interrompus */}
+      {pendingResumes.length > 0 && !uploading && (
+        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 space-y-3 mb-6">
+          <div className="flex items-center gap-2">
+            <RotateCcw size={15} className="text-amber-400 shrink-0" />
+            <p className="text-sm font-semibold text-amber-300">{t('request.resumeTitle')}</p>
+          </div>
+          {pendingResumes.map(item => (
+            <div key={item.key} className="flex items-center gap-3 [background:var(--surface-700)] rounded-xl px-3 py-2.5">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{item.filename}</p>
+                <p className="text-xs text-amber-400/80 mt-0.5">
+                  {item.totalChunks > 0
+                    ? t('request.resumeProgress', { done: String(item.receivedChunks), total: String(item.totalChunks) })
+                    : t('request.resumePending')}
+                </p>
+                <p className="text-xs [color:var(--text-30)] mt-0.5">{t('request.resumeHint')}</p>
+              </div>
+              <button
+                onClick={() => handleAbandon(item)}
+                className="shrink-0 flex items-center gap-1 text-xs text-red-400/70 hover:text-red-400 transition-colors px-2 py-1 rounded-lg hover:bg-red-500/10"
+              >
+                <X size={12} /> {t('request.resumeAbandon')}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Header */}
       <div className="text-center mb-10">
         <h1 className="text-4xl font-bold mb-3">
@@ -335,6 +533,11 @@ export default function HomePage() {
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{file.name}</p>
                 <p className="text-xs text-white/40">{formatBytes(file.size)}</p>
+                {(() => { const r = getResumeInfo(file); return r ? (
+                  <p className="text-xs text-amber-400/80 mt-0.5">
+                    {t('request.resumeMatched', { done: String(r.receivedChunks), total: String(r.totalChunks) })}
+                  </p>
+                ) : null })()}
               </div>
               <button
                 onClick={() => removeFile(i)}
@@ -348,10 +551,12 @@ export default function HomePage() {
           {/* Options */}
           <div className="pt-3 border-t border-white/10 grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
+              <label htmlFor="home-password" className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
                 <Lock size={11} /> {t('home.passwordLabel')}
               </label>
               <input
+                id="home-password"
+                name="password"
                 type="password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
@@ -360,10 +565,12 @@ export default function HomePage() {
               />
             </div>
             <div>
-              <label className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
+              <label htmlFor="home-expiry" className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
                 <Clock size={11} /> {t('home.expiryLabel')}
               </label>
               <select
+                id="home-expiry"
+                name="expiresIn"
                 value={expiresIn}
                 onChange={e => setExpiresIn(e.target.value)}
                 className="input text-sm py-2 bg-surface-700"
@@ -376,10 +583,12 @@ export default function HomePage() {
               </select>
             </div>
             <div className="col-span-2">
-              <label className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
+              <label htmlFor="home-max-downloads" className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
                 <Download size={11} /> {t('home.maxDlLabel')}
               </label>
               <input
+                id="home-max-downloads"
+                name="maxDownloads"
                 type="number"
                 min="1"
                 value={maxDownloads}
@@ -389,7 +598,7 @@ export default function HomePage() {
               />
             </div>
             <div className="col-span-2">
-              <label className="flex items-center gap-3 cursor-pointer group">
+              <div className="flex items-center gap-3 cursor-pointer group">
                 <div className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0
                   ${hideFilenames ? 'bg-brand-500' : 'bg-white/10'}`}
                   onClick={() => setHideFilenames(v => !v)}>
@@ -402,32 +611,38 @@ export default function HomePage() {
                   </p>
                   <p className="text-xs text-white/40 mt-0.5">{t('home.hideFilenamesHint')}</p>
                 </div>
-              </label>
+              </div>
             </div>
           </div>
 
           {/* Barre de progression */}
           {uploading && (
             <div className="pt-2">
-              <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+              <div className="h-1.5 [background:var(--surface-600)] rounded-full overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-brand-600 to-brand-400 rounded-full transition-all duration-300"
                   style={{ width: `${progress}%` }}
                 />
               </div>
-              <p className="text-xs text-white/40 mt-1 text-right">{progress}%</p>
+              {progressLabel && (
+                <p className="text-xs text-brand-300/80 mt-1.5 text-center font-medium">
+                  {progressLabel}{uploadSpeed > 0 ? ` · ${formatSpeed(uploadSpeed)}` : ''}
+                </p>
+              )}
             </div>
           )}
 
           <button
             onClick={handleUpload}
             disabled={uploading}
-            className="btn-primary w-full flex items-center justify-center gap-2 mt-2"
+            className="btn-primary w-full flex flex-col items-center justify-center gap-1 py-3 mt-2"
           >
             {uploading ? (
               <>
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                {t('home.uploading')}
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  {t('home.uploading', { pct: String(progress) })}
+                </div>
               </>
             ) : (
               <>

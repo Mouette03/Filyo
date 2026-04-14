@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { Settings, Upload, Trash2, Check, Type, Image, RefreshCw, Mail, Eye, EyeOff, Wifi, Globe, Users, Palette, Moon, Sun, Monitor, Clock } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { updateAppName, uploadLogo, deleteLogo, getSmtpSettings, updateSmtpSettings, testSmtp, updateSiteUrl, updateUploaderFields, updateAllowRegistration, updateCleanupSetting, updateMaxFileSize } from '../api/client'
+import { updateAppName, uploadLogo, deleteLogo, getSmtpSettings, updateSmtpSettings, testSmtp, updateSiteUrl, updateUploaderFields, updateAllowRegistration, updateCleanupSetting, updateMaxFileSize, updateChunkSize } from '../api/client'
 import { useAppSettingsStore } from '../stores/useAppSettingsStore'
 import { usePreferencesStore, ACCENT_PRESETS, BG_PRESETS, type ThemeMode, type AccentKey, type BgColorKey } from '../stores/usePreferencesStore'
 import { useT } from '../i18n'
@@ -76,6 +76,21 @@ export default function SettingsPage() {
   useEffect(() => {
     setMaxFileSizeMb(settings.maxFileSizeBytes ? String(Math.round(parseInt(settings.maxFileSizeBytes) / (1024 * 1024))) : '')
   }, [settings.maxFileSizeBytes])
+
+  // Upload par morceaux
+  const [chunkSizeMb, setChunkSizeMb] = useState<string>(settings.uploadChunkSizeMb ? String(settings.uploadChunkSizeMb) : '0')
+  const [savingChunkSize, setSavingChunkSize] = useState(false)
+  useEffect(() => { setChunkSizeMb(settings.uploadChunkSizeMb ? String(settings.uploadChunkSizeMb) : '0') }, [settings.uploadChunkSizeMb])
+
+  const handleSaveChunkSize = async (mb: number | null) => {
+    setSavingChunkSize(true)
+    try {
+      await updateChunkSize(mb)
+      setSettings({ uploadChunkSizeMb: mb })
+      toast.success(mb ? t('settings.chunkSaved') : t('settings.chunkRemoved'))
+    } catch { toast.error(t('toast.saveError')) }
+    setSavingChunkSize(false)
+  }
 
   useEffect(() => {
     getSmtpSettings().then(res => {
@@ -223,6 +238,8 @@ export default function SettingsPage() {
         </div>
         <div className="flex gap-3">
           <input
+            id="settings-app-name"
+            name="appName"
             value={appName}
             onChange={e => setAppName(e.target.value)}
             className="input flex-1"
@@ -300,7 +317,7 @@ export default function SettingsPage() {
 
         {/* Thème */}
         <div className="mb-6">
-          <label className="text-xs text-white/50 mb-3 block uppercase tracking-wider">{t('settings.themeLabel')}</label>
+          <p className="text-xs text-white/50 mb-3 block uppercase tracking-wider">{t('settings.themeLabel')}</p>
           <div className="grid grid-cols-3 gap-2">
             {THEME_OPTIONS.map(opt => {
               const Icon = opt.icon
@@ -328,7 +345,7 @@ export default function SettingsPage() {
 
         {/* Couleur d'accent */}
         <div>
-          <label className="text-xs text-white/50 mb-3 block uppercase tracking-wider">{t('settings.accentLabel')}</label>
+          <p className="text-xs text-white/50 mb-3 block uppercase tracking-wider">{t('settings.accentLabel')}</p>
           <div className="flex flex-wrap gap-3">
             {(Object.entries(ACCENT_PRESETS) as [AccentKey, typeof ACCENT_PRESETS[AccentKey]][]).map(([key, preset]) => {
               const active = accentColor === key
@@ -358,7 +375,7 @@ export default function SettingsPage() {
 
         {/* Couleur de fond */}
         <div className="mt-6">
-          <label className="text-xs text-white/50 mb-3 block uppercase tracking-wider">{t('settings.bgLabel')}</label>
+          <p className="text-xs text-white/50 mb-3 block uppercase tracking-wider">{t('settings.bgLabel')}</p>
           <div className="flex flex-wrap gap-3 mb-3">
             <button
               onClick={() => setBgColor(null)}
@@ -403,6 +420,8 @@ export default function SettingsPage() {
         </div>
         <div className="flex gap-3">
           <input
+            id="settings-site-url"
+            name="siteUrl"
             value={siteUrl}
             onChange={e => setSiteUrl(e.target.value)}
             className="input flex-1"
@@ -500,6 +519,8 @@ export default function SettingsPage() {
         </div>
         <div className="flex items-center gap-3">
           <input
+            id="settings-max-file-size"
+            name="maxFileSizeMb"
             type="number"
             min="1"
             value={maxFileSizeMb}
@@ -543,6 +564,36 @@ export default function SettingsPage() {
               {t('settings.maxFileSizeUnlimited')}
             </button>
           )}
+        </div>
+      </div>
+
+      {/* Section : Upload par morceaux */}
+      <div className="card mb-6">
+        <div className="flex items-center gap-2 mb-5">
+          <Upload size={16} className="text-brand-400" />
+          <h3 className="font-semibold">{t('settings.chunkSection')}</h3>
+          <span className="text-xs text-white/30 ml-auto">{t('settings.chunkHint')}</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <select
+            value={chunkSizeMb}
+            onChange={e => setChunkSizeMb(e.target.value)}
+            className="input w-44"
+          >
+            <option value="0">{t('settings.chunkDisabled')}</option>
+            <option value="5">5 MB</option>
+            <option value="10">10 MB</option>
+            <option value="20">20 MB</option>
+            <option value="50">50 MB</option>
+          </select>
+          <button
+            onClick={() => handleSaveChunkSize(chunkSizeMb === '0' ? null : parseInt(chunkSizeMb))}
+            disabled={savingChunkSize}
+            className="btn-primary flex items-center gap-2 py-2 px-4"
+          >
+            {savingChunkSize ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
+            {t('common.save')}
+          </button>
         </div>
       </div>
 
@@ -599,8 +650,10 @@ export default function SettingsPage() {
 
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div className="col-span-2 sm:col-span-1">
-            <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('settings.smtpHost')}</label>
+            <label htmlFor="smtp-host" className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('settings.smtpHost')}</label>
             <input
+              id="smtp-host"
+              name="smtpHost"
               value={smtpHost}
               onChange={e => setSmtpHost(e.target.value)}
               placeholder="smtp.example.com"
@@ -608,8 +661,10 @@ export default function SettingsPage() {
             />
           </div>
           <div className="col-span-2 sm:col-span-1">
-            <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('settings.smtpPort')}</label>
+            <label htmlFor="smtp-port" className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('settings.smtpPort')}</label>
             <input
+              id="smtp-port"
+              name="smtpPort"
               value={smtpPort}
               onChange={e => setSmtpPort(e.target.value)}
               placeholder="587"
@@ -637,8 +692,10 @@ export default function SettingsPage() {
             </button>
           </div>
           <div className="col-span-2">
-            <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('settings.smtpFrom')}</label>
+            <label htmlFor="smtp-from" className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('settings.smtpFrom')}</label>
             <input
+              id="smtp-from"
+              name="smtpFrom"
               value={smtpFrom}
               onChange={e => setSmtpFrom(e.target.value)}
               placeholder="noreply@mondomaine.fr"
@@ -647,8 +704,10 @@ export default function SettingsPage() {
             />
           </div>
           <div>
-            <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('settings.smtpUser')}</label>
+            <label htmlFor="smtp-user" className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('settings.smtpUser')}</label>
             <input
+              id="smtp-user"
+              name="smtpUser"
               value={smtpUser}
               onChange={e => setSmtpUser(e.target.value)}
               placeholder="smtp_user"
@@ -657,9 +716,11 @@ export default function SettingsPage() {
             />
           </div>
           <div>
-            <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('settings.smtpPassword')}</label>
+            <label htmlFor="smtp-password" className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('settings.smtpPassword')}</label>
             <div className="relative">
               <input
+                id="smtp-password"
+                name="smtpPassword"
                 value={smtpPass}
                 onChange={e => setSmtpPass(e.target.value)}
                 placeholder="••••••••"

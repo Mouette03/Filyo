@@ -109,10 +109,12 @@ export default function CreateRequestPage() {
         <div className="card space-y-5">
           {/* Title */}
           <div>
-            <label className="text-xs text-white/50 mb-1.5 block font-medium uppercase tracking-wider">
+            <label htmlFor="create-title" className="text-xs text-white/50 mb-1.5 block font-medium uppercase tracking-wider">
               {t('create.titleLabel')}
             </label>
             <input
+              id="create-title"
+              name="title"
               type="text"
               value={title}
               onChange={e => setTitle(e.target.value)}
@@ -124,10 +126,12 @@ export default function CreateRequestPage() {
 
           {/* Message */}
           <div>
-            <label className="text-xs text-white/50 mb-1.5 block font-medium uppercase tracking-wider">
+            <label htmlFor="create-message" className="text-xs text-white/50 mb-1.5 block font-medium uppercase tracking-wider">
               {t('create.messageLabel')}
             </label>
             <textarea
+              id="create-message"
+              name="message"
               value={message}
               onChange={e => setMessage(e.target.value)}
               placeholder={t('create.messagePlaceholder')}
@@ -139,10 +143,10 @@ export default function CreateRequestPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Expiry */}
             <div>
-              <label className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
+              <label htmlFor="create-expiry" className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
                 <Clock size={11} /> {t('create.expiryLabel')}
               </label>
-              <select value={expiresIn} onChange={e => setExpiresIn(e.target.value)}
+              <select id="create-expiry" name="expiresIn" value={expiresIn} onChange={e => setExpiresIn(e.target.value)}
                 className="input bg-surface-700">
                 <option value="3600">{t('time.1h')}</option>
                 <option value="86400">{t('time.24h')}</option>
@@ -154,23 +158,23 @@ export default function CreateRequestPage() {
 
             {/* Max files */}
             <div>
-              <label className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
+              <label htmlFor="create-max-files" className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
                 <Hash size={11} /> {t('create.maxFilesLabel')}
               </label>
-              <input type="number" min="1" value={maxFiles}
+              <input id="create-max-files" name="maxFiles" type="number" min="1" value={maxFiles}
                 onChange={e => setMaxFiles(e.target.value)}
                 placeholder={t('create.maxFilesPlaceholder')} className="input" />
             </div>
 
             {/* Max size */}
             <div>
-              <label className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
+              <label htmlFor="create-max-size" className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
                 <FileUp size={11} /> {t('create.maxSizeLabel')}
                 {globalMaxMb && (
                   <span className="ml-1 text-white/30">({t('create.maxSizeAdminCap', { max: String(globalMaxMb) })})</span>
                 )}
               </label>
-              <input type="number" min="1" max={globalMaxMb ?? undefined} value={maxSizeMb}
+              <input id="create-max-size" name="maxSizeMb" type="number" min="1" max={globalMaxMb ?? undefined} value={maxSizeMb}
                 onChange={e => {
                   const val = e.target.value
                   if (globalMaxMb && Number(val) > globalMaxMb) {
@@ -185,10 +189,10 @@ export default function CreateRequestPage() {
 
             {/* Password */}
             <div>
-              <label className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
+              <label htmlFor="create-password" className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
                 <Lock size={11} /> {t('create.passwordLabel')}
               </label>
-              <input type="password" value={password}
+              <input id="create-password" name="password" type="password" value={password}
                 onChange={e => setPassword(e.target.value)}
                 placeholder={t('create.passwordPlaceholder')} className="input" />
             </div>

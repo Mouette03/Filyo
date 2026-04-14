@@ -1,10 +1,10 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import { useDropzone } from 'react-dropzone'
-import { Upload, ArrowDownUp, AlertTriangle, Clock, Check, Lock, User, Mail, MessageSquare } from 'lucide-react'
+import { Upload, ArrowDownUp, AlertTriangle, Clock, Check, Lock, User, Mail, MessageSquare, RotateCcw, X } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { getUploadRequestInfo, submitToUploadRequest, getSettings } from '../api/client'
-import { formatBytes, formatDate, getFileIcon } from '../lib/utils'
+import { getUploadRequestInfo, submitToUploadRequest, getSettings, initChunkedUpload, getChunkUploadStatus, uploadChunk, finalizeChunkedUpload } from '../api/client'
+import { formatBytes, formatDate, getFileIcon, formatSpeed } from '../lib/utils'
 import { useT } from '../i18n'
 import { useAppSettingsStore } from '../stores/useAppSettingsStore'
 import LanguageSwitcher from '../components/LanguageSwitcher'
@@ -20,6 +20,15 @@ interface RequestInfo {
   maxSizeBytes: string | null
 }
 
+interface PendingResume {
+  key: string
+  filename: string
+  fileSize: number
+  uploadId: string
+  receivedChunks: number
+  totalChunks: number
+}
+
 type Status = 'loading' | 'ready' | 'uploading' | 'done' | 'error' | 'expired'
 
 export default function RequestUploadPage() {
@@ -33,6 +42,9 @@ export default function RequestUploadPage() {
   const [message, setMessage] = useState('')
   const [password, setPassword] = useState('')
   const [progress, setProgress] = useState(0)
+  const [progressLabel, setProgressLabel] = useState('')
+  const [uploadSpeed, setUploadSpeed] = useState(0)
+  const [pendingResumes, setPendingResumes] = useState<PendingResume[]>([])
   const [nameReq, setNameReq] = useState<FieldReq>('optional')
   const [emailReq, setEmailReq] = useState<FieldReq>('optional')
   const [msgReq, setMsgReq] = useState<FieldReq>('optional')
@@ -68,6 +80,66 @@ export default function RequestUploadPage() {
         }
       })
   }, [token])
+
+  // Scanner localStorage pour les uploads interrompus
+  useEffect(() => {
+    if (status !== 'ready' || !token) return
+    const prefix = `filyo-upload-${token}-`
+    const found: Omit<PendingResume, 'receivedChunks' | 'totalChunks'>[] = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (!key?.startsWith(prefix)) continue
+      const uploadId = localStorage.getItem(key)
+      if (!uploadId) continue
+      const rest = key.slice(prefix.length)
+      // Format : ${file.name}-${file.size}
+      const lastDash = rest.lastIndexOf('-')
+      if (lastDash === -1) continue
+      const filename = rest.slice(0, lastDash)
+      const fileSize = parseInt(rest.slice(lastDash + 1))
+      if (isNaN(fileSize)) continue
+      found.push({ key, filename, fileSize, uploadId })
+    }
+    if (!found.length) return
+    Promise.all(
+      found.map(async item => {
+        // Placeholder "pending" = init démarré mais pas encore terminé (ou serveur relancé)
+        if (item.uploadId === 'pending') {
+          return { ...item, receivedChunks: 0, totalChunks: 0 } as PendingResume
+        }
+        try {
+          const res = await getChunkUploadStatus(token, item.uploadId)
+          return { ...item, receivedChunks: res.data.receivedChunks, totalChunks: res.data.totalChunks } as PendingResume
+        } catch (e: any) {
+          // Supprimer la clé UNIQUEMENT si le serveur confirme que l'upload n'existe plus (404)
+          // Pour les erreurs réseau ou erreurs serveur transitoires, conserver la clé et afficher le bandeau
+          if (e?.response?.status === 404) {
+            localStorage.removeItem(item.key)
+            return null
+          }
+          return { ...item, receivedChunks: 0, totalChunks: 0 } as PendingResume
+        }
+      })
+    ).then(results => {
+      setPendingResumes(results.filter(Boolean) as PendingResume[])
+    })
+  }, [status, token])
+
+  // Bloquer navigation pendant upload en cours
+  useEffect(() => {
+    if (status !== 'uploading') return
+    const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = '' }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [status])
+
+  const handleAbandon = (item: PendingResume) => {
+    localStorage.removeItem(item.key)
+    setPendingResumes(prev => prev.filter(r => r.key !== item.key))
+  }
+
+  const getResumeInfo = (file: { name: string; size: number }) =>
+    pendingResumes.find(r => r.filename === file.name && r.fileSize === file.size) ?? null
 
   const onDrop = useCallback((accepted: File[]) => {
     setFiles(prev => {
@@ -108,7 +180,100 @@ export default function RequestUploadPage() {
 
     setStatus('uploading')
     setProgress(0)
+    setProgressLabel('')
+    setUploadSpeed(0)
 
+    const chunkSizeMb = settings.uploadChunkSizeMb
+    const chunkSizeBytes = chunkSizeMb ? chunkSizeMb * 1024 * 1024 : null
+
+    // Upload chunked si activé et AU MOINS un fichier atteint ou dépasse la taille d'un chunk
+    if (chunkSizeBytes && files.some(f => f.size >= chunkSizeBytes)) {
+      try {
+        const globalStartTime = Date.now()
+        let globalUploadedBytes = 0
+        for (let fi = 0; fi < files.length; fi++) {
+          const file = files[fi]
+          const totalChunks = Math.ceil(file.size / chunkSizeBytes)
+          const RESUME_KEY = `filyo-upload-${token}-${file.name}-${file.size}`
+
+          // Écrire un placeholder avant l'init pour survivre à un refresh pendant l'appel réseau
+          if (!localStorage.getItem(RESUME_KEY)) {
+            localStorage.setItem(RESUME_KEY, 'pending')
+          }
+
+          // Vérifier si un upload est en cours pour ce fichier
+          let uploadId: string | null = localStorage.getItem(RESUME_KEY)
+          let startChunk = 0
+
+          if (uploadId && uploadId !== 'pending') {
+            try {
+              setProgressLabel(t('request.chunkResuming'))
+              const statusRes = await getChunkUploadStatus(token, uploadId)
+              startChunk = statusRes.data.receivedChunks
+            } catch {
+              // Upload introuvable — recommencer
+              uploadId = null
+              startChunk = 0
+            }
+          } else {
+            uploadId = null  // "pending" ou null : init requis
+          }
+
+          if (!uploadId) {
+            const initRes = await initChunkedUpload(
+              token,
+              { filename: file.name, mimeType: file.type || 'application/octet-stream', totalSize: file.size, totalChunks,
+                uploaderName: uploaderName || undefined, uploaderEmail: uploaderEmail || undefined,
+                message: message || undefined, password: password || undefined }
+            )
+            uploadId = initRes.data.uploadId as string
+            localStorage.setItem(RESUME_KEY, uploadId)
+
+          }
+
+          if (startChunk > 0) globalUploadedBytes += startChunk * chunkSizeBytes
+          for (let ci = startChunk; ci < totalChunks; ci++) {
+            const start = ci * chunkSizeBytes
+            const chunkBlob = file.slice(start, start + chunkSizeBytes)
+            const chunkStart = globalUploadedBytes
+            setProgressLabel(t('request.uploadingChunk', { current: String(ci + 1), total: String(totalChunks), pct: '0' }))
+            await uploadChunk(token, uploadId, ci, chunkBlob, (pct) => {
+              const chunkLoaded = Math.round((chunkBlob.size * pct) / 100)
+              const totalLoaded = chunkStart + chunkLoaded
+              const elapsed = (Date.now() - globalStartTime) / 1000
+              const avgSpeed = elapsed > 0.5 ? totalLoaded / elapsed : 0
+              if (avgSpeed > 0) setUploadSpeed(avgSpeed)
+              setProgressLabel(t('request.uploadingChunk', { current: String(ci + 1), total: String(totalChunks), pct: String(pct) }))
+              // Progression globale inter-fichiers
+              const filePct = (ci + pct / 100) / totalChunks
+              const globalPct = ((fi + filePct) / files.length) * 100
+              setProgress(Math.round(globalPct))
+            })
+            globalUploadedBytes += chunkBlob.size
+          }
+
+          setProgressLabel(t('home.finalizing'))
+          await finalizeChunkedUpload(token, uploadId)
+          localStorage.removeItem(RESUME_KEY)
+          setPendingResumes(prev => prev.filter(r => r.key !== RESUME_KEY))
+        }
+        setStatus('done')
+        toast.success(t('toast.filesDeposited'))
+      } catch (err: any) {
+        const code = err.response?.data?.code
+        if (code === 'WRONG_PASSWORD') toast.error(t('toast.passwordWrong'))
+        else if (code === 'REQUEST_LIMIT_REACHED') toast.error(t('request.limitReachedDesc'))
+        else if (code === 'FILE_TOO_LARGE') toast.error(t('error.fileTooLarge'))
+        else if (code === 'QUOTA_EXCEEDED') toast.error(t('error.quotaExceeded'))
+        else if (err.response?.status === 429) toast.error(t('toast.tooManyRequests'))
+        else toast.error(t('toast.sendError'))
+        setStatus('ready')
+        setUploadSpeed(0)
+      }
+      return
+    }
+
+    // Upload classique (pas chunked ou tous les fichiers plus petits qu'un chunk)
     const formData = new FormData()
     if (uploaderName) formData.append('uploaderName', uploaderName)
     if (uploaderEmail) formData.append('uploaderEmail', uploaderEmail)
@@ -116,7 +281,11 @@ export default function RequestUploadPage() {
     files.forEach(f => formData.append('files', f))
 
     try {
-      await submitToUploadRequest(token, formData, setProgress, password || undefined)
+      await submitToUploadRequest(token, formData, (pct, speed) => {
+        setProgress(pct)
+        const speedStr = speed > 0 ? ` · ${formatSpeed(speed)}` : ''
+        setProgressLabel(`${pct}%${speedStr}`)
+      }, password || undefined)
       setStatus('done')
       toast.success(t('toast.filesDeposited'))
     } catch (err: any) {
@@ -128,6 +297,9 @@ export default function RequestUploadPage() {
       else if (err.response?.status === 429) toast.error(t('toast.tooManyRequests'))
       else toast.error(t('toast.sendError'))
       setStatus('ready')
+    } finally {
+      setProgressLabel('')
+      setUploadSpeed(0)
     }
   }
 
@@ -180,6 +352,35 @@ export default function RequestUploadPage() {
 
         {(status === 'ready' || status === 'uploading') && info && (
           <>
+            {/* Bandeau uploads interrompus */}
+            {pendingResumes.length > 0 && status !== 'uploading' && (
+              <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <RotateCcw size={15} className="text-amber-400 shrink-0" />
+                  <p className="text-sm font-semibold text-amber-300">{t('request.resumeTitle')}</p>
+                </div>
+                {pendingResumes.map(item => (
+                  <div key={item.key} className="flex items-center gap-3 [background:var(--surface-700)] rounded-xl px-3 py-2.5">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{item.filename}</p>
+                      <p className="text-xs text-amber-400/80 mt-0.5">
+                        {item.totalChunks > 0
+                          ? t('request.resumeProgress', { done: String(item.receivedChunks), total: String(item.totalChunks) })
+                          : t('request.resumePending')}
+                      </p>
+                      <p className="text-xs [color:var(--text-30)] mt-0.5">{t('request.resumeHint')}</p>
+                    </div>
+                    <button
+                      onClick={() => handleAbandon(item)}
+                      className="shrink-0 flex items-center gap-1 text-xs text-red-400/70 hover:text-red-400 transition-colors px-2 py-1 rounded-lg hover:bg-red-500/10"
+                    >
+                      <X size={12} /> {t('request.resumeAbandon')}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* Request info */}
             <div className="card">
               <div className="flex items-center gap-3 mb-3">
@@ -309,37 +510,54 @@ export default function RequestUploadPage() {
             {/* File list */}
             {files.length > 0 && (
               <div className="card space-y-2">
-                {files.map((f, i) => (
+                {files.map((f, i) => {
+                    const resume = getResumeInfo(f)
+                    return (
                     <div key={i} className="flex items-center gap-3 [background:var(--surface-700)] rounded-xl px-3 py-2.5">
                     <span className="text-xl">{getFileIcon(f.type)}</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{f.name}</p>
                       <p className="text-xs [color:var(--text-40)]">{formatBytes(f.size)}</p>
+                      {resume && (
+                        <p className="text-xs text-amber-400/80 mt-0.5">
+                          {t('request.resumeMatched', { done: String(resume.receivedChunks), total: String(resume.totalChunks) })}
+                        </p>
+                      )}
                     </div>
                   </div>
-                ))}
+                    )
+                  })}
               </div>
             )}
 
             {/* Progress bar */}
             {status === 'uploading' && (
-              <div className="h-1.5 [background:var(--surface-600)] rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-brand-600 to-brand-400 rounded-full transition-all duration-300"
-                  style={{ width: `${progress}%` }}
-                />
+              <div>
+                <div className="h-1.5 [background:var(--surface-600)] rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-brand-600 to-brand-400 rounded-full transition-all duration-300"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+                {progressLabel && (
+                  <p className="text-xs text-brand-300/80 mt-1.5 text-center font-medium">
+                    {progressLabel}{uploadSpeed > 0 ? ` · ${formatSpeed(uploadSpeed)}` : ''}
+                  </p>
+                )}
               </div>
             )}
 
             <button
               onClick={handleSubmit}
               disabled={!files.length || status === 'uploading'}
-              className="btn-primary w-full flex items-center justify-center gap-2"
+              className="btn-primary w-full flex flex-col items-center justify-center gap-1 py-3"
             >
               {status === 'uploading' ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  {t('request.uploading', { pct: String(progress) })}
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    {t('request.uploading', { pct: String(progress) })}
+                  </div>
                 </>
               ) : (
                 <>
