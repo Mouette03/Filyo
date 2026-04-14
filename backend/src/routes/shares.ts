@@ -1,10 +1,12 @@
 import { FastifyInstance } from 'fastify'
 import bcrypt from 'bcryptjs'
 import fs from 'fs-extra'
+import { nanoid } from 'nanoid'
 import { prisma } from '../lib/prisma'
 import { getAppSettings } from '../lib/appSettings'
 import { createSmtpTransport } from '../lib/smtp'
 import { t, escapeHtml } from '../lib/i18n'
+import { createDlToken, consumeDlToken } from '../lib/dlTokens'
 
 /** Retourne le nom d'affichage d'un fichier en tenant compte de hideFilenames. */
 function getDisplayName(originalName: string, hideFilenames: boolean, lang = 'fr'): string {
@@ -79,6 +81,72 @@ export async function shareRoutes(app: FastifyInstance) {
       batchToken: share.file.batchToken ?? null,
       batchFiles: batchFiles.length > 1 ? batchFiles : null
     }
+  })
+
+  // POST /api/shares/:token/dl-token — vérifie le mot de passe, retourne un token de téléchargement court-vivant
+  app.post<{ Params: { token: string }; Body: { password?: string } }>('/:token/dl-token', {
+    config: {
+      rateLimit: {
+        max: 3,
+        timeWindow: '1 minute',
+        keyGenerator: (req) => `${req.ip}:${(req.params as any).token}`,
+      },
+    },
+  }, async (req, reply) => {
+    const share = await prisma.share.findUnique({
+      where: { token: req.params.token },
+      include: { file: true }
+    })
+    if (!share) return reply.code(404).send({ code: 'SHARE_NOT_FOUND' })
+    if (share.expiresAt && share.expiresAt < new Date()) return reply.code(410).send({ code: 'SHARE_EXPIRED' })
+    if (share.maxDownloads && share.downloads >= share.maxDownloads) return reply.code(410).send({ code: 'SHARE_LIMIT_REACHED' })
+
+    if (share.password) {
+      const ok = await bcrypt.compare(req.body?.password || '', share.password)
+      if (!ok) {
+        req.log.warn(
+          { tokenPrefix: req.params.token.substring(0, 8) + '…', ipMasked: req.ip.replace(/(\.(\d+))$/, '.***').replace(/(:([0-9a-f]+))$/i, ':****') },
+          'Share dl-token: wrong password attempt'
+        )
+        return reply.code(401).send({ code: 'WRONG_PASSWORD' })
+      }
+    }
+
+    const fileExists = await fs.pathExists(share.file.path)
+    if (!fileExists) return reply.code(404).send({ code: 'FILE_MISSING' })
+
+    const dlToken = createDlToken({
+      path: share.file.path,
+      filename: share.file.originalName,
+      mimeType: share.file.mimeType,
+      size: share.file.size,
+      onDownload: async () => {
+        await prisma.$transaction([
+          prisma.share.update({ where: { id: share.id }, data: { downloads: { increment: 1 } } }),
+          prisma.file.update({ where: { id: share.fileId }, data: { downloads: { increment: 1 } } })
+        ])
+        req.log.info({ token: req.params.token, filename: share.file.originalName }, 'File downloaded via dl-token')
+      }
+    })
+
+    return { dlToken }
+  })
+
+  // GET /api/shares/dl/:dlToken — streaming direct via navigateur (pas d'auth, token prouve l'autorisation)
+  app.get<{ Params: { dlToken: string } }>('/dl/:dlToken', async (req, reply) => {
+    const entry = consumeDlToken(req.params.dlToken)
+    if (!entry) return reply.code(410).send({ code: 'DL_TOKEN_INVALID' })
+
+    const fileExists = await fs.pathExists(entry.path)
+    if (!fileExists) return reply.code(404).send({ code: 'FILE_MISSING' })
+
+    if (entry.onDownload) await entry.onDownload()
+
+    const stream = fs.createReadStream(entry.path)
+    reply.header('Content-Type', entry.mimeType)
+    reply.header('Content-Disposition', `attachment; filename="${encodeURIComponent(entry.filename)}"`)
+    reply.header('Content-Length', entry.size.toString())
+    return reply.send(stream)
   })
 
   // POST /api/shares/:token/download - Télécharger (avec vérif password si besoin)

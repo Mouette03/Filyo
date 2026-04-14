@@ -10,6 +10,7 @@ import { UPLOAD_DIR } from '../lib/config'
 import { getAppSettings } from '../lib/appSettings'
 import { createSmtpTransport } from '../lib/smtp'
 import { t, escapeHtml } from '../lib/i18n'
+import { createDlToken, consumeDlToken } from '../lib/dlTokens'
 
 /**
  * Register HTTP routes under `/api/upload-requests` to create, manage and consume upload requests and their files.
@@ -306,6 +307,48 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
     )
   })
 
+  // GET /api/upload-requests/dl/:dlToken — streaming direct (pas d'auth, token prouve l'autorisation)
+  app.get<{ Params: { dlToken: string } }>('/dl/:dlToken', async (req, reply) => {
+    const entry = consumeDlToken(req.params.dlToken)
+    if (!entry) return reply.code(410).send({ code: 'DL_TOKEN_INVALID' })
+
+    const fileExists = await fs.pathExists(entry.path)
+    if (!fileExists) return reply.code(404).send({ code: 'FILE_MISSING' })
+
+    if (entry.onDownload) await entry.onDownload()
+
+    const stream = fs.createReadStream(entry.path)
+    reply.header('Content-Type', entry.mimeType)
+    reply.header('Content-Disposition', `attachment; filename="${encodeURIComponent(entry.filename)}"`)
+    reply.header('Content-Length', entry.size.toString())
+    return reply.send(stream)
+  })
+
+  // POST /api/upload-requests/:id/received/:fileId/dl-token — token de téléchargement court-vivant (propriétaire ou admin)
+  app.post<{ Params: { id: string; fileId: string } }>('/:id/received/:fileId/dl-token', auth, async (req, reply) => {
+    const where = ownerWhere(req, req.params.id)
+    const request = await prisma.uploadRequest.findFirst({ where })
+    if (!request) return reply.code(403).send({ code: 'FORBIDDEN' })
+
+    const file = await prisma.receivedFile.findFirst({
+      where: { id: req.params.fileId, uploadRequestId: req.params.id }
+    })
+    if (!file) return reply.code(404).send({ code: 'FILE_NOT_FOUND' })
+
+    const fileExists = await fs.pathExists(file.path)
+    if (!fileExists) return reply.code(404).send({ code: 'FILE_MISSING' })
+
+    const dlToken = createDlToken({
+      path: file.path,
+      filename: file.originalName,
+      mimeType: file.mimeType,
+      size: file.size,
+    })
+
+    req.log.debug({ id: req.params.id, fileId: req.params.fileId, userId: req.user.id }, 'Received file dl-token issued')
+    return { dlToken }
+  })
+
   // GET /api/upload-requests/:id/files - Fichiers recus (proprietaire ou admin)
   app.get<{ Params: { id: string } }>('/:id/files', auth, async (req, reply) => {
     const where = ownerWhere(req, req.params.id)
@@ -318,35 +361,6 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
     })
     return files.map((f: any) => ({ ...f, size: f.size.toString() }))
   })
-
-  // GET /api/upload-requests/:id/received/:fileId/download
-  app.get<{ Params: { id: string; fileId: string } }>(
-    '/:id/received/:fileId/download',
-    auth,
-    async (req, reply) => {
-      const where = ownerWhere(req, req.params.id)
-      const request = await prisma.uploadRequest.findFirst({ where })
-      if (!request) return reply.code(403).send({ code: 'FORBIDDEN' })
-
-      const file = await prisma.receivedFile.findFirst({
-        where: { id: req.params.fileId, uploadRequestId: req.params.id }
-      })
-      if (!file) return reply.code(404).send({ code: 'FILE_NOT_FOUND' })
-
-      const fileExists = await fs.pathExists(file.path)
-      if (!fileExists) return reply.code(404).send({ code: 'FILE_MISSING' })
-
-      req.log.debug({ id: req.params.id, fileId: req.params.fileId, userId: req.user.id }, 'Received file downloaded')
-      const stream = fs.createReadStream(file.path)
-      reply.header('Content-Type', file.mimeType)
-      reply.header(
-        'Content-Disposition',
-        `attachment; filename="${encodeURIComponent(file.originalName)}"`
-      )
-      reply.header('Content-Length', file.size.toString())
-      return reply.send(stream)
-    }
-  )
 
   // PATCH /api/upload-requests/:id/toggle (proprietaire ou admin)
   app.patch<{ Params: { id: string } }>('/:id/toggle', auth, async (req, reply) => {

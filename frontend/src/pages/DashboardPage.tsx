@@ -5,10 +5,10 @@ import { useAuthStore } from '../stores/useAuthStore'
 import {
   listFiles, deleteFile, listUploadRequests,
   deleteUploadRequest, toggleUploadRequest, getStats,
-  runCleanup, getReceivedFiles, downloadReceivedFile,
+  runCleanup, getReceivedFiles, getReceivedFileDlToken,
   sendShareByEmail, updateFileExpiry
 } from '../api/client'
-import { formatBytes, formatDate, getFileIcon, downloadBlob, copyToClipboard, isValidEmail, formatSpeed } from '../lib/utils'
+import { formatBytes, formatDate, getFileIcon, copyToClipboard, isValidEmail } from '../lib/utils'
 import { useT } from '../i18n'
 
 interface FileItem {
@@ -56,7 +56,7 @@ export default function DashboardPage() {
   const [savingExpiryId, setSavingExpiryId] = useState<string | null>(null)
   const [expiringNowId, setExpiringNowId] = useState<string | null>(null)
   const [expandedBatches, setExpandedBatches] = useState<Set<string>>(new Set())
-  const [downloadReceivedProgress, setDownloadReceivedProgress] = useState<Record<string, { pct: number; speed: number }>>({})
+  const [downloadingReceived, setDownloadingReceived] = useState<Record<string, boolean>>({})
 
   // Grouper les fichiers par batchToken pour l'affichage
   type DisplayItem =
@@ -187,14 +187,15 @@ export default function DashboardPage() {
 
   const handleDownloadReceived = async (requestId: string, fileId: string, filename: string) => {
     const key = `${requestId}:${fileId}`
-    setDownloadReceivedProgress(p => ({ ...p, [key]: { pct: 0, speed: 0 } }))
+    setDownloadingReceived(p => ({ ...p, [key]: true }))
     try {
-      const res = await downloadReceivedFile(requestId, fileId, (pct, speed) => {
-        setDownloadReceivedProgress(p => ({ ...p, [key]: { pct, speed } }))
-      })
-      downloadBlob(res.data, filename)
+      const res = await getReceivedFileDlToken(requestId, fileId)
+      const a = document.createElement('a')
+      a.href = `/api/upload-requests/dl/${res.data.dlToken}`
+      a.download = filename
+      a.click()
     } catch { toast.error(t('toast.loadError')) }
-    finally { setDownloadReceivedProgress(p => { const next = { ...p }; delete next[key]; return next }) }
+    finally { setDownloadingReceived(p => { const next = { ...p }; delete next[key]; return next }) }
   }
 
   const handleSendFileEmail = async (token: string) => {
@@ -903,7 +904,7 @@ export default function DashboardPage() {
                         {/* Fichiers du groupe */}
                         {group.files.map((f, i) => {
                           const dlKey = `${r.id}:${f.id}`
-                          const dlProg = downloadReceivedProgress[dlKey]
+                          const isDl = !!downloadingReceived[dlKey]
                           return (
                           <div key={f.id} className={`flex items-center gap-3 px-3 py-2.5 ${i < group.files.length - 1 ? 'border-b border-white/5' : ''}`}>
                             <span className="text-lg flex-shrink-0">{getFileIcon(f.originalName.split('.').pop() || '')}</span>
@@ -913,22 +914,13 @@ export default function DashboardPage() {
                             </div>
                             <div className="flex flex-col items-end gap-1 flex-shrink-0">
                               <button
-                                onClick={() => !dlProg && handleDownloadReceived(r.id, f.id, f.originalName)}
-                                disabled={!!dlProg}
+                                onClick={() => !isDl && handleDownloadReceived(r.id, f.id, f.originalName)}
+                                disabled={isDl}
                                 className="btn-secondary flex items-center gap-1.5 text-xs px-2.5 py-1.5 disabled:opacity-60">
-                                {dlProg
-                                  ? <><div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> {dlProg.pct}%</>
+                                {isDl
+                                  ? <><div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> {t('share.downloading')}</>
                                   : <><Download size={12} /> {t('common.download')}</>}
                               </button>
-                              {dlProg && (
-                                <>
-                                  <div className="w-24 h-1 [background:var(--surface-600)] rounded-full overflow-hidden">
-                                    <div className="h-full bg-gradient-to-r from-brand-600 to-brand-400 rounded-full transition-all duration-200"
-                                      style={{ width: `${dlProg.pct}%` }} />
-                                  </div>
-                                  {dlProg.speed > 0 && <span className="text-xs text-white/40">{formatSpeed(dlProg.speed)}</span>}
-                                </>
-                              )}
                             </div>
                           </div>
                           )

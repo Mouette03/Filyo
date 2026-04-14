@@ -84,27 +84,6 @@ export const deleteFile = (id: string) => api.delete(`/files/${id}`)
 
 // ---- Partages (téléchargement) ----
 export const getShareInfo = (token: string) => api.get(`/shares/${token}/info`)
-export const downloadShare = (token: string, password?: string, onProgress?: (pct: number, speed: number) => void) => {
-  let prevLoaded = 0
-  let prevTime = Date.now()
-  return api.post(
-    `/shares/${token}/download`,
-    { password },
-    {
-      responseType: 'blob',
-      onDownloadProgress: onProgress
-        ? (e: any) => {
-            if (!e.total) return
-            const now = Date.now()
-            const dt = (now - prevTime) / 1000
-            const speed = dt > 0.1 ? (e.loaded - prevLoaded) / dt : 0
-            if (dt > 0.1) { prevLoaded = e.loaded; prevTime = now }
-            onProgress(Math.round((e.loaded / e.total) * 100), speed)
-          }
-        : undefined,
-    }
-  )
-}
 
 // ---- Partage inversé (Upload Request) ----
 export const createUploadRequest = (data: {
@@ -226,23 +205,12 @@ export const finalizeFileChunkedUpload = (uploadId: string) =>
 export const updateChunkSize = (mb: number | null) =>
   api.patch('/settings/chunk-size', { uploadChunkSizeMb: mb })
 
-export const downloadReceivedFile = (requestId: string, fileId: string, onProgress?: (pct: number, speed: number) => void) => {
-  let prevLoaded = 0
-  let prevTime = Date.now()
-  return api.get(`/upload-requests/${requestId}/received/${fileId}/download`, {
-    responseType: 'blob',
-    onDownloadProgress: onProgress
-      ? (e: any) => {
-          if (!e.total) return
-          const now = Date.now()
-          const dt = (now - prevTime) / 1000
-          const speed = dt > 0.1 ? (e.loaded - prevLoaded) / dt : 0
-          if (dt > 0.1) { prevLoaded = e.loaded; prevTime = now }
-          onProgress(Math.round((e.loaded / e.total) * 100), speed)
-        }
-      : undefined,
-  })
-}
+// ---- Tokens de téléchargement (streaming natif navigateur) ----
+export const getShareDlToken = (token: string, password?: string) =>
+  api.post<{ dlToken: string }>(`/shares/${token}/dl-token`, { password })
+
+export const getReceivedFileDlToken = (requestId: string, fileId: string) =>
+  api.post<{ dlToken: string }>(`/upload-requests/${requestId}/received/${fileId}/dl-token`)
 
 // ---- Envoi email ----
 export const sendShareByEmail = (to: string, tokens: string[], lang: string = 'fr') =>
