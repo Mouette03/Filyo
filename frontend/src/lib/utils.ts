@@ -55,7 +55,6 @@ export function getFileIcon(mimeTypeOrExt: string): string {
   return '📁'
 }
 
-/** Triggers a browser download for a Blob with the given filename. */
 /** Returns true if the string matches a basic email format. */
 export function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())

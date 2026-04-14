@@ -53,8 +53,6 @@ export default function SharePage() {
   const [downloading, setDownloading] = useState<Record<string, boolean>>({})
   const [downloaded, setDownloaded] = useState<Record<string, boolean>>({})
   const [downloadingAll, setDownloadingAll] = useState(false)
-  const [downloadProgress, setDownloadProgress] = useState<Record<string, number>>({})
-  const [downloadSpeed, setDownloadSpeed] = useState<Record<string, number>>({})
 
   useEffect(() => {
     if (!token) return
@@ -83,7 +81,6 @@ export default function SharePage() {
   const handleDownloadSingle = async () => {
     if (!token || !info) return
     setDownloading(p => ({ ...p, [token]: true }))
-    setDownloadProgress(p => ({ ...p, [token]: 0 }))
     try {
       const res = await getShareDlToken(token, password || undefined)
       const a = document.createElement('a')
@@ -109,7 +106,6 @@ export default function SharePage() {
   // Téléchargement d'un fichier dans un lot
   const handleDownloadBatch = async (shareToken: string, filename: string) => {
     setDownloading(p => ({ ...p, [shareToken]: true }))
-    setDownloadProgress(p => ({ ...p, [shareToken]: 0 }))
     try {
       const res = await getShareDlToken(shareToken, password || undefined)
       const a = document.createElement('a')
@@ -142,7 +138,6 @@ export default function SharePage() {
       const bf = files[i]
       if (downloaded[bf.shareToken]) continue
       setDownloading(p => ({ ...p, [bf.shareToken]: true }))
-      setDownloadProgress(p => ({ ...p, [bf.shareToken]: 0 }))
       try {
         const res = await getShareDlToken(bf.shareToken, password || undefined)
         const a = document.createElement('a')
