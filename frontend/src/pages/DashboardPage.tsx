@@ -570,10 +570,8 @@ export default function DashboardPage() {
                         </button>
                         <button
                           onClick={() => copyLink('s', firstShare.token)}
-                          className={`flex items-center gap-1.5 px-2.5 h-8 rounded-lg text-xs font-medium transition-all flex-shrink-0
-                            ${copiedToken === firstShare.token ? 'bg-emerald-500/20 text-emerald-400' : 'btn-secondary'}`}>
+                          className={`btn-icon flex-shrink-0 ${copiedToken === firstShare.token ? '!bg-emerald-500/20 !text-emerald-400 !border-emerald-500/30' : ''}`}>
                           {copiedToken === firstShare.token ? <Check size={12} /> : <Copy size={12} />}
-                          {t('dash.link')}
                         </button>
                         <button
                           onClick={() => { setEmailingFileId(emailingFileId === batchToken ? null : batchToken); setEmailToFile('') }}
@@ -816,10 +814,8 @@ export default function DashboardPage() {
                       </button>
                       <button
                         onClick={() => copyLink('s', share.token)}
-                        className={`flex items-center gap-1.5 px-2.5 h-8 rounded-lg text-xs font-medium transition-all flex-shrink-0
-                          ${copiedToken === share.token ? 'bg-emerald-500/20 text-emerald-400' : 'btn-secondary'}`}>
+                        className={`btn-icon flex-shrink-0 ${copiedToken === share.token ? '!bg-emerald-500/20 !text-emerald-400 !border-emerald-500/30' : ''}`}>
                         {copiedToken === share.token ? <Check size={12} /> : <Copy size={12} />}
-                        {t('dash.link')}
                       </button>
                       <button
                         onClick={() => { setEmailingFileId(emailingFileId === f.id ? null : f.id); setEmailToFile('') }}
@@ -990,6 +986,12 @@ export default function DashboardPage() {
                     {copiedToken === r.token ? <Check size={12} /> : <Copy size={12} />}
                     {t('dash.link')}
                   </button>
+                  <button
+                    onClick={() => { setEmailingRequestId(emailingRequestId === r.id ? null : r.id); setEmailToRequest('') }}
+                    className={`btn-icon ${emailingRequestId === r.id ? '!bg-brand-500/20 !text-brand-400 !border-brand-500/30' : ''}`}
+                    title={t('dash.sendEmail')}>
+                    <Mail size={13} />
+                  </button>
                   <button onClick={() => handleToggleRequest(r.id)}
                     className="btn-icon"
                     title={r.active ? t('dash.disable') : t('dash.enable')}>
@@ -1000,12 +1002,6 @@ export default function DashboardPage() {
                     className={`btn-icon ${requestExpiryEditId === r.id ? '!bg-brand-500/20 !text-brand-400 !border-brand-500/30' : ''}`}
                     title={t('dash.expiryEdit')}>
                     <Clock size={13} />
-                  </button>
-                  <button
-                    onClick={() => { setEmailingRequestId(emailingRequestId === r.id ? null : r.id); setEmailToRequest('') }}
-                    className={`btn-icon ${emailingRequestId === r.id ? '!bg-brand-500/20 !text-brand-400 !border-brand-500/30' : ''}`}
-                    title={t('dash.sendEmail')}>
-                    <Mail size={13} />
                   </button>
                   <button onClick={() => handleDeleteRequest(r.id)} className="btn-icon-danger" title={t('common.delete')}>
                     <Trash2 size={13} />
@@ -1020,10 +1016,13 @@ export default function DashboardPage() {
                   <Eye size={12} /> {t('dash.filesBtn')}
                 </button>
                 <button onClick={() => copyLink('r', r.token)}
-                  className={`flex items-center gap-1.5 px-2.5 h-8 rounded-lg text-xs font-medium transition-all flex-1 justify-center
-                    ${copiedToken === r.token ? 'bg-emerald-500/20 text-emerald-400' : 'btn-secondary'}`}>
+                  className={`btn-icon flex-shrink-0 ${copiedToken === r.token ? '!bg-emerald-500/20 !text-emerald-400 !border-emerald-500/30' : ''}`}>
                   {copiedToken === r.token ? <Check size={12} /> : <Copy size={12} />}
-                  {t('dash.link')}
+                </button>
+                <button
+                  onClick={() => { setEmailingRequestId(emailingRequestId === r.id ? null : r.id); setEmailToRequest('') }}
+                  className={`btn-icon flex-shrink-0 ${emailingRequestId === r.id ? '!bg-brand-500/20 !text-brand-400 !border-brand-500/30' : ''}`}>
+                  <Mail size={13} />
                 </button>
                 <button onClick={() => handleToggleRequest(r.id)}
                   className="btn-icon flex-shrink-0"
@@ -1034,11 +1033,6 @@ export default function DashboardPage() {
                   onClick={() => { setRequestExpiryEditId(requestExpiryEditId === r.id ? null : r.id); setRequestExpiryValue(r.expiresAt ? toLocalDatetimeValue(r.expiresAt) : '') }}
                   className={`btn-icon flex-shrink-0 ${requestExpiryEditId === r.id ? '!bg-brand-500/20 !text-brand-400 !border-brand-500/30' : ''}`}>
                   <Clock size={13} />
-                </button>
-                <button
-                  onClick={() => { setEmailingRequestId(emailingRequestId === r.id ? null : r.id); setEmailToRequest('') }}
-                  className={`btn-icon flex-shrink-0 ${emailingRequestId === r.id ? '!bg-brand-500/20 !text-brand-400 !border-brand-500/30' : ''}`}>
-                  <Mail size={13} />
                 </button>
                 <button onClick={() => handleDeleteRequest(r.id)} className="btn-icon-danger flex-shrink-0" title={t('common.delete')}>
                   <Trash2 size={13} />
