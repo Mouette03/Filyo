@@ -110,7 +110,7 @@ labels:
 | `DATA_PATH` | `./data` | Data folder (database + uploads) |
 | `LOG_LEVEL` | `info` | Minimum log level (Pino). The app emits `debug`, `info`, `warn`, `error`. Use `debug` for verbose output, `warn` for quiet, `silent` to disable all logs. |
 | `UPLOAD_TIMEOUT_MS` | `1800000` | Upload timeout in ms (default 30 min, min 1 min, max 2 h) |
-| `TRUST_PROXY` | `false` | When `true`, the server trusts reverse proxy headers (X-Forwarded-*) — enable when behind Traefik/Nginx/other proxies |
+| `TRUST_PROXY` | `false` | Trust level for reverse proxy headers (`X-Forwarded-*`). Accepts `false`, `true`, an IP address, or a CIDR range (e.g. `127.0.0.1`). Enable only if Filyo is behind a trusted proxy. |
 
 > [!NOTE]
 > Any SMTP password saved through the settings form is stored **encrypted** in the database (AES-256-GCM, key derived from `JWT_SECRET`).
@@ -123,7 +123,17 @@ labels:
 
 ## 🛡️ Note on `TRUST_PROXY`
 
-If you run Filyo behind a reverse proxy (Traefik, Nginx, etc.), set `TRUST_PROXY=true` in your environment or `.env` so the Fastify server trusts `X-Forwarded-*` headers and correctly obtains the client IP, protocol and origin. The provided Docker files default to `TRUST_PROXY=false`.
+If you run Filyo behind a reverse proxy (Traefik, Nginx, etc.), set `TRUST_PROXY` in your environment or `.env` so the Fastify server trusts `X-Forwarded-*` headers and correctly obtains the client IP, protocol and origin. The provided Docker files default to `TRUST_PROXY=false`.
+
+> [!WARNING]
+> Only enable `TRUST_PROXY` if Filyo is **exclusively accessible through a trusted proxy** and not directly exposed to the internet. Without this precaution, malicious clients can forge `X-Forwarded-*` headers to bypass rate limiting or IP-based controls.
+
+| Value | Behaviour |
+|---|---|
+| `false` | Default — no proxy trust |
+| `true` | Trust all proxies (convenient but less secure) |
+| `127.0.0.1` | Trust only localhost proxy (recommended) |
+| `10.0.0.0/8` | Trust a specific IP range / CIDR |
 
 ---
 
@@ -280,7 +290,7 @@ labels:
 | `DATA_PATH` | `./data` | Dossier données (base de données + uploads) |
 | `LOG_LEVEL` | `info` | Seuil minimum de log (Pino). Le code émet `debug`, `info`, `warn`, `error`. Utiliser `debug` pour plus de verbosité, `warn` pour le silence relatif, `silent` pour tout désactiver. |
 | `UPLOAD_TIMEOUT_MS` | `1800000` | Délai d'attente des uploads (ms — défaut 30 min, min 1 min, max 2 h) |
-| `TRUST_PROXY` | `false` | Quand `true`, le serveur fait confiance aux en-têtes reverse proxy (`X-Forwarded-*`) — activer derrière Traefik/Nginx/autres proxies |
+| `TRUST_PROXY` | `false` | Niveau de confiance pour les en-têtes reverse proxy (`X-Forwarded-*`). Accepte `false`, `true`, une adresse IP ou une plage CIDR (ex. `127.0.0.1`). À activer uniquement si Filyo est derrière un proxy de confiance. |
 
 > [!NOTE]
 > Tout mot de passe SMTP enregistré via le formulaire de réglages est stocké **chiffré** en base de données (AES-256-GCM, clé dérivée de `JWT_SECRET`).
@@ -291,7 +301,17 @@ labels:
 
 ## 🛡️ Note sur `TRUST_PROXY`
 
-Si vous exécutez Filyo derrière un reverse proxy (Traefik, Nginx, etc.), définissez `TRUST_PROXY=true` dans votre environnement ou votre fichier `.env` afin que le serveur Fastify fasse confiance aux en-têtes `X-Forwarded-*` et récupère correctement l'adresse IP du client, le protocole et l'origine. Les fichiers Docker fournis définissent par défaut `TRUST_PROXY=false`.
+Si vous exécutez Filyo derrière un reverse proxy (Traefik, Nginx, etc.), définissez `TRUST_PROXY` dans votre environnement ou votre fichier `.env` afin que le serveur Fastify fasse confiance aux en-têtes `X-Forwarded-*` et récupère correctement l'adresse IP du client, le protocole et l'origine. Les fichiers Docker fournis définissent par défaut `TRUST_PROXY=false`.
+
+> [!WARNING]
+> N'activez `TRUST_PROXY` que si Filyo est **exclusivement accessible via un proxy de confiance** et non exposé directement sur Internet. Sans cette précaution, des clients malveillants peuvent forger les en-têtes `X-Forwarded-*` pour contourner le rate limiting ou les contrôles basés sur l'IP.
+
+| Valeur | Comportement |
+|---|---|
+| `false` | Défaut — aucune confiance proxy |
+| `true` | Fait confiance à tous les proxies (pratique mais moins sécurisé) |
+| `127.0.0.1` | Fait confiance uniquement au proxy local (recommandé) |
+| `10.0.0.0/8` | Fait confiance à une plage IP / CIDR spécifique |
 
 ---
 
