@@ -73,7 +73,7 @@ export const fr = {
   'home.removeAll': 'Tout supprimer',
   'home.passwordLabel': 'Mot de passe (optionnel)',
   'home.expiryLabel': 'Expiration',
-  'home.maxDlLabel': 'Téléchargements max (optionnel)',
+  'home.maxDlLabel': 'Téléchargements max',
   'home.uploading': 'Envoi en cours… {{pct}}%',
   'home.finalizing': 'Finalisation…',
   'home.uploadBtnMultiple': 'Envoyer {{count}} fichiers',
