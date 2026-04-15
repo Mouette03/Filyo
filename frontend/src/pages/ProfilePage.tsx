@@ -301,7 +301,8 @@ export default function ProfilePage() {
                 <button
                   key={key}
                   onClick={() => setAccentColor(key)}
-                  title={preset.name}
+                  title={t(`settings.accent.${key}`)}
+                  aria-label={t(`settings.accent.${key}`)}
                   className={`w-9 h-9 rounded-xl transition-all ${
                     active ? 'scale-110 ring-2 ring-offset-2 ring-offset-surface-800' : 'hover:scale-105 opacity-80 hover:opacity-100'
                   }`}
@@ -317,7 +318,7 @@ export default function ProfilePage() {
             })}
           </div>
           <p className="text-xs text-white/30 mt-3">
-            {t('settings.accentCurrent', { name: ACCENT_PRESETS[accentColor].name })}
+            {t('settings.accentCurrent', { name: t(`settings.accent.${accentColor}`) })}
           </p>
         </div>
 
@@ -328,6 +329,7 @@ export default function ProfilePage() {
             <button
               onClick={() => setBgColor(null)}
               title={t('settings.bgDefault')}
+              aria-label={t('settings.bgDefault')}
               className={`w-9 h-9 rounded-xl border-2 transition-all flex items-center justify-center bg-surface-700 ${
                 !bgColorKey
                   ? 'border-brand-500 ring-2 ring-offset-2 ring-offset-surface-800 ring-brand-500'
@@ -342,7 +344,8 @@ export default function ProfilePage() {
                 <button
                   key={key}
                   onClick={() => setBgColor(key)}
-                  title={preset.label}
+                  title={t(`settings.bg.${key}`)}
+                  aria-label={t(`settings.bg.${key}`)}
                   className={`w-9 h-9 rounded-xl transition-all ${
                     active ? 'scale-110 ring-2 ring-offset-2 ring-offset-surface-800' : 'hover:scale-105 opacity-80 hover:opacity-100'
                   }`}
