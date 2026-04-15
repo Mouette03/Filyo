@@ -542,7 +542,7 @@ export default function HomePage() {
               <button
                 onClick={() => removeFile(i)}
                 aria-label={t('common.delete')}
-                className="opacity-0 group-hover:opacity-100 focus:opacity-100 text-white/30 hover:text-red-400 transition-all"
+                className="focus:opacity-100 text-white/30 hover:text-red-400 transition-all"
               >
                 <X size={16} />
               </button>
