@@ -1,9 +1,8 @@
 import { useEffect, useState, useRef } from 'react'
-import { Settings, Upload, Trash2, Check, Type, Image, RefreshCw, Mail, Eye, EyeOff, Wifi, Globe, Users, Palette, Moon, Sun, Monitor, Clock } from 'lucide-react'
+import { Settings, Upload, Trash2, Check, Type, Image, RefreshCw, Mail, Eye, EyeOff, Wifi, Globe, Users, Clock } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { updateAppName, uploadLogo, deleteLogo, getSmtpSettings, updateSmtpSettings, testSmtp, updateSiteUrl, updateUploaderFields, updateAllowRegistration, updateCleanupSetting, updateMaxFileSize, updateChunkSize } from '../api/client'
 import { useAppSettingsStore } from '../stores/useAppSettingsStore'
-import { usePreferencesStore, ACCENT_PRESETS, BG_PRESETS, type ThemeMode, type AccentKey, type BgColorKey } from '../stores/usePreferencesStore'
 import { useT } from '../i18n'
 import type { FieldReq } from '../types/common'
 
@@ -15,15 +14,7 @@ import type { FieldReq } from '../types/common'
  */
 export default function SettingsPage() {
   const { settings, setSettings } = useAppSettingsStore()
-  const { theme, accentColor, bgColorKey, setTheme, setAccentColor, setBgColor } = usePreferencesStore()
   const { t } = useT()
-  const isDark = theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)
-
-  const THEME_OPTIONS: { value: ThemeMode; label: string; icon: typeof Moon }[] = [
-    { value: 'dark',  label: t('settings.themeDark'),  icon: Moon },
-    { value: 'light', label: t('settings.themeLight'), icon: Sun },
-    { value: 'auto',  label: t('settings.themeAuto'),  icon: Monitor },
-  ]
 
   const [appName, setAppName] = useState(settings.appName || 'Filyo')
   const [logoUrl, setLogoUrl] = useState(settings.logoUrl || '')
@@ -307,111 +298,6 @@ export default function SettingsPage() {
         />
       </div>
 
-      {/* Section : Apparence */}
-      <div className="card mb-6">
-        <div className="flex items-center gap-2 mb-5">
-          <Palette size={16} className="text-brand-400" />
-          <h3 className="font-semibold">{t('settings.appearanceSection')}</h3>
-          <span className="text-xs text-white/30 ml-auto">{t('settings.appliesToAll')}</span>
-        </div>
-
-        {/* Thème */}
-        <div className="mb-6">
-          <p className="text-xs text-white/50 mb-3 block uppercase tracking-wider">{t('settings.themeLabel')}</p>
-          <div className="grid grid-cols-3 gap-2">
-            {THEME_OPTIONS.map(opt => {
-              const Icon = opt.icon
-              const active = theme === opt.value
-              return (
-                <button
-                  key={opt.value}
-                  onClick={() => setTheme(opt.value)}
-                  className={`flex flex-col items-center gap-2 py-3 px-2 rounded-xl border transition-all ${
-                    active
-                      ? 'border-brand-500 bg-brand-500/15 text-brand-400'
-                      : 'border-white/10 bg-white/5 text-white/50 hover:text-white/80 hover:bg-white/10'
-                  }`}
-                >
-                  <Icon size={20} />
-                  <span className="text-xs font-medium">{opt.label}</span>
-                </button>
-              )
-            })}
-          </div>
-          <p className="text-xs text-white/30 mt-2">
-            {theme === 'auto' ? t('settings.themeAutoHint') : ''}
-          </p>
-        </div>
-
-        {/* Couleur d'accent */}
-        <div>
-          <p className="text-xs text-white/50 mb-3 block uppercase tracking-wider">{t('settings.accentLabel')}</p>
-          <div className="flex flex-wrap gap-3">
-            {(Object.entries(ACCENT_PRESETS) as [AccentKey, typeof ACCENT_PRESETS[AccentKey]][]).map(([key, preset]) => {
-              const active = accentColor === key
-              return (
-                <button
-                  key={key}
-                  onClick={() => setAccentColor(key)}
-                  title={preset.name}
-                  className={`w-9 h-9 rounded-xl transition-all ${
-                    active ? 'scale-110 ring-2 ring-offset-2 ring-offset-surface-800' : 'hover:scale-105 opacity-80 hover:opacity-100'
-                  }`}
-                  style={{ background: preset.hex }}
-                >
-                  {active && (
-                    <span className="flex items-center justify-center w-full h-full">
-                      <Check size={14} className="text-white drop-shadow" />
-                    </span>
-                  )}
-                </button>
-              )
-            })}
-          </div>
-          <p className="text-xs text-white/30 mt-3">
-            {t('settings.accentCurrent', { name: ACCENT_PRESETS[accentColor].name })}
-          </p>
-        </div>
-
-        {/* Couleur de fond */}
-        <div className="mt-6">
-          <p className="text-xs text-white/50 mb-3 block uppercase tracking-wider">{t('settings.bgLabel')}</p>
-          <div className="flex flex-wrap gap-3 mb-3">
-            <button
-              onClick={() => setBgColor(null)}
-              title="Défaut"
-              className={`w-9 h-9 rounded-xl border-2 transition-all flex items-center justify-center bg-surface-700 ${
-                !bgColorKey
-                  ? 'border-brand-500 ring-2 ring-offset-2 ring-offset-surface-800 ring-brand-500'
-                  : 'border-white/10 hover:border-white/30'
-              }`}
-            >
-              {!bgColorKey && <Check size={14} className="text-white" />}
-            </button>
-            {(Object.entries(BG_PRESETS) as [BgColorKey, typeof BG_PRESETS[BgColorKey]][]).filter(([, p]) => p.theme === (isDark ? 'dark' : 'light')).map(([key, preset]) => {
-              const active = bgColorKey === key
-              return (
-                <button
-                  key={key}
-                  onClick={() => setBgColor(key)}
-                  title={preset.label}
-                  className={`w-9 h-9 rounded-xl transition-all ${
-                    active ? 'scale-110 ring-2 ring-offset-2 ring-offset-surface-800' : 'hover:scale-105 opacity-80 hover:opacity-100'
-                  }`}
-                  style={{ background: preset.s900, border: '2px solid', borderColor: active ? 'white' : 'transparent' }}
-                >
-                  {active && (
-                    <span className="flex items-center justify-center w-full h-full">
-                      <Check size={14} className="text-white drop-shadow" />
-                    </span>
-                  )}
-                </button>
-              )
-            })}
-          </div>
-          <p className="text-xs text-white/30">{t('settings.bgHint')}</p>
-        </div>
-      </div>
       {/* Section : Adresse du site */}
       <div className="card mb-6">
         <div className="flex items-center gap-2 mb-4">
