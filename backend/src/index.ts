@@ -89,7 +89,8 @@ async function bootstrap() {
     max: 200,
     timeWindow: '1 minute',
     onExceeded: (req, key) => {
-      req.log.warn({ ip: key, url: req.url, method: req.method }, 'Rate limit exceeded')
+      const route = (req as any).routeOptions?.url ?? req.url.split('?')[0]
+      req.log.warn({ key, route, method: req.method }, 'Rate limit exceeded')
     }
   })
 
