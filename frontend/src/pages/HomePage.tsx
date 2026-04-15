@@ -550,7 +550,7 @@ export default function HomePage() {
 
           {/* Options */}
           <div className="pt-3 border-t border-white/10 grid grid-cols-2 gap-3">
-            <div>
+            <div className="col-span-2">
               <label htmlFor="home-password" className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
                 <Lock size={11} /> {t('home.passwordLabel')}
               </label>
@@ -582,7 +582,7 @@ export default function HomePage() {
                 <option value="">{t('common.never')}</option>
               </select>
             </div>
-            <div className="col-span-2">
+            <div>
               <label htmlFor="home-max-downloads" className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
                 <Download size={11} /> {t('home.maxDlLabel')}
               </label>
