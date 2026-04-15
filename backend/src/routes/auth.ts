@@ -77,7 +77,20 @@ export async function authRoutes(app: FastifyInstance) {
       { expiresIn: '7d' }
     )
 
-    return reply.send({ token, user: { id: user.id, email: user.email, name: user.name, role: user.role, avatarUrl: user.avatarUrl ?? null } })
+    reply.setCookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'Strict' : 'Lax',
+      path: '/',
+      maxAge: 60 * 60 * 24 * 7 // 7 jours
+    })
+    return reply.send({ user: { id: user.id, email: user.email, name: user.name, role: user.role, avatarUrl: user.avatarUrl ?? null } })
+  })
+
+  // POST /api/auth/logout
+  app.post('/logout', async (_req, reply) => {
+    reply.clearCookie('token', { path: '/' })
+    return reply.send({ ok: true })
   })
 
   // GET /api/auth/me — vérifier le token
