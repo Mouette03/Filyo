@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { useEffect } from 'react'
-import { usePreferencesStore, applyTheme, applyAccent, applyBgColor } from './stores/usePreferencesStore'
+import { usePreferencesStore, applyTheme, applyAccent, applyBgColor, resetBgColor } from './stores/usePreferencesStore'
 import { useAppSettingsStore } from './stores/useAppSettingsStore'
 import HomePage from './pages/HomePage'
 import SharePage from './pages/SharePage'
@@ -40,7 +40,7 @@ export default function App() {
     if (bgColorKey) applyBgColor(bgColorKey)
     if (theme === 'auto') {
       const mq = window.matchMedia('(prefers-color-scheme: dark)')
-      const handler = () => applyTheme('auto')
+      const handler = () => { applyTheme('auto'); resetBgColor() }
       mq.addEventListener('change', handler)
       return () => mq.removeEventListener('change', handler)
     }

@@ -528,7 +528,8 @@ export default function RequestUploadPage() {
                     <button
                       onClick={() => removeFile(i)}
                       disabled={status === 'uploading'}
-                      className="opacity-0 group-hover:opacity-100 text-white/30 hover:text-red-400 transition-all disabled:hidden"
+                      aria-label={t('common.delete')}
+                      className="opacity-0 group-hover:opacity-100 focus:opacity-100 text-white/30 hover:text-red-400 transition-all disabled:hidden"
                     >
                       <X size={16} />
                     </button>

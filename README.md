@@ -118,6 +118,7 @@ labels:
 
 **SQLite** : `DATABASE_URL=file:/data/filyo.db`
 **MariaDB** : `DB_HOST`, `DB_USER`, `DB_PASSWORD`, etc.
+
 ---
 
 ## 🛡️ Note on `TRUST_PROXY`

@@ -327,7 +327,7 @@ export default function ProfilePage() {
           <div className="flex flex-wrap gap-3 mb-3">
             <button
               onClick={() => setBgColor(null)}
-              title="Défaut"
+              title={t('settings.bgDefault')}
               className={`w-9 h-9 rounded-xl border-2 transition-all flex items-center justify-center bg-surface-700 ${
                 !bgColorKey
                   ? 'border-brand-500 ring-2 ring-offset-2 ring-offset-surface-800 ring-brand-500'
