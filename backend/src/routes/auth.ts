@@ -80,7 +80,7 @@ export async function authRoutes(app: FastifyInstance) {
     reply.setCookie('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'Strict' : 'Lax',
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
       path: '/',
       maxAge: 60 * 60 * 24 * 7 // 7 jours
     })
