@@ -81,9 +81,13 @@ app.decorate('adminOnly', async function (req: FastifyRequest, reply: FastifyRep
 })
 
 async function bootstrap() {
-  // Rate limiting — protection brute-force sur les routes sensibles
+  // Rate limiting — 200 req/min par IP par défaut sur toutes les routes.
+  // Les routes sensibles (login, forgot-password…) définissent leur propre config.rateLimit
+  // plus restrictive via { config: { rateLimit: { max, timeWindow } } }.
   await app.register(rateLimit, {
-    global: false,
+    global: true,
+    max: 200,
+    timeWindow: '1 minute',
     onExceeded: (req, key) => {
       req.log.warn({ ip: key, url: req.url, method: req.method }, 'Rate limit exceeded')
     }
