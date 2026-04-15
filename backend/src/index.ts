@@ -38,8 +38,11 @@ const UPLOAD_TIMEOUT_MS = Number.isFinite(_parsedTimeout) && _parsedTimeout >= U
 
 const isDev = process.env.NODE_ENV !== 'production'
 
+const rawTrustProxy = process.env.TRUST_PROXY ?? 'false'
+const trustProxyValue: boolean | string = rawTrustProxy === 'true' ? true : rawTrustProxy === 'false' ? false : rawTrustProxy
+
 const app = Fastify({
-  trustProxy: process.env.TRUST_PROXY === 'true',
+  trustProxy: trustProxyValue,
   logger: {
     level: process.env.LOG_LEVEL || 'info',
     ...(isDev && {

@@ -37,6 +37,7 @@ export default function RequestUploadPage() {
   const [status, setStatus] = useState<Status>('loading')
   const [error, setError] = useState('')
   const [files, setFiles] = useState<File[]>([])
+  const removeFile = (index: number) => setFiles(prev => prev.filter((_, i) => i !== index))
   const [uploaderName, setUploaderName] = useState('')
   const [uploaderEmail, setUploaderEmail] = useState('')
   const [message, setMessage] = useState('')
@@ -513,7 +514,7 @@ export default function RequestUploadPage() {
                 {files.map((f, i) => {
                     const resume = getResumeInfo(f)
                     return (
-                    <div key={i} className="flex items-center gap-3 [background:var(--surface-700)] rounded-xl px-3 py-2.5">
+                    <div key={i} className="flex items-center gap-3 [background:var(--surface-700)] rounded-xl px-3 py-2.5 group">
                     <span className="text-xl">{getFileIcon(f.type)}</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{f.name}</p>
@@ -524,6 +525,14 @@ export default function RequestUploadPage() {
                         </p>
                       )}
                     </div>
+                    <button
+                      onClick={() => removeFile(i)}
+                      disabled={status === 'uploading'}
+                      aria-label={t('common.delete')}
+                      className="opacity-0 group-hover:opacity-100 focus:opacity-100 text-white/30 hover:text-red-400 transition-all disabled:hidden"
+                    >
+                      <X size={16} />
+                    </button>
                   </div>
                     )
                   })}

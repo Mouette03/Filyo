@@ -72,8 +72,8 @@
   --text-30:        rgba(12,14,42,0.40);
   --text-20:        rgba(12,14,42,0.30);
   --bg-dot-line:    rgba(12,14,42,0.04);
-  --bg-radial-1:    rgba(var(--brand-500),0.07);
-  --bg-radial-2:    rgba(var(--brand-600),0.04);
+  --bg-radial-1:    rgb(var(--brand-500) / 0.07);
+  --bg-radial-2:    rgb(var(--brand-600) / 0.04);
   --scrollbar-thumb: rgba(12,14,42,0.18);
   --scrollbar-hover: rgba(12,14,42,0.28);
 }
@@ -214,6 +214,7 @@
 /* ─── Overrides select pour le thème clair ─── */
 [data-theme="light"] select.input {
   color-scheme: light;
+  background-color: var(--input-bg);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(12,14,42,0.4)' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
 }
 

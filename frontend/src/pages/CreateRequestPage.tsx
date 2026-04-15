@@ -141,6 +141,16 @@ export default function CreateRequestPage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Password */}
+            <div>
+              <label htmlFor="create-password" className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
+                <Lock size={11} /> {t('create.passwordLabel')}
+              </label>
+              <input id="create-password" name="password" type="password" value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder={t('create.passwordPlaceholder')} className="input" />
+            </div>
+
             {/* Expiry */}
             <div>
               <label htmlFor="create-expiry" className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
@@ -154,16 +164,6 @@ export default function CreateRequestPage() {
                 <option value="2592000">{t('time.30d')}</option>
                 <option value="">{t('common.never')}</option>
               </select>
-            </div>
-
-            {/* Max files */}
-            <div>
-              <label htmlFor="create-max-files" className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
-                <Hash size={11} /> {t('create.maxFilesLabel')}
-              </label>
-              <input id="create-max-files" name="maxFiles" type="number" min="1" value={maxFiles}
-                onChange={e => setMaxFiles(e.target.value)}
-                placeholder={t('create.maxFilesPlaceholder')} className="input" />
             </div>
 
             {/* Max size */}
@@ -187,14 +187,14 @@ export default function CreateRequestPage() {
                 placeholder={t('create.maxSizePlaceholder')} className="input" />
             </div>
 
-            {/* Password */}
+            {/* Max files */}
             <div>
-              <label htmlFor="create-password" className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
-                <Lock size={11} /> {t('create.passwordLabel')}
+              <label htmlFor="create-max-files" className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
+                <Hash size={11} /> {t('create.maxFilesLabel')}
               </label>
-              <input id="create-password" name="password" type="password" value={password}
-                onChange={e => setPassword(e.target.value)}
-                placeholder={t('create.passwordPlaceholder')} className="input" />
+              <input id="create-max-files" name="maxFiles" type="number" min="1" value={maxFiles}
+                onChange={e => setMaxFiles(e.target.value)}
+                placeholder={t('create.maxFilesPlaceholder')} className="input" />
             </div>
           </div>
 
