@@ -52,9 +52,9 @@ export default function App() {
         position="top-right"
         toastOptions={{
           style: {
-            background: '#1c1f3a',
-            color: '#fff',
-            border: '1px solid rgba(255,255,255,0.1)',
+            background: 'var(--surface-800)',
+            color: 'var(--text-base)',
+            border: '1px solid var(--glass-border)',
             borderRadius: '12px',
           },
           success: { iconTheme: { primary: '#5c6bfa', secondary: '#fff' } },
