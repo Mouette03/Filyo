@@ -48,7 +48,7 @@ export default function LoginPage() {
     setLoading(true)
     try {
       const res = await login(email, password)
-      setAuth(res.data.token, res.data.user)
+      setAuth(res.data.user)
       toast.success(t('toast.welcome', { name: res.data.user.name }))
       navigate('/')
     } catch (err: any) {
@@ -70,7 +70,7 @@ export default function LoginPage() {
     try {
       await registerUser({ email, name, password })
       const res = await login(email, password)
-      setAuth(res.data.token, res.data.user)
+      setAuth(res.data.user)
       toast.success(t('toast.adminCreated', { name: res.data.user.name }))
       navigate('/')
     } catch (err: any) {
@@ -91,7 +91,7 @@ export default function LoginPage() {
     try {
       await registerUser({ email, name, password })
       const res = await login(email, password)
-      setAuth(res.data.token, res.data.user)
+      setAuth(res.data.user)
       toast.success(t('toast.welcome', { name: res.data.user.name }))
       navigate('/')
     } catch (err: any) {

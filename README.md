@@ -137,6 +137,37 @@ If you run Filyo behind a reverse proxy (Traefik, Nginx, etc.), set `TRUST_PROXY
 
 ---
 
+## 🍪 Authentication cookie
+
+Filyo stores the JWT in an **HttpOnly cookie** (named `token`) so it is never accessible from JavaScript, which prevents XSS-based token theft.
+
+| Context | `secure` flag | `sameSite` flag |
+|---|---|---|
+| **Production** (`NODE_ENV=production`) | `true` — HTTPS only | `Strict` |
+| **Development** (`NODE_ENV=development`) | `false` | `Lax` |
+
+### Development (Vite + backend on separate ports)
+
+Vite (port 5173) proxies API calls to the backend (port 3001). The `vite.config.ts` proxy handles this automatically — cookies are sent because both are treated as same-origin.
+
+```ts
+// vite.config.ts — already configured
+server: {
+  proxy: {
+    '/api': 'http://localhost:3001'
+  }
+}
+```
+
+### Production (Docker)
+
+In the default Docker image, frontend and backend share the same origin (port 3001), so cookies work out of the box without any additional configuration.
+
+> [!WARNING]
+> The cookie is automatically set to `secure: true` in production. Make sure Filyo is served over **HTTPS** in production, otherwise the browser will reject the cookie and users will not be able to log in.
+
+---
+
 ## 🗄️ SQLite vs MariaDB
 
 | | SQLite | MariaDB |
@@ -312,6 +343,37 @@ Si vous exécutez Filyo derrière un reverse proxy (Traefik, Nginx, etc.), défi
 | `true` | Fait confiance à tous les proxies (pratique mais moins sécurisé) |
 | `127.0.0.1` | Fait confiance uniquement au proxy local (recommandé) |
 | `10.0.0.0/8` | Fait confiance à une plage IP / CIDR spécifique |
+
+---
+
+## 🍪 Cookie d'authentification
+
+Filyo stocke le JWT dans un **cookie HttpOnly** (nommé `token`) afin qu'il ne soit jamais accessible depuis JavaScript, ce qui empêche le vol de token par XSS.
+
+| Contexte | Flag `secure` | Flag `sameSite` |
+|---|---|---|
+| **Production** (`NODE_ENV=production`) | `true` — HTTPS uniquement | `Strict` |
+| **Développement** (`NODE_ENV=development`) | `false` | `Lax` |
+
+### Développement (Vite + backend sur des ports séparés)
+
+Vite (port 5173) proxifie les appels API vers le backend (port 3001). Le proxy `vite.config.ts` gère cela automatiquement — les cookies sont envoyés car les deux sont traités comme étant de la même origine.
+
+```ts
+// vite.config.ts — déjà configuré
+server: {
+  proxy: {
+    '/api': 'http://localhost:3001'
+  }
+}
+```
+
+### Production (Docker)
+
+Dans l'image Docker par défaut, le frontend et le backend partagent la même origine (port 3001), donc les cookies fonctionnent sans configuration supplémentaire.
+
+> [!WARNING]
+> Le cookie est automatiquement défini avec `secure: true` en production. Assurez-vous que Filyo est servi en **HTTPS** en production, sinon le navigateur rejettera le cookie et les utilisateurs ne pourront pas se connecter.
 
 ---
 

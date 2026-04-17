@@ -3,7 +3,7 @@ import { Upload, LayoutDashboard, ArrowDownUp, Plus, Settings, Users, LogOut, Ch
 import { useState, useEffect, useRef } from 'react'
 import { useAuthStore } from '../stores/useAuthStore'
 import { useAppSettingsStore } from '../stores/useAppSettingsStore'
-import { getSettings } from '../api/client'
+import { getSettings, logoutApi } from '../api/client'
 import toast from 'react-hot-toast'
 import { useT } from '../i18n'
 import LanguageSwitcher from './LanguageSwitcher'
@@ -46,7 +46,8 @@ export default function Layout() {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try { await logoutApi() } catch { /* ignore */ }
     logout()
     toast.success(t('toast.loggedOut'))
     navigate('/login')

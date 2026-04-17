@@ -1,5 +1,6 @@
 import Fastify, { FastifyRequest, FastifyReply } from 'fastify'
 import cors from '@fastify/cors'
+import cookie from '@fastify/cookie'
 import multipart from '@fastify/multipart'
 import jwt from '@fastify/jwt'
 import staticFiles from '@fastify/static'
@@ -109,10 +110,14 @@ async function bootstrap() {
     credentials: true
   })
 
+  // Cookie — doit être enregistré avant JWT
+  await app.register(cookie)
+
   // JWT
   if (!process.env.JWT_SECRET) throw new Error('JWT_SECRET must be set (use a random 32+ character string)')
   await app.register(jwt, {
-    secret: process.env.JWT_SECRET
+    secret: process.env.JWT_SECRET,
+    cookie: { cookieName: 'token', signed: false }
   })
 
   // Sécurité HTTP headers

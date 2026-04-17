@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuthStore } from '../stores/useAuthStore'
-import { checkSetup } from '../api/client'
+import { checkSetup, getMe } from '../api/client'
 
 interface Props {
   children: React.ReactNode
@@ -9,17 +9,41 @@ interface Props {
 }
 
 export default function ProtectedRoute({ children, adminOnly = false }: Props) {
-  const { isAuthenticated, isAdmin } = useAuthStore()
+  const { isAuthenticated, isAdmin, setAuth } = useAuthStore()
   const [setupNeeded, setSetupNeeded] = useState<boolean | null>(null)
+  const [authChecked, setAuthChecked] = useState(isAuthenticated)
 
   useEffect(() => {
-    checkSetup()
-      .then(r => setSetupNeeded(r.data.setupNeeded))
-      .catch(() => setSetupNeeded(false))
+    let cancelled = false
+
+    const init = async () => {
+      try {
+        const setupRes = await checkSetup()
+        if (cancelled) return
+        setSetupNeeded(setupRes.data.setupNeeded)
+      } catch {
+        if (!cancelled) setSetupNeeded(false)
+        return
+      }
+
+      // Si le store ne contient pas de session, tenter de la restaurer via le cookie
+      if (!isAuthenticated) {
+        try {
+          const meRes = await getMe()
+          if (!cancelled) setAuth(meRes.data)
+        } catch { /* cookie absent ou expiré */ }
+      }
+
+      if (!cancelled) setAuthChecked(true)
+    }
+
+    init()
+    return () => { cancelled = true }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // En attente de la réponse du serveur
-  if (setupNeeded === null) return null
+  if (setupNeeded === null || !authChecked) return null
 
   // Si setup nécessaire, forcer la page de login (mode création compte admin)
   if (setupNeeded) return <Navigate to="/login" replace />

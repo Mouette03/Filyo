@@ -3,14 +3,8 @@ import { useAuthStore } from '../stores/useAuthStore'
 
 const api = axios.create({
   baseURL: '/api',
-  headers: { 'Content-Type': 'application/json' }
-})
-
-// Injecter le token JWT sur chaque requête
-api.interceptors.request.use(config => {
-  const token = useAuthStore.getState().token
-  if (token) config.headers.Authorization = `Bearer ${token}`
-  return config
+  headers: { 'Content-Type': 'application/json' },
+  withCredentials: true
 })
 
 // Déconnecter si le token est expiré
@@ -29,7 +23,9 @@ api.interceptors.response.use(
 )
 
 // ---- Auth ----
+export const logoutApi = () => api.post('/auth/logout')
 export const checkSetup = () => api.get('/auth/setup')
+export const getMe = () => api.get('/auth/me')
 
 export const login = (email: string, password: string) =>
   api.post('/auth/login', { email, password })
