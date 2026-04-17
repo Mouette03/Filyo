@@ -68,7 +68,8 @@ export default function RequestUploadPage() {
         break
       } catch {}
     }
-  }, []) = useState<FieldReq>('optional')
+  }, [])
+  const [nameReq, setNameReq] = useState<FieldReq>('optional')
   const [emailReq, setEmailReq] = useState<FieldReq>('optional')
   const [msgReq, setMsgReq] = useState<FieldReq>('optional')
   const { t } = useT()
