@@ -37,6 +37,8 @@ export default function HomePage() {
   const [emailSending, setEmailSending] = useState(false)
   const [emailSent, setEmailSent] = useState(false)
   const uploadExpiresAtRef = useRef<string | null>(null)
+  const tusUploadRef = useRef<tus.Upload | null>(null)
+  const abortedRef = useRef(false)
 
   const onDrop = useCallback((accepted: File[]) => {
     setFiles(prev => [...prev, ...accepted])
@@ -145,19 +147,24 @@ export default function HomePage() {
               resolve()
             },
             onError: (err: Error) => {
+              const wasAborted = abortedRef.current
+              abortedRef.current = false
               const remainingBytes = file.size - lastBytesUploaded
               const remaining = formatBytes(remainingBytes)
               const expiresDisplay = uploadExpiresAtRef.current
                 ? new Date(uploadExpiresAtRef.current).toLocaleString()
                 : null
               if (expiresDisplay) {
-                toast.error(t('request.resumeProgress', { remaining, expires: expiresDisplay }), { duration: 8000 })
+                toast(t('request.resumeProgress', { remaining, expires: expiresDisplay }), { duration: 10000, icon: '⏸' })
+              } else if (wasAborted) {
+                toast(t('home.uploadPaused'), { duration: 8000, icon: '⏸' })
               } else {
                 toast.error(t('toast.uploadFailed'))
               }
               reject(err)
             }
           })
+          tusUploadRef.current = tusUpload
           tusUpload.findPreviousUploads().then((prev: tus.PreviousUpload[]) => {
             if (prev.length > 0) {
               tusUpload.resumeFromPreviousUpload(prev[0])
@@ -212,6 +219,11 @@ export default function HomePage() {
   }
 
   const closeModal = () => { setShowShareModal(false); setResults([]); setEmailTo(''); setEmailSent(false) }
+
+  const handleAbortUpload = () => {
+    abortedRef.current = true
+    tusUploadRef.current?.abort()
+  }
 
   const copyLink = async (token: string) => {
     const url = `${window.location.origin}/s/${token}`
@@ -504,33 +516,38 @@ export default function HomePage() {
                   style={{ width: `${progress}%` }}
                 />
               </div>
-              {progressLabel && (
-                <p className="text-xs text-brand-300/80 mt-1.5 text-center font-medium">
-                  {progressLabel}{uploadSpeed > 0 ? ` · ${formatSpeed(uploadSpeed)}` : ''}
-                </p>
-              )}
             </div>
           )}
 
-          <button
-            onClick={handleUpload}
-            disabled={uploading}
-            className="btn-primary w-full flex flex-col items-center justify-center gap-1 py-3 mt-2"
-          >
-            {uploading ? (
-              <>
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  {t('home.uploading', { pct: String(progress) })}
-                </div>
-              </>
-            ) : (
-              <>
-                <Upload size={16} />
-                {files.length > 1 ? t('home.uploadBtnMultiple', { count: String(files.length) }) : t('home.uploadBtnSingle')}
-              </>
-            )}
-          </button>
+          {uploading ? (
+            <div className="flex gap-2 mt-2">
+              <button
+                disabled
+                className="btn-primary flex-1 flex items-center justify-center gap-2 py-3 opacity-80 cursor-not-allowed"
+              >
+                {progressLabel
+                  ? <>{progressLabel}{uploadSpeed > 0 ? <span className="text-white/60"> · {formatSpeed(uploadSpeed)}</span> : null}</>
+                  : t('home.uploading', { pct: String(progress) })}
+              </button>
+              <button
+                onClick={handleAbortUpload}
+                className="btn-secondary flex items-center gap-1.5 px-4 py-3"
+                title={t('home.abortUpload')}
+              >
+                <X size={15} />
+                {t('home.abortUpload')}
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={handleUpload}
+              disabled={uploading}
+              className="btn-primary w-full flex flex-col items-center justify-center gap-1 py-3 mt-2"
+            >
+              <Upload size={16} />
+              {files.length > 1 ? t('home.uploadBtnMultiple', { count: String(files.length) }) : t('home.uploadBtnSingle')}
+            </button>
+          )}
         </div>
       )}
 

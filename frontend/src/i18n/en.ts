@@ -76,6 +76,8 @@ export const en = {
   'home.maxDlLabel': 'Max downloads',
   'home.uploading': 'Uploading… {{pct}}%',
   'home.finalizing': 'Finalizing…',
+  'home.abortUpload': 'Pause upload',
+  'home.uploadPaused': 'Upload paused · Re-drop the same file to resume',
   'home.uploadBtnMultiple': 'Upload {{count}} files',
   'home.uploadBtnSingle': 'Upload file',
   'home.modal.title': 'Files sent!',

@@ -494,6 +494,6 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
       reply.raw.once('close', resolve)
     })
   }
-  app.all('/:token/tus', handleTus)
-  app.all('/:token/tus/*', handleTus)
+  app.all('/tus', handleTus)
+  app.all('/tus/*', handleTus)
 }

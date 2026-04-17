@@ -76,6 +76,8 @@ export const fr = {
   'home.maxDlLabel': 'Téléchargements max',
   'home.uploading': 'Envoi en cours… {{pct}}%',
   'home.finalizing': 'Finalisation…',
+  'home.abortUpload': 'Mettre en pause',
+  'home.uploadPaused': 'Envoi mis en pause · Redéposez le même fichier pour reprendre',
   'home.uploadBtnMultiple': 'Envoyer {{count}} fichiers',
   'home.uploadBtnSingle': 'Envoyer le fichier',
   'home.modal.title': 'Fichiers envoyés !',

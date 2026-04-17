@@ -172,9 +172,9 @@ export default function RequestUploadPage() {
                 ? new Date(uploadExpiresAtRef.current).toLocaleString()
                 : null
               if (expiresDisplay) {
-                toast.error(t('request.resumeProgress', { remaining, expires: expiresDisplay }), { duration: 8000 })
+                toast(t('request.resumeProgress', { remaining, expires: expiresDisplay }), { duration: 10000, icon: '⏸' })
               } else {
-                toast.error(t('toast.sendError'))
+                toast(t('home.uploadPaused'), { duration: 8000, icon: '⏸' })
               }
               reject(err)
             }
@@ -414,26 +414,18 @@ export default function RequestUploadPage() {
                     style={{ width: `${progress}%` }}
                   />
                 </div>
-                {progressLabel && (
-                  <p className="text-xs text-brand-300/80 mt-1.5 text-center font-medium">
-                    {progressLabel}{uploadSpeed > 0 ? ` · ${formatSpeed(uploadSpeed)}` : ''}
-                  </p>
-                )}
               </div>
             )}
 
             <button
               onClick={handleSubmit}
               disabled={!files.length || status === 'uploading'}
-              className="btn-primary w-full flex flex-col items-center justify-center gap-1 py-3"
+              className="btn-primary w-full flex items-center justify-center gap-2 py-3"
             >
               {status === 'uploading' ? (
-                <>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    {t('request.uploading', { pct: String(progress) })}
-                  </div>
-                </>
+                progressLabel
+                  ? <>{progressLabel}{uploadSpeed > 0 ? <span className="text-white/60"> · {formatSpeed(uploadSpeed)}</span> : null}</>
+                  : t('request.uploading', { pct: String(progress) })
               ) : (
                 <>
                   <Upload size={16} />
