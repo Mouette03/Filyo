@@ -1,0 +1,69 @@
+name: 🧪 Notif Discord Beta Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      sha_tag:
+        description: "SHA de l'image (ex: sha-9878b78)"
+        required: true
+        type: string
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Récupérer les commits depuis le dernier tag stable
+        id: commits
+        run: |
+          LAST_TAG=$(git tag --sort=-creatordate | grep -v -E 'beta|alpha|rc' | head -n 1)
+          if [ -z "$LAST_TAG" ]; then
+            RAW=$(git log --oneline -10 --pretty=format:"%s")
+            LAST_TAG="début du projet"
+          else
+            RAW=$(git log ${LAST_TAG}..HEAD --pretty=format:"%s")
+          fi
+          echo "last_tag=$LAST_TAG" >> $GITHUB_OUTPUT
+          echo "raw<<EOF" >> $GITHUB_OUTPUT
+          echo "$RAW" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Résumer les commits avec l'IA
+        id: summary
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          COMMITS="${{ steps.commits.outputs.raw }}"
+          RESPONSE=$(curl -s https://models.inference.ai.azure.com/chat/completions \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"model\": \"gpt-4o-mini\",
+              \"messages\": [{
+                \"role\": \"user\",
+                \"content\": \"Voici une liste de commits git pour une release bêta. Fais un résumé clair et lisible en français, groupé par thème (nouveautés, corrections, etc.), avec des emojis. Maximum 10 lignes. Commits :\n${COMMITS}\"
+              }],
+              \"max_tokens\": 400
+            }")
+          SUMMARY=$(echo "$RESPONSE" | jq -r '.choices[0].message.content')
+          echo "summary<<EOF" >> $GITHUB_OUTPUT
+          echo "$SUMMARY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Envoyer notif Discord
+        uses: tsickert/discord-webhook@v6.0.0
+        with:
+          webhook-url: ${{ secrets.DISCORD_TAG }}
+          embed-title: "🧪 Beta Release"
+          embed-description: |
+            **Image :** `ghcr.io/mouette03/filyo:${{ github.event.inputs.sha_tag }}`
+            **Déclenché par :** ${{ github.actor }}
+            **Changements depuis `${{ steps.commits.outputs.last_tag }}` :**
+
+            ${{ steps.summary.outputs.summary }}
+          embed-color: 16753920
+          username: "GitHub Beta Bot"
