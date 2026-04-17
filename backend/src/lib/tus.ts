@@ -127,6 +127,7 @@ export function createFilesTusServer(app: FastifyInstance): Server {
       }
 
       // Ajouter userId aux métadonnées pour le retrouver dans onUploadFinish
+      app.log.info({ uploadId: upload.id, filename: upload.metadata?.filename, size: upload.size }, '⬆️  TUS file upload started')
       return { metadata: { ...(upload.metadata ?? {}), _userId: dbUser!.id } }
     },
 
@@ -182,6 +183,8 @@ export function createFilesTusServer(app: FastifyInstance): Server {
       // Nettoyer le fichier .info TUS
       await fs.remove(path.join(tusDir, `${upload.id}.info`)).catch(() => {})
 
+      app.log.info({ uploadId: upload.id, filename, size: upload.size }, '✅ TUS file upload completed')
+
       // Stocker le résultat pour récupération par le client
       tusFileResultsMap.set(upload.id, {
         id: file.id,
@@ -202,7 +205,7 @@ export function createFilesTusServer(app: FastifyInstance): Server {
 }
 
 // ── TUS serveur — upload requests (public, sans auth) ─────────────────────────
-export function createRequestsTusServer(): Server {
+export function createRequestsTusServer(app: FastifyInstance): Server {
   const tusDir = getTusDir('tus-requests')
 
   const server = new Server({
@@ -261,6 +264,7 @@ export function createRequestsTusServer(): Server {
       }
 
       // Stocker l'uploadRequestId dans les métadonnées
+      app.log.info({ uploadId: upload.id, filename: meta.filename, size: upload.size }, '⬆️  TUS request upload started')
       return { metadata: { ...meta, _uploadRequestId: request!.id } }
     },
 
@@ -300,6 +304,8 @@ export function createRequestsTusServer(): Server {
         await fs.remove(destPath).catch(() => {})
         throw err
       })
+
+      app.log.info({ uploadId: upload.id, filename, size: upload.size, uploadRequestId }, '✅ TUS request upload completed')
 
       // Nettoyer le fichier .info TUS
       await fs.remove(path.join(tusDir, `${upload.id}.info`)).catch(() => {})

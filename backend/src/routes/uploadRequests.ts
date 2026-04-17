@@ -30,7 +30,7 @@ import { createRequestsTusServer } from '../lib/tus'
  */
 export async function uploadRequestRoutes(app: FastifyInstance) {
   const auth = { onRequest: [app.authenticate] }
-  const tusServer = createRequestsTusServer()
+  const tusServer = createRequestsTusServer(app)
 
   /** Construit le filtre Prisma pour un upload request : admin voit tout, owner voit le sien. */
   function ownerWhere(req: FastifyRequest, id: string) {
