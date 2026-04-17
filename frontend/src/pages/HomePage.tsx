@@ -205,6 +205,12 @@ export default function HomePage() {
               resolve()
             },
             onError: (err: Error) => {
+              const status = (err as any).originalResponse?.getStatus?.()
+              if (status === 429) {
+                toast.error(t('toast.tooManyRequests'))
+                reject(err)
+                return
+              }
               const remainingBytes = file.size - lastBytesUploaded
               const expiry = uploadExpiresAtRef.current
               if (expiry) {

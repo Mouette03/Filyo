@@ -198,7 +198,13 @@ export default function RequestUploadPage() {
             },
             onSuccess: () => { resolve() },
             onError: (err: Error) => {
-              const status401 = (err as any).originalResponse?.getStatus?.() === 401
+              const status = (err as any).originalResponse?.getStatus?.()
+              if (status === 429) {
+                toast.error(t('toast.tooManyRequests'))
+                reject(err)
+                return
+              }
+              const status401 = status === 401
               if (status401) {
                 toast.error(t(!password.trim() ? 'toast.unauthorized' : 'toast.passwordWrong'))
                 reject(err)
