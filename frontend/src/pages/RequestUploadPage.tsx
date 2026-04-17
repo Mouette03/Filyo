@@ -36,7 +36,6 @@ export default function RequestUploadPage() {
   const [password, setPassword] = useState('')
   const [progress, setProgress] = useState(0)
   const [progressLabel, setProgressLabel] = useState('')
-  const [uploadSpeed, setUploadSpeed] = useState(0)
   const uploadExpiresAtRef = useRef<string | null>(null)
   const tusUploadRef = useRef<tus.Upload | null>(null)
 
@@ -133,7 +132,6 @@ export default function RequestUploadPage() {
     setStatus('uploading')
     setProgress(0)
     setProgressLabel('')
-    setUploadSpeed(0)
     uploadExpiresAtRef.current = null
 
     // Upload TUS (resumable) — toujours utilisé désormais
@@ -167,7 +165,6 @@ export default function RequestUploadPage() {
               setProgress(globalPct)
               const elapsed = (Date.now() - startTime) / 1000
               const speed = elapsed > 0.5 ? bytesUploaded / elapsed : 0
-              if (speed > 0) setUploadSpeed(speed)
               const speedStr = speed > 0 ? ` · ${formatSpeed(speed)}` : ''
               setProgressLabel(`${globalPct}%${speedStr}`)
             },
@@ -227,10 +224,8 @@ export default function RequestUploadPage() {
       else if (err.response?.status === 429) toast.error(t('toast.tooManyRequests'))
       // erreur TUS d\u00e9j\u00e0 affich\u00e9e dans onError
       setStatus('ready')
-      setUploadSpeed(0)
     } finally {
       setProgressLabel('')
-      setUploadSpeed(0)
     }
   }
 

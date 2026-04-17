@@ -28,7 +28,6 @@ export default function HomePage() {
   const [uploading, setUploading] = useState(false)
   const [progress, setProgress] = useState(0)
   const [progressLabel, setProgressLabel] = useState('')
-  const [uploadSpeed, setUploadSpeed] = useState(0)
   const [results, setResults] = useState<UploadedResult[]>([])
   const [hideFilenames, setHideFilenames] = useState(false)
   const [copiedToken, setCopiedToken] = useState<string | null>(null)
@@ -142,7 +141,6 @@ export default function HomePage() {
     setUploading(true)
     setProgress(0)
     setProgressLabel('')
-    setUploadSpeed(0)
     uploadExpiresAtRef.current = null
 
     // Chemin TUS (resumable) — toujours utilisé désormais
@@ -182,7 +180,6 @@ export default function HomePage() {
               setProgress(globalPct)
               const elapsed = (Date.now() - startTime) / 1000
               const speed = elapsed > 0.5 ? bytesUploaded / elapsed : 0
-              if (speed > 0) setUploadSpeed(speed)
               const speedStr = speed > 0 ? ` · ${formatSpeed(speed)}` : ''
               setProgressLabel(`${globalPct}%${speedStr}`)
               const now2 = Date.now()
@@ -254,7 +251,6 @@ export default function HomePage() {
     } finally {
       setUploading(false)
       setProgressLabel('')
-      setUploadSpeed(0)
     }
   }
 
