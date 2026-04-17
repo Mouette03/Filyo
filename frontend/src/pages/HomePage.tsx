@@ -38,7 +38,6 @@ export default function HomePage() {
   const [emailSent, setEmailSent] = useState(false)
   const uploadExpiresAtRef = useRef<string | null>(null)
   const tusUploadRef = useRef<tus.Upload | null>(null)
-  const abortedRef = useRef(false)
   const [pendingResume, setPendingResume] = useState<{ url: string; filename: string; remaining: number; expiry: string } | null>(null)
 
   // Bloquer navigation pendant upload en cours
@@ -213,8 +212,6 @@ export default function HomePage() {
               resolve()
             },
             onError: (err: Error) => {
-              const wasAborted = abortedRef.current
-              abortedRef.current = false
               const remainingBytes = file.size - lastBytesUploaded
               const remaining = formatBytes(remainingBytes)
               const expiresDisplay = uploadExpiresAtRef.current
@@ -222,8 +219,6 @@ export default function HomePage() {
                 : null
               if (expiresDisplay) {
                 toast(t('request.resumeProgress', { remaining, expires: expiresDisplay }), { duration: 10000, icon: '⏸' })
-              } else if (wasAborted) {
-                toast(t('home.uploadPaused'), { duration: 8000, icon: '⏸' })
               } else {
                 toast.error(t('toast.uploadFailed'))
               }
@@ -291,11 +286,6 @@ export default function HomePage() {
   }
 
   const closeModal = () => { setShowShareModal(false); setResults([]); setEmailTo(''); setEmailSent(false) }
-
-  const handleAbortUpload = () => {
-    abortedRef.current = true
-    tusUploadRef.current?.abort()
-  }
 
   const copyLink = async (token: string) => {
     const url = `${window.location.origin}/s/${token}`
@@ -611,19 +601,11 @@ export default function HomePage() {
             <div className="flex gap-2 mt-2">
               <button
                 disabled
-                className="btn-primary flex-1 flex items-center justify-center gap-2 py-3 opacity-80 cursor-not-allowed"
+                className="btn-primary w-full flex items-center justify-center gap-2 py-3 opacity-80 cursor-not-allowed"
               >
                 {progressLabel
                   ? <>{progressLabel}</>
                   : t('home.uploading', { pct: String(progress) })}
-              </button>
-              <button
-                onClick={handleAbortUpload}
-                className="btn-secondary flex items-center gap-1.5 px-4 py-3"
-                title={t('home.abortUpload')}
-              >
-                <X size={15} />
-                {t('home.abortUpload')}
               </button>
             </div>
           ) : (

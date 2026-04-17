@@ -179,12 +179,14 @@ export default function RequestUploadPage() {
               }
             },
             onSuccess: () => { resolve() },
-            onError: (err: Error) => {              const status401 = (err as any).originalResponse?.getStatus?.() === 401
+            onError: (err: Error) => {
+              const status401 = (err as any).originalResponse?.getStatus?.() === 401
               if (status401) {
                 toast.error(t(info?.hasPassword ? 'toast.passwordWrong' : 'toast.unauthorized'))
                 reject(err)
                 return
-              }              const remainingBytes = file.size - lastBytesUploaded
+              }
+              const remainingBytes = file.size - lastBytesUploaded
               const remaining = formatBytes(remainingBytes)
               const expiresDisplay = uploadExpiresAtRef.current
                 ? new Date(uploadExpiresAtRef.current).toLocaleString()
@@ -449,7 +451,7 @@ export default function RequestUploadPage() {
             >
               {status === 'uploading' ? (
                 progressLabel
-                  ? <>{progressLabel}{uploadSpeed > 0 ? <span className="text-white/60"> · {formatSpeed(uploadSpeed)}</span> : null}</>
+                  ? <>{progressLabel}</>
                   : t('request.uploading', { pct: String(progress) })
               ) : (
                 <>
