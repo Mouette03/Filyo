@@ -7,6 +7,11 @@ on:
         description: "SHA de l'image (ex: sha-9878b78)"
         required: true
         type: string
+      branch:
+        description: "Branche à analyser (ex: develop)"
+        required: true
+        default: "develop"
+        type: string
 
 jobs:
   notify:
@@ -16,6 +21,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.event.inputs.branch }}
 
       - name: Récupérer les commits depuis le dernier tag stable
         id: commits
@@ -61,6 +67,7 @@ jobs:
           embed-title: "🧪 Beta Release"
           embed-description: |
             **Image :** `ghcr.io/mouette03/filyo:${{ github.event.inputs.sha_tag }}`
+            **Branche :** `${{ github.event.inputs.branch }}`
             **Déclenché par :** ${{ github.actor }}
             **Changements depuis `${{ steps.commits.outputs.last_tag }}` :**
 
