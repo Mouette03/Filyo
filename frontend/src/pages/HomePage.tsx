@@ -206,12 +206,9 @@ export default function HomePage() {
             },
             onError: (err: Error) => {
               const remainingBytes = file.size - lastBytesUploaded
-              const remaining = formatBytes(remainingBytes)
-              const expiresDisplay = uploadExpiresAtRef.current
-                ? new Date(uploadExpiresAtRef.current).toLocaleString()
-                : null
-              if (expiresDisplay) {
-                toast(t('request.resumeProgress', { remaining, expires: expiresDisplay }), { duration: 10000, icon: '⏸' })
+              const expiry = uploadExpiresAtRef.current
+              if (expiry) {
+                setPendingResume({ url: tusUploadRef.current?.url ?? '', filename: file.name, remaining: remainingBytes, expiry })
               } else {
                 toast.error(t('toast.uploadFailed'))
               }
