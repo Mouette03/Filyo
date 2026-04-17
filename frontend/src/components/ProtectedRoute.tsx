@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuthStore } from '../stores/useAuthStore'
-import { checkSetup } from '../api/client'
-import axios from 'axios'
+import { checkSetup, getMe } from '../api/client'
 
 interface Props {
   children: React.ReactNode
@@ -30,7 +29,7 @@ export default function ProtectedRoute({ children, adminOnly = false }: Props) {
       // Si le store ne contient pas de session, tenter de la restaurer via le cookie
       if (!isAuthenticated) {
         try {
-          const meRes = await axios.get('/api/auth/me', { withCredentials: true })
+          const meRes = await getMe()
           if (!cancelled) setAuth(meRes.data)
         } catch { /* cookie absent ou expiré */ }
       }
