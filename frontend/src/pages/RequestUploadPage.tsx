@@ -38,6 +38,7 @@ export default function RequestUploadPage() {
   const [progressLabel, setProgressLabel] = useState('')
   const uploadExpiresAtRef = useRef<string | null>(null)
   const tusUploadRef = useRef<tus.Upload | null>(null)
+  const [pendingResume, setPendingResume] = useState<{ url: string; filename: string; remaining: number; expiry: string } | null>(null)
 
   const tusExpiryKey = (url: string) => `tus-expiry:${url}`
   const storeTusExpiry = (url: string | null | undefined, expiry: string) => {
@@ -48,7 +49,26 @@ export default function RequestUploadPage() {
     if (!url) return null
     try { return localStorage.getItem(tusExpiryKey(url)) } catch { return null }
   }
-  const [nameReq, setNameReq] = useState<FieldReq>('optional')
+
+  // Vérifier au montage si un upload a été interrompu
+  useEffect(() => {
+    const now = Date.now()
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i)
+      if (!key?.startsWith('tus-expiry:')) continue
+      const url = key.slice('tus-expiry:'.length)
+      const expiry = localStorage.getItem(key)
+      if (!expiry) continue
+      if (new Date(expiry).getTime() <= now) { localStorage.removeItem(key); continue }
+      const infoRaw = localStorage.getItem(`tus-info:${url}`)
+      if (!infoRaw) continue
+      try {
+        const info2 = JSON.parse(infoRaw)
+        setPendingResume({ url, filename: info2.filename, remaining: info2.totalSize - info2.bytesUploaded, expiry })
+        break
+      } catch {}
+    }
+  }, []) = useState<FieldReq>('optional')
   const [emailReq, setEmailReq] = useState<FieldReq>('optional')
   const [msgReq, setMsgReq] = useState<FieldReq>('optional')
   const { t } = useT()
@@ -184,12 +204,9 @@ export default function RequestUploadPage() {
                 return
               }
               const remainingBytes = file.size - lastBytesUploaded
-              const remaining = formatBytes(remainingBytes)
-              const expiresDisplay = uploadExpiresAtRef.current
-                ? new Date(uploadExpiresAtRef.current).toLocaleString()
-                : null
-              if (expiresDisplay) {
-                toast(t('request.resumeProgress', { remaining, expires: expiresDisplay }), { duration: 10000, icon: '⏸' })
+              const expiry = uploadExpiresAtRef.current
+              if (expiry) {
+                setPendingResume({ url: tusUploadRef.current?.url ?? '', filename: file.name, remaining: remainingBytes, expiry })
               } else {
                 toast(t('home.uploadPaused'), { duration: 8000, icon: '⏸' })
               }
@@ -385,6 +402,22 @@ export default function RequestUploadPage() {
                 </label>
                 <input id="uploader-password" type="password" value={password} onChange={e => setPassword(e.target.value)}
                   placeholder={t('request.passwordPlaceholder')} className="input text-sm py-2.5" />
+              </div>
+            )}
+
+            {/* Bannière reprise upload interrompu */}
+            {pendingResume && status !== 'uploading' && (
+              <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 px-4 py-3 flex items-start gap-3">
+                <span className="text-lg text-amber-400 mt-0.5">⏸</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-amber-300 truncate">{pendingResume.filename}</p>
+                  <p className="text-xs text-white/60 mt-0.5">
+                    {t('home.pendingResume', { remaining: formatBytes(pendingResume.remaining), expires: new Date(pendingResume.expiry).toLocaleString() })}
+                  </p>
+                </div>
+                <button onClick={() => setPendingResume(null)} className="text-white/30 hover:text-white/60 flex-shrink-0">
+                  <X size={14} />
+                </button>
               </div>
             )}
 

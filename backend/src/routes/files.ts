@@ -178,6 +178,8 @@ export async function fileRoutes(app: FastifyInstance) {
       reply.raw.once('close', resolve)
     })
   }
+  // POST init : rate limit strict (création d'upload = vérification auth/mot de passe)
+  app.post('/tus', { config: { rateLimit: { max: 10, timeWindow: '1 minute', keyGenerator: (req) => req.ip } } }, handleTus)
   app.all('/tus', handleTus)
   app.all('/tus/*', handleTus)
 

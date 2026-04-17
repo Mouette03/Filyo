@@ -494,6 +494,8 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
       reply.raw.once('close', resolve)
     })
   }
+  // POST init : rate limit strict par IP+token (création d'upload = vérification mot de passe)
+  app.post('/tus', { config: { rateLimit: { max: 5, timeWindow: '1 minute', keyGenerator: (req) => req.ip } } }, handleTus)
   app.all('/tus', handleTus)
   app.all('/tus/*', handleTus)
 }
