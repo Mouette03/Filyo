@@ -206,15 +206,13 @@ async function bootstrap() {
   async function cleanupJob() {
     try {
       const result = await runScheduledCleanup()
-      if (result.deletedFiles > 0 || result.deletedRequests > 0) {
-        app.log.info(result, '🧹 Auto-cleanup completed')
-      }
+      app.log.info(result, '🧹 Auto-cleanup completed')
     } catch (err) {
       app.log.error(err, 'Auto-cleanup failed')
     }
     try {
       const deleted = await cleanupExpiredTusUploads()
-      if (deleted > 0) app.log.info({ deleted }, '🧹 Expired TUS uploads cleaned')
+      app.log.info({ deleted }, '🧹 Expired TUS uploads cleaned')
     } catch (err) {
       app.log.error(err, 'TUS cleanup failed')
     }
