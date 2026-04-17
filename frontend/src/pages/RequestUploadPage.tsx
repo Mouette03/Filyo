@@ -38,6 +38,17 @@ export default function RequestUploadPage() {
   const [progressLabel, setProgressLabel] = useState('')
   const [uploadSpeed, setUploadSpeed] = useState(0)
   const uploadExpiresAtRef = useRef<string | null>(null)
+  const tusUploadRef = useRef<tus.Upload | null>(null)
+
+  const tusExpiryKey = (url: string) => `tus-expiry:${url}`
+  const storeTusExpiry = (url: string | null | undefined, expiry: string) => {
+    if (!url) return
+    try { localStorage.setItem(tusExpiryKey(url), expiry) } catch {}
+  }
+  const loadTusExpiry = (url: string | null | undefined): string | null => {
+    if (!url) return null
+    try { return localStorage.getItem(tusExpiryKey(url)) } catch { return null }
+  }
   const [nameReq, setNameReq] = useState<FieldReq>('optional')
   const [emailReq, setEmailReq] = useState<FieldReq>('optional')
   const [msgReq, setMsgReq] = useState<FieldReq>('optional')
@@ -162,7 +173,10 @@ export default function RequestUploadPage() {
             },
             onAfterResponse: (_req: unknown, res: { getHeader: (h: string) => string | undefined }) => {
               const exp = res.getHeader('Upload-Expires')
-              if (exp) uploadExpiresAtRef.current = exp
+              if (exp) {
+                uploadExpiresAtRef.current = exp
+                storeTusExpiry(tusUploadRef.current?.url, exp)
+              }
             },
             onSuccess: () => { resolve() },
             onError: (err: Error) => {
@@ -179,10 +193,17 @@ export default function RequestUploadPage() {
               reject(err)
             }
           })
+          tusUploadRef.current = tusUpload
           tusUpload.findPreviousUploads().then((prev: tus.PreviousUpload[]) => {
             if (prev.length > 0) {
               tusUpload.resumeFromPreviousUpload(prev[0])
-              setProgressLabel(t('request.resuming'))
+              const storedExpiry = loadTusExpiry(prev[0].uploadUrl)
+              if (storedExpiry) {
+                const expiresDisplay = new Date(storedExpiry).toLocaleString()
+                toast(t('request.resumingWithExpiry', { expires: expiresDisplay }), { duration: 8000, icon: '⏸' })
+              } else {
+                setProgressLabel(t('request.resuming'))
+              }
             }
             tusUpload.start()
           })

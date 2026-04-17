@@ -435,6 +435,7 @@ export const fr = {
   'request.resumePending': 'Initialisation en cours…',
   'request.resumeAbandon': 'Abandonner',
   'request.resuming': 'Reprise en cours…',
+  'request.resumingWithExpiry': 'Reprise en cours · Possible jusqu\'au {{expires}}',
   'settings.cleanupHint': 'Délai maximum que les utilisateurs peuvent choisir pour leurs partages. Désactivé si réglé sur « Jamais ».',
   'settings.cleanupLabel': 'Délai maximum autorisé',
   'settings.cleanupSaved': 'Réglage enregistré',

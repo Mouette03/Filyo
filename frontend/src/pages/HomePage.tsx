@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { Upload, X, Copy, Check, Lock, Clock, Download, Plus, Trash2, Share2, Mail, Send, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -39,6 +39,24 @@ export default function HomePage() {
   const uploadExpiresAtRef = useRef<string | null>(null)
   const tusUploadRef = useRef<tus.Upload | null>(null)
   const abortedRef = useRef(false)
+
+  // Bloquer navigation pendant upload en cours
+  useEffect(() => {
+    if (!uploading) return
+    const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = '' }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [uploading])
+
+  const tusExpiryKey = (url: string) => `tus-expiry:${url}`
+  const storeTusExpiry = (url: string | null | undefined, expiry: string) => {
+    if (!url) return
+    try { localStorage.setItem(tusExpiryKey(url), expiry) } catch {}
+  }
+  const loadTusExpiry = (url: string | null | undefined): string | null => {
+    if (!url) return null
+    try { return localStorage.getItem(tusExpiryKey(url)) } catch { return null }
+  }
 
   const onDrop = useCallback((accepted: File[]) => {
     setFiles(prev => [...prev, ...accepted])
@@ -133,7 +151,10 @@ export default function HomePage() {
             },
             onAfterResponse: (_req: unknown, res: { getHeader: (h: string) => string | undefined }) => {
               const exp = res.getHeader('Upload-Expires')
-              if (exp) uploadExpiresAtRef.current = exp
+              if (exp) {
+                uploadExpiresAtRef.current = exp
+                storeTusExpiry(tusUploadRef.current?.url, exp)
+              }
             },
             onSuccess: async () => {
               const tusUrl = (tusUpload as any).url as string
@@ -168,7 +189,13 @@ export default function HomePage() {
           tusUpload.findPreviousUploads().then((prev: tus.PreviousUpload[]) => {
             if (prev.length > 0) {
               tusUpload.resumeFromPreviousUpload(prev[0])
-              setProgressLabel(t('request.resuming'))
+              const storedExpiry = loadTusExpiry(prev[0].uploadUrl)
+              if (storedExpiry) {
+                const expiresDisplay = new Date(storedExpiry).toLocaleString()
+                toast(t('request.resumingWithExpiry', { expires: expiresDisplay }), { duration: 8000, icon: '⏸' })
+              } else {
+                setProgressLabel(t('request.resuming'))
+              }
             }
             tusUpload.start()
           })

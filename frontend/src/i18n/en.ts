@@ -437,6 +437,7 @@ export const en = {
   'request.resumePending': 'Initialization in progress…',
   'request.resumeAbandon': 'Discard',
   'request.resuming': 'Resuming…',
+  'request.resumingWithExpiry': 'Resuming · Possible until {{expires}}',
   'settings.cleanupHint': 'Maximum delay users can choose for their shares. Disabled if set to "Never".',
   'settings.cleanupLabel': 'Maximum allowed delay',
   'settings.cleanupSaved': 'Setting saved',
