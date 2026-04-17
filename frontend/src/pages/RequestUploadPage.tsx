@@ -179,7 +179,7 @@ export default function RequestUploadPage() {
             onError: (err: Error) => {
               const status401 = (err as any).originalResponse?.getStatus?.() === 401
               if (status401) {
-                toast.error(t(info?.hasPassword ? 'toast.passwordWrong' : 'toast.unauthorized'))
+                toast.error(t(!password.trim() ? 'toast.unauthorized' : 'toast.passwordWrong'))
                 reject(err)
                 return
               }
