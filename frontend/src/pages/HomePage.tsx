@@ -129,7 +129,7 @@ export default function HomePage() {
               const speedStr = speed > 0 ? ` · ${formatSpeed(speed)}` : ''
               setProgressLabel(`${globalPct}%${speedStr}`)
             },
-            onAfterResponse: (_req: unknown, res: { getHeader: (h: string) => string | null }) => {
+            onAfterResponse: (_req: unknown, res: { getHeader: (h: string) => string | undefined }) => {
               const exp = res.getHeader('Upload-Expires')
               if (exp) uploadExpiresAtRef.current = exp
             },
