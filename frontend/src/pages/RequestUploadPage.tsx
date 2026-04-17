@@ -38,7 +38,7 @@ export default function RequestUploadPage() {
   const [progressLabel, setProgressLabel] = useState('')
   const uploadExpiresAtRef = useRef<string | null>(null)
   const tusUploadRef = useRef<tus.Upload | null>(null)
-  const [pendingResume, setPendingResume] = useState<{ url: string; filename: string; remaining: number; expiry: string } | null>(null)
+  const [pendingResumes, setPendingResumes] = useState<{ url: string; filename: string; remaining: number; expiry: string }[]>([])
 
   const tusExpiryKey = (url: string) => `tus-expiry:${url}`
   const storeTusExpiry = (url: string | null | undefined, expiry: string) => {
@@ -48,6 +48,17 @@ export default function RequestUploadPage() {
   const loadTusExpiry = (url: string | null | undefined): string | null => {
     if (!url) return null
     try { return localStorage.getItem(tusExpiryKey(url)) } catch { return null }
+  }
+  const storeTusInfo = (url: string | null | undefined, info: { filename: string; totalSize: number; bytesUploaded: number }) => {
+    if (!url) return
+    try { localStorage.setItem(`tus-info:${url}`, JSON.stringify(info)) } catch {}
+  }
+  const removeTusInfo = (url: string | null | undefined) => {
+    if (!url) return
+    try {
+      localStorage.removeItem(`tus-info:${url}`)
+      localStorage.removeItem(tusExpiryKey(url))
+    } catch {}
   }
 
   // Vérifier au montage si un upload a été interrompu
@@ -64,8 +75,7 @@ export default function RequestUploadPage() {
       if (!infoRaw) continue
       try {
         const info2 = JSON.parse(infoRaw)
-        setPendingResume({ url, filename: info2.filename, remaining: info2.totalSize - info2.bytesUploaded, expiry })
-        break
+        setPendingResumes(prev => [...prev, { url, filename: info2.filename, remaining: info2.totalSize - info2.bytesUploaded, expiry }])
       } catch {}
     }
   }, [])
@@ -162,6 +172,7 @@ export default function RequestUploadPage() {
       for (let fi = 0; fi < files.length; fi++) {
         const file = files[fi]
         let lastBytesUploaded = 0
+        let lastInfoWriteTime = 0
 
         await new Promise<void>((resolve, reject) => {
           const tusUpload = new tus.Upload(file, {
@@ -188,6 +199,11 @@ export default function RequestUploadPage() {
               const speed = elapsed > 0.5 ? bytesUploaded / elapsed : 0
               const speedStr = speed > 0 ? ` · ${formatSpeed(speed)}` : ''
               setProgressLabel(`${globalPct}%${speedStr}`)
+              const now2 = Date.now()
+              if (now2 - lastInfoWriteTime > 2000) {
+                lastInfoWriteTime = now2
+                storeTusInfo(tusUploadRef.current?.url, { filename: file.name, totalSize: file.size, bytesUploaded })
+              }
             },
             onAfterResponse: (_req: unknown, res: { getHeader: (h: string) => string | undefined }) => {
               const exp = res.getHeader('Upload-Expires')
@@ -196,7 +212,7 @@ export default function RequestUploadPage() {
                 storeTusExpiry(tusUploadRef.current?.url, exp)
               }
             },
-            onSuccess: () => { resolve() },
+            onSuccess: () => { const doneUrl = tusUploadRef.current?.url; removeTusInfo(doneUrl); setPendingResumes(prev => prev.filter(r => r.url !== doneUrl)); resolve() },
             onError: (err: Error) => {
               const status = (err as any).originalResponse?.getStatus?.()
               if (status === 429) {
@@ -213,7 +229,8 @@ export default function RequestUploadPage() {
               const remainingBytes = file.size - lastBytesUploaded
               const expiry = uploadExpiresAtRef.current
               if (expiry) {
-                setPendingResume({ url: tusUploadRef.current?.url ?? '', filename: file.name, remaining: remainingBytes, expiry })
+                const errUrl = tusUploadRef.current?.url ?? ''
+                setPendingResumes(prev => prev.some(r => r.url === errUrl) ? prev : [...prev, { url: errUrl, filename: file.name, remaining: remainingBytes, expiry }])
               } else {
                 toast(t('home.uploadPaused'), { duration: 8000, icon: '⏸' })
               }
@@ -412,21 +429,21 @@ export default function RequestUploadPage() {
               </div>
             )}
 
-            {/* Bannière reprise upload interrompu */}
-            {pendingResume && status !== 'uploading' && (
-              <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 px-4 py-3 flex items-start gap-3">
+            {/* Bannières reprise uploads interrompus */}
+            {pendingResumes.length > 0 && status !== 'uploading' && pendingResumes.map(pr => (
+              <div key={pr.url} className="rounded-xl bg-amber-500/10 border border-amber-500/30 px-4 py-3 flex items-start gap-3">
                 <span className="text-lg text-amber-400 mt-0.5">⏸</span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-amber-300 truncate">{pendingResume.filename}</p>
+                  <p className="text-sm font-medium text-amber-300 truncate">{pr.filename}</p>
                   <p className="text-xs text-white/60 mt-0.5">
-                    {t('home.pendingResume', { remaining: formatBytes(pendingResume.remaining), expires: new Date(pendingResume.expiry).toLocaleString() })}
+                    {t('home.pendingResume', { remaining: formatBytes(pr.remaining), expires: new Date(pr.expiry).toLocaleString() })}
                   </p>
                 </div>
-                <button onClick={() => setPendingResume(null)} className="text-white/30 hover:text-white/60 flex-shrink-0">
+                <button onClick={() => { removeTusInfo(pr.url); setPendingResumes(prev => prev.filter(r => r.url !== pr.url)) }} className="text-white/30 hover:text-white/60 flex-shrink-0">
                   <X size={14} />
                 </button>
               </div>
-            )}
+            ))}
 
             {/* Drop zone */}
             <div

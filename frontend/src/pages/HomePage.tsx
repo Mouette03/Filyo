@@ -37,7 +37,7 @@ export default function HomePage() {
   const [emailSent, setEmailSent] = useState(false)
   const uploadExpiresAtRef = useRef<string | null>(null)
   const tusUploadRef = useRef<tus.Upload | null>(null)
-  const [pendingResume, setPendingResume] = useState<{ url: string; filename: string; remaining: number; expiry: string } | null>(null)
+  const [pendingResumes, setPendingResumes] = useState<{ url: string; filename: string; remaining: number; expiry: string }[]>([])
 
   // Bloquer navigation pendant upload en cours
   useEffect(() => {
@@ -83,8 +83,7 @@ export default function HomePage() {
       if (!infoRaw) continue
       try {
         const info = JSON.parse(infoRaw)
-        setPendingResume({ url, filename: info.filename, remaining: info.totalSize - info.bytesUploaded, expiry })
-        break
+        setPendingResumes(prev => [...prev, { url, filename: info.filename, remaining: info.totalSize - info.bytesUploaded, expiry }])
       } catch {}
     }
   }, [])
@@ -194,7 +193,7 @@ export default function HomePage() {
             onSuccess: async () => {
               const tusUrl = (tusUpload as any).url as string
               removeTusInfo(tusUrl)
-              setPendingResume(null)
+              setPendingResumes(prev => prev.filter(r => r.url !== tusUrl))
               const uploadId = tusUrl.split('/').pop()!
               try {
                 const res = await getTusFileResult(uploadId)
@@ -214,7 +213,8 @@ export default function HomePage() {
               const remainingBytes = file.size - lastBytesUploaded
               const expiry = uploadExpiresAtRef.current
               if (expiry) {
-                setPendingResume({ url: tusUploadRef.current?.url ?? '', filename: file.name, remaining: remainingBytes, expiry })
+                const errUrl = tusUploadRef.current?.url ?? ''
+                setPendingResumes(prev => prev.some(r => r.url === errUrl) ? prev : [...prev, { url: errUrl, filename: file.name, remaining: remainingBytes, expiry }])
               } else {
                 toast.error(t('toast.uploadFailed'))
               }
@@ -434,21 +434,21 @@ export default function HomePage() {
         </p>
       </div>
 
-      {/* Bannière reprise upload interrompu */}
-      {pendingResume && !uploading && (
-        <div className="mb-4 rounded-xl bg-amber-500/10 border border-amber-500/30 px-4 py-3 flex items-start gap-3">
+      {/* Bannières reprise uploads interrompus */}
+      {!uploading && pendingResumes.map(pr => (
+        <div key={pr.url} className="mb-2 rounded-xl bg-amber-500/10 border border-amber-500/30 px-4 py-3 flex items-start gap-3">
           <span className="text-lg text-amber-400 mt-0.5">⏸</span>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-amber-300 truncate">{pendingResume.filename}</p>
+            <p className="text-sm font-medium text-amber-300 truncate">{pr.filename}</p>
             <p className="text-xs text-white/60 mt-0.5">
-              {t('home.pendingResume', { remaining: formatBytes(pendingResume.remaining), expires: new Date(pendingResume.expiry).toLocaleString() })}
+              {t('home.pendingResume', { remaining: formatBytes(pr.remaining), expires: new Date(pr.expiry).toLocaleString() })}
             </p>
           </div>
-          <button onClick={() => setPendingResume(null)} className="text-white/30 hover:text-white/60 flex-shrink-0">
+          <button onClick={() => { removeTusInfo(pr.url); setPendingResumes(prev => prev.filter(r => r.url !== pr.url)) }} className="text-white/30 hover:text-white/60 flex-shrink-0">
             <X size={14} />
           </button>
         </div>
-      )}
+      ))}
 
       {/* Drop Zone */}
       {!results.length && (
