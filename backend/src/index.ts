@@ -17,7 +17,7 @@ import { adminRoutes } from './routes/admin'
 import { authRoutes } from './routes/auth'
 import { userRoutes } from './routes/users'
 import { settingsRoutes } from './routes/settings'
-import { runScheduledCleanup, cleanupOrphanedChunks } from './lib/cleanup'
+import { runScheduledCleanup, cleanupExpiredTusUploads } from './lib/cleanup'
 import { UPLOAD_DIR } from './lib/config'
 
 const appVersion: string = (() => {
@@ -133,6 +133,11 @@ async function bootstrap() {
     limits: { fileSize: 10 * 1024 * 1024 * 1024 } // 10 GB
   })
 
+  // Content-type parser pour TUS (application/offset+octet-stream)
+  // Sans ce parser, Fastify rejetterait les PATCH TUS avec 415 Unsupported Media Type.
+  // On ne lit pas le body ici — c'est le TUS server qui le lit via req.raw.
+  app.addContentTypeParser('application/offset+octet-stream', (_request, _payload, done) => done(null))
+
   // Servir les fichiers statiques uploadés (logos…)
   await app.register(staticFiles, { root: UPLOAD_DIR, prefix: '/uploads/' })
 
@@ -208,10 +213,10 @@ async function bootstrap() {
       app.log.error(err, 'Auto-cleanup failed')
     }
     try {
-      const deleted = await cleanupOrphanedChunks()
-      if (deleted > 0) app.log.info({ deleted }, '🧹 Orphaned chunks cleaned')
+      const deleted = await cleanupExpiredTusUploads()
+      if (deleted > 0) app.log.info({ deleted }, '🧹 Expired TUS uploads cleaned')
     } catch (err) {
-      app.log.error(err, 'Orphaned chunks cleanup failed')
+      app.log.error(err, 'TUS cleanup failed')
     }
   }
   // Premier passage 1 min après le démarrage, puis toutes les heures

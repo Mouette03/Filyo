@@ -3,6 +3,7 @@ import path from 'path'
 import { prisma } from './prisma'
 import { UPLOAD_DIR } from './config'
 import { getAppSettings } from './appSettings'
+export { cleanupExpiredTusUploads } from './tus'
 
 /**
  * Nettoyage planifié automatique.
@@ -68,47 +69,6 @@ export async function runScheduledCleanup(): Promise<{ deletedFiles: number; del
   }
 
   return { deletedFiles: filesToDelete.length, deletedRequests: requestsToDelete.length }
-}
-
-/**
- * Nettoyage des uploads chunked orphelins (> 1h sans finalisation).
- * Couvre à la fois ChunkedUpload (dépôt public) et FileChunkedUpload (admin).
- */
-export async function cleanupOrphanedChunks(): Promise<number> {
-  const cutoff = new Date(Date.now() - 1 * 60 * 60 * 1000)
-
-  // Un upload est orphelin si ni lastChunkAt ni createdAt n'est récent
-  const orphans = await prisma.chunkedUpload.findMany({
-    where: {
-      AND: [
-        { createdAt: { lt: cutoff } },
-        { OR: [{ lastChunkAt: null }, { lastChunkAt: { lt: cutoff } }] }
-      ]
-    }
-  })
-  for (const c of orphans) {
-    await fs.remove(path.join(UPLOAD_DIR, 'chunks', c.id)).catch(() => {})
-  }
-  if (orphans.length) {
-    await prisma.chunkedUpload.deleteMany({ where: { id: { in: orphans.map(c => c.id) } } })
-  }
-
-  const fileOrphans = await prisma.fileChunkedUpload.findMany({
-    where: {
-      AND: [
-        { createdAt: { lt: cutoff } },
-        { OR: [{ lastChunkAt: null }, { lastChunkAt: { lt: cutoff } }] }
-      ]
-    }
-  })
-  for (const c of fileOrphans) {
-    await fs.remove(path.join(UPLOAD_DIR, 'chunks', c.id)).catch(() => {})
-  }
-  if (fileOrphans.length) {
-    await prisma.fileChunkedUpload.deleteMany({ where: { id: { in: fileOrphans.map(c => c.id) } } })
-  }
-
-  return orphans.length + fileOrphans.length
 }
 
 /**

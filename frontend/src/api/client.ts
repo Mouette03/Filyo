@@ -120,86 +120,11 @@ export const submitToUploadRequest = (
   })
 }
 
-export const initChunkedUpload = (
-  token: string,
-  data: { filename: string; mimeType: string; totalSize: number; totalChunks: number; uploaderName?: string; uploaderEmail?: string; message?: string; password?: string }
-) =>
-  api.post(`/upload-requests/${token}/upload-init`, data)
+export const updateCfBypass = (enabled: boolean) =>
+  api.patch('/settings/cf-bypass', { enabled })
 
-export const getChunkUploadStatus = (token: string, uploadId: string) =>
-  api.get(`/upload-requests/${token}/upload-status/${uploadId}`)
-
-export const uploadChunk = (
-  token: string,
-  uploadId: string,
-  chunkIndex: number,
-  blob: Blob,
-  onProgress?: (pct: number, speed: number) => void
-) => {
-  let prevLoaded = 0
-  let prevTime = Date.now()
-  const form = new FormData()
-  form.append('uploadId', uploadId)
-  form.append('chunkIndex', String(chunkIndex))
-  form.append('chunk', blob)
-  return api.post(`/upload-requests/${token}/upload-chunk`, form, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-    onUploadProgress: e => {
-      if (onProgress && e.total) {
-        const now = Date.now()
-        const dt = (now - prevTime) / 1000
-        const speed = dt > 0.1 ? (e.loaded - prevLoaded) / dt : 0
-        if (dt > 0.1) { prevLoaded = e.loaded; prevTime = now }
-        onProgress(Math.round((e.loaded * 100) / e.total), speed)
-      }
-    }
-  })
-}
-
-export const finalizeChunkedUpload = (token: string, uploadId: string) =>
-  api.post(`/upload-requests/${token}/upload-finalize`, { uploadId })
-
-// ---- Chunked upload admin (dépôt de fichiers perso) ----
-export const initFileChunkedUpload = (data: {
-  filename: string; mimeType: string; totalSize: number; totalChunks: number
-  expiresIn?: string; maxDownloads?: string; password?: string
-  hideFilenames?: boolean; batchToken?: string
-}) => api.post('/files/upload-init', data)
-
-export const getFileChunkUploadStatus = (uploadId: string) =>
-  api.get(`/files/upload-status/${uploadId}`)
-
-export const uploadFileChunk = (
-  uploadId: string,
-  chunkIndex: number,
-  chunk: Blob,
-  onProgress?: (pct: number, speed: number) => void
-) => {
-  let prevLoaded = 0
-  let prevTime = Date.now()
-  const form = new FormData()
-  form.append('uploadId', uploadId)
-  form.append('chunkIndex', String(chunkIndex))
-  form.append('chunk', chunk)
-  return api.post('/files/upload-chunk', form, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-    onUploadProgress: e => {
-      if (onProgress && e.total) {
-        const now = Date.now()
-        const dt = (now - prevTime) / 1000
-        const speed = dt > 0.1 ? (e.loaded - prevLoaded) / dt : 0
-        if (dt > 0.1) { prevLoaded = e.loaded; prevTime = now }
-        onProgress(Math.round((e.loaded / e.total) * 100), speed)
-      }
-    }
-  })
-}
-
-export const finalizeFileChunkedUpload = (uploadId: string) =>
-  api.post('/files/upload-finalize', { uploadId })
-
-export const updateChunkSize = (mb: number | null) =>
-  api.patch('/settings/chunk-size', { uploadChunkSizeMb: mb })
+export const getTusFileResult = (uploadId: string) =>
+  api.get(`/files/tus-result/${uploadId}`)
 
 // ---- Tokens de téléchargement (streaming natif navigateur) ----
 export const getShareDlToken = (token: string, password?: string) =>

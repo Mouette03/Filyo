@@ -1,20 +1,12 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { useDropzone } from 'react-dropzone'
-import { Upload, X, Copy, Check, Lock, Clock, Download, Plus, Trash2, Share2, Mail, Send, EyeOff, RotateCcw } from 'lucide-react'
+import { Upload, X, Copy, Check, Lock, Clock, Download, Plus, Trash2, Share2, Mail, Send, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { uploadFiles, sendShareByEmail, getMyQuota, initFileChunkedUpload, getFileChunkUploadStatus, uploadFileChunk, finalizeFileChunkedUpload } from '../api/client'
+import * as tus from 'tus-js-client'
+import { sendShareByEmail, getMyQuota, getTusFileResult } from '../api/client'
 import { formatBytes, getFileIcon, copyToClipboard, isValidEmail, formatSpeed } from '../lib/utils'
 import { useT } from '../i18n'
 import { useAppSettingsStore } from '../stores/useAppSettingsStore'
-
-interface PendingResume {
-  key: string
-  filename: string
-  fileSize: number
-  uploadId: string
-  receivedChunks: number
-  totalChunks: number
-}
 
 interface UploadedResult {
   id: string
@@ -41,58 +33,10 @@ export default function HomePage() {
   const [hideFilenames, setHideFilenames] = useState(false)
   const [copiedToken, setCopiedToken] = useState<string | null>(null)
   const [showShareModal, setShowShareModal] = useState(false)
-  const [pendingResumes, setPendingResumes] = useState<PendingResume[]>([])
   const [emailTo, setEmailTo] = useState('')
   const [emailSending, setEmailSending] = useState(false)
   const [emailSent, setEmailSent] = useState(false)
-
-  // Scanner localStorage pour les uploads admin interrompus
-  useEffect(() => {
-    const prefix = 'filyo-file-'
-    const found: Omit<PendingResume, 'receivedChunks' | 'totalChunks'>[] = []
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i)
-      if (!key?.startsWith(prefix)) continue
-      const uploadId = localStorage.getItem(key)
-      if (!uploadId) continue
-      const rest = key.slice(prefix.length)
-      // Format : ${file.name}-${file.size}
-      const lastDash = rest.lastIndexOf('-')
-      if (lastDash === -1) continue
-      const filename = rest.slice(0, lastDash)
-      const fileSize = parseInt(rest.slice(lastDash + 1))
-      if (isNaN(fileSize)) continue
-      found.push({ key, filename, fileSize, uploadId })
-    }
-    if (!found.length) return
-    Promise.all(
-      found.map(async item => {
-        if (item.uploadId === 'pending') {
-          return { ...item, receivedChunks: 0, totalChunks: 0 } as PendingResume
-        }
-        try {
-          const res = await getFileChunkUploadStatus(item.uploadId)
-          return { ...item, receivedChunks: res.data.receivedChunks, totalChunks: res.data.totalChunks } as PendingResume
-        } catch (e: any) {
-          if (e?.response?.status === 404) {
-            localStorage.removeItem(item.key)
-            return null
-          }
-          return { ...item, receivedChunks: 0, totalChunks: 0 } as PendingResume
-        }
-      })
-    ).then(results => {
-      setPendingResumes(results.filter(Boolean) as PendingResume[])
-    })
-  }, [])
-
-  const handleAbandon = (item: PendingResume) => {
-    localStorage.removeItem(item.key)
-    setPendingResumes(prev => prev.filter(r => r.key !== item.key))
-  }
-
-  const getResumeInfo = (file: { name: string; size: number }) =>
-    pendingResumes.find(r => r.filename === file.name && r.fileSize === file.size) ?? null
+  const uploadExpiresAtRef = useRef<string | null>(null)
 
   const onDrop = useCallback((accepted: File[]) => {
     setFiles(prev => [...prev, ...accepted])
@@ -143,128 +87,96 @@ export default function HomePage() {
     setProgress(0)
     setProgressLabel('')
     setUploadSpeed(0)
+    uploadExpiresAtRef.current = null
 
-    const chunkSizeMb = settings.uploadChunkSizeMb
-    const chunkSizeBytes = chunkSizeMb ? chunkSizeMb * 1024 * 1024 : null
-
-    // Chemin chunked si activé et au moins un fichier atteint la taille du chunk
-    if (chunkSizeBytes && files.some(f => f.size >= chunkSizeBytes)) {
-      // batchToken partagé entre tous les fichiers du lot (null si fichier unique)
-      const sessionBatchToken = files.length > 1 ? (Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)).slice(0, 16) : null
-
-      try {
-        const globalStartTime = Date.now()
-        let globalUploadedBytes = 0
-        const accumulated: UploadedResult[] = []
-        for (let fi = 0; fi < files.length; fi++) {
-          const file = files[fi]
-          const totalChunks = Math.ceil(file.size / chunkSizeBytes)
-          const RESUME_KEY = `filyo-file-${file.name}-${file.size}`
-
-          // Placeholder avant init pour survivre à un refresh
-          if (!localStorage.getItem(RESUME_KEY)) {
-            localStorage.setItem(RESUME_KEY, 'pending')
-          }
-
-          let uploadId: string | null = localStorage.getItem(RESUME_KEY)
-          let startChunk = 0
-
-          if (uploadId && uploadId !== 'pending') {
-            try {
-              setProgressLabel(t('request.chunkResuming'))
-              const statusRes = await getFileChunkUploadStatus(uploadId)
-              startChunk = statusRes.data.receivedChunks
-            } catch {
-              uploadId = null
-              startChunk = 0
-            }
-          } else {
-            uploadId = null
-          }
-
-          if (!uploadId) {
-            const initRes = await initFileChunkedUpload({
-              filename: file.name,
-              mimeType: file.type || 'application/octet-stream',
-              totalSize: file.size,
-              totalChunks,
-              expiresIn: expiresIn || undefined,
-              maxDownloads: maxDownloads || undefined,
-              password: password || undefined,
-              hideFilenames: hideFilenames || undefined,
-              batchToken: sessionBatchToken || undefined
-            })
-            uploadId = initRes.data.uploadId as string
-            localStorage.setItem(RESUME_KEY, uploadId)
-          }
-
-          if (startChunk > 0) globalUploadedBytes += startChunk * chunkSizeBytes
-          for (let ci = startChunk; ci < totalChunks; ci++) {
-            const start = ci * chunkSizeBytes
-            const chunkBlob = file.slice(start, start + chunkSizeBytes)
-            const chunkStart = globalUploadedBytes
-            setProgressLabel(t('request.uploadingChunk', { current: String(ci + 1), total: String(totalChunks), pct: '0' }))
-            await uploadFileChunk(uploadId, ci, chunkBlob, (pct) => {
-              const chunkLoaded = Math.round((chunkBlob.size * pct) / 100)
-              const totalLoaded = chunkStart + chunkLoaded
-              const elapsed = (Date.now() - globalStartTime) / 1000
-              const avgSpeed = elapsed > 0.5 ? totalLoaded / elapsed : 0
-              if (avgSpeed > 0) setUploadSpeed(avgSpeed)
-              setProgressLabel(t('request.uploadingChunk', { current: String(ci + 1), total: String(totalChunks), pct: String(pct) }))
-              const filePct = (ci + pct / 100) / totalChunks
-              const globalPct = ((fi + filePct) / files.length) * 100
-              setProgress(Math.round(globalPct))
-            })
-            globalUploadedBytes += chunkBlob.size
-          }
-
-          setProgressLabel(t('home.finalizing'))
-          const finalRes = await finalizeFileChunkedUpload(uploadId)
-          localStorage.removeItem(RESUME_KEY)
-          setPendingResumes(prev => prev.filter(r => r.key !== RESUME_KEY))
-          accumulated.push(finalRes.data)
-        }
-
-        setResults(accumulated)
-        setFiles([])
-        setShowShareModal(true)
-        toast.success(t('toast.uploadSuccess', { count: String(accumulated.length) }))
-      } catch (err: any) {
-        const code = err?.response?.data?.code
-        if (code === 'QUOTA_EXCEEDED') toast.error(t('error.quotaExceeded'))
-        else if (code === 'FILE_TOO_LARGE') toast.error(t('error.fileTooLarge'))
-        else toast.error(t('toast.uploadFailed'))
-      } finally {
-        setUploading(false)
-        setProgressLabel('')
-        setUploadSpeed(0)
-      }
-      return
-    }
-
-    // Chemin classique (chunked désactivé ou tous les fichiers < seuil)
-    const formData = new FormData()
-    files.forEach(f => formData.append('files', f))
-    if (password) formData.append('password', password)
-    if (expiresIn) formData.append('expiresIn', expiresIn)
-    if (maxDownloads) formData.append('maxDownloads', maxDownloads)
-    if (hideFilenames) formData.append('hideFilenames', 'true')
+    // Chemin TUS (resumable) — toujours utilisé désormais
+    const sessionBatchToken = files.length > 1
+      ? (Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)).slice(0, 16)
+      : null
 
     try {
-      const res = await uploadFiles(formData, (pct, speed) => {
-        setProgress(pct)
-        const speedStr = speed > 0 ? ` · ${formatSpeed(speed)}` : ''
-        setProgressLabel(`${pct}%${speedStr}`)
-      })
-      setResults(res.data)
+      const startTime = Date.now()
+      const accumulated: UploadedResult[] = []
+
+      for (let fi = 0; fi < files.length; fi++) {
+        const file = files[fi]
+        let lastBytesUploaded = 0
+
+        await new Promise<void>((resolve, reject) => {
+          const tusUpload = new tus.Upload(file, {
+            endpoint: '/api/files/tus',
+            retryDelays: [0, 1000, 3000, 5000],
+            storeFingerprintForResuming: true,
+            removeFingerprintOnSuccess: true,
+            chunkSize: settings.cfBypassEnabled ? settings.cfBypassChunkMb * 1024 * 1024 : Infinity,
+            metadata: {
+              filename: file.name,
+              mimeType: file.type || 'application/octet-stream',
+              expiresIn: expiresIn || '',
+              maxDownloads: maxDownloads || '',
+              password: password || '',
+              hideFilenames: hideFilenames ? 'true' : 'false',
+              batchToken: sessionBatchToken || '',
+            },
+            onProgress: (bytesUploaded: number, bytesTotal: number) => {
+              lastBytesUploaded = bytesUploaded
+              const filePct = bytesTotal > 0 ? bytesUploaded / bytesTotal : 0
+              const globalPct = Math.round(((fi + filePct) / files.length) * 100)
+              setProgress(globalPct)
+              const elapsed = (Date.now() - startTime) / 1000
+              const speed = elapsed > 0.5 ? bytesUploaded / elapsed : 0
+              if (speed > 0) setUploadSpeed(speed)
+              const speedStr = speed > 0 ? ` · ${formatSpeed(speed)}` : ''
+              setProgressLabel(`${globalPct}%${speedStr}`)
+            },
+            onAfterResponse: (_req: unknown, res: { getHeader: (h: string) => string | null }) => {
+              const exp = res.getHeader('Upload-Expires')
+              if (exp) uploadExpiresAtRef.current = exp
+            },
+            onSuccess: async () => {
+              const tusUrl = (tusUpload as any).url as string
+              const uploadId = tusUrl.split('/').pop()!
+              try {
+                const res = await getTusFileResult(uploadId)
+                accumulated.push(res.data)
+              } catch {
+                // résultat non trouvé — ignorer
+              }
+              resolve()
+            },
+            onError: (err: Error) => {
+              const remainingBytes = file.size - lastBytesUploaded
+              const remaining = formatBytes(remainingBytes)
+              const expiresDisplay = uploadExpiresAtRef.current
+                ? new Date(uploadExpiresAtRef.current).toLocaleString()
+                : null
+              if (expiresDisplay) {
+                toast.error(t('request.resumeProgress', { remaining, expires: expiresDisplay }), { duration: 8000 })
+              } else {
+                toast.error(t('toast.uploadFailed'))
+              }
+              reject(err)
+            }
+          })
+          tusUpload.findPreviousUploads().then((prev: tus.PreviousUpload[]) => {
+            if (prev.length > 0) {
+              tusUpload.resumeFromPreviousUpload(prev[0])
+              setProgressLabel(t('request.resuming'))
+            }
+            tusUpload.start()
+          })
+        })
+      }
+
+      setResults(accumulated)
       setFiles([])
       setShowShareModal(true)
-      toast.success(t('toast.uploadSuccess', { count: String(res.data.length) }))
+      toast.success(t('toast.uploadSuccess', { count: String(accumulated.length) }))
     } catch (err: any) {
       const code = err?.response?.data?.code
       if (code === 'QUOTA_EXCEEDED') toast.error(t('error.quotaExceeded'))
       else if (code === 'FILE_TOO_LARGE') toast.error(t('error.fileTooLarge'))
-      else toast.error(t('toast.uploadFailed'))
+      // erreur TUS déjà affichée dans onError
     } finally {
       setUploading(false)
       setProgressLabel('')
@@ -447,34 +359,6 @@ export default function HomePage() {
           </div>
         </div>
       )}
-      {/* Bandeau uploads admin interrompus */}
-      {pendingResumes.length > 0 && !uploading && (
-        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 space-y-3 mb-6">
-          <div className="flex items-center gap-2">
-            <RotateCcw size={15} className="text-amber-400 shrink-0" />
-            <p className="text-sm font-semibold text-amber-300">{t('request.resumeTitle')}</p>
-          </div>
-          {pendingResumes.map(item => (
-            <div key={item.key} className="flex items-center gap-3 [background:var(--surface-700)] rounded-xl px-3 py-2.5">
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{item.filename}</p>
-                <p className="text-xs text-amber-400/80 mt-0.5">
-                  {item.totalChunks > 0
-                    ? t('request.resumeProgress', { done: String(item.receivedChunks), total: String(item.totalChunks) })
-                    : t('request.resumePending')}
-                </p>
-                <p className="text-xs [color:var(--text-30)] mt-0.5">{t('request.resumeHint')}</p>
-              </div>
-              <button
-                onClick={() => handleAbandon(item)}
-                className="shrink-0 flex items-center gap-1 text-xs text-red-400/70 hover:text-red-400 transition-colors px-2 py-1 rounded-lg hover:bg-red-500/10"
-              >
-                <X size={12} /> {t('request.resumeAbandon')}
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
 
       {/* Header */}
       <div className="text-center mb-10">
@@ -533,11 +417,6 @@ export default function HomePage() {
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{file.name}</p>
                 <p className="text-xs text-white/40">{formatBytes(file.size)}</p>
-                {(() => { const r = getResumeInfo(file); return r ? (
-                  <p className="text-xs text-amber-400/80 mt-0.5">
-                    {t('request.resumeMatched', { done: String(r.receivedChunks), total: String(r.totalChunks) })}
-                  </p>
-                ) : null })()}
               </div>
               <button
                 onClick={() => removeFile(i)}

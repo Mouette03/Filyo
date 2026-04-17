@@ -40,7 +40,8 @@ export async function settingsRoutes(app: FastifyInstance) {
       allowRegistration: s.allowRegistration ?? false,
       cleanupAfterDays: s.cleanupAfterDays ?? null,
       maxFileSizeBytes: s.maxFileSizeBytes ? s.maxFileSizeBytes.toString() : null,
-      uploadChunkSizeMb: s.uploadChunkSizeMb ?? null,
+      cfBypassEnabled: s.cfBypassEnabled ?? false,
+      cfBypassChunkMb: parseInt(process.env.TUS_CF_CHUNK_MB || '90', 10),
       updatedAt: s.updatedAt
     }
   })
@@ -319,22 +320,20 @@ export async function settingsRoutes(app: FastifyInstance) {
     }
   )
 
-  // PATCH /api/settings/chunk-size — taille des chunks pour upload resumable (admin)
-  app.patch<{ Body: { uploadChunkSizeMb: number | null } }>(
-    '/chunk-size',
+  // PATCH /api/settings/cf-bypass — activer/désactiver le mode bypass Cloudflare (TUS chunked)
+  app.patch<{ Body: { enabled: boolean } }>(
+    '/cf-bypass',
     { onRequest: [app.authenticate, app.adminOnly] },
     async (req, reply) => {
-      const { uploadChunkSizeMb } = req.body
-      if (uploadChunkSizeMb !== null && (typeof uploadChunkSizeMb !== 'number' || uploadChunkSizeMb < 1 || uploadChunkSizeMb > 100)) {
-        return reply.code(400).send({ code: 'INVALID_VALUE' })
-      }
+      const { enabled } = req.body
+      if (typeof enabled !== 'boolean') return reply.code(400).send({ code: 'INVALID_VALUE' })
       const s = await prisma.appSettings.upsert({
         where: { id: 'singleton' },
-        update: { uploadChunkSizeMb: uploadChunkSizeMb ?? null },
-        create: { id: 'singleton', appName: 'Filyo', uploadChunkSizeMb: uploadChunkSizeMb ?? null }
+        update: { cfBypassEnabled: enabled },
+        create: { id: 'singleton', appName: 'Filyo', cfBypassEnabled: enabled }
       })
-      req.log.info({ uploadChunkSizeMb }, 'Upload chunk size updated')
-      return { uploadChunkSizeMb: s.uploadChunkSizeMb }
+      req.log.info({ cfBypassEnabled: enabled }, 'CF bypass setting updated')
+      return { cfBypassEnabled: s.cfBypassEnabled }
     }
   )
 }

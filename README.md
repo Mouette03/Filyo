@@ -46,6 +46,7 @@
 | Feature | Description |
 |---|---|
 | **File upload** | Multi-file upload with progress bar and drag & drop |
+| **Resumable upload** | TUS protocol — interrupted uploads resume automatically; Cloudflare bypass mode (chunked upload) configurable from admin settings |
 | **Protection** | Optional password per file/link |
 | **Rate limiting** | Brute-force protection on login, password reset and file deposit |
 | **Expiration** | 1h / 24h / 7d / 30d / never |
@@ -111,6 +112,8 @@ labels:
 | `LOG_LEVEL` | `info` | Minimum log level (Pino). The app emits `debug`, `info`, `warn`, `error`. Use `debug` for verbose output, `warn` for quiet, `silent` to disable all logs. |
 | `UPLOAD_TIMEOUT_MS` | `1800000` | Upload timeout in ms (default 30 min, min 1 min, max 2 h) |
 | `TRUST_PROXY` | `false` | Trust level for reverse proxy headers (`X-Forwarded-*`). Accepts `false`, `true`, an IP address, or a CIDR range (e.g. `127.0.0.1`). Enable only if Filyo is behind a trusted proxy. |
+| `TUS_CF_CHUNK_MB` | `90` | Chunk size in MB used when the **Cloudflare bypass** mode is enabled (admin toggle in Settings). Lower this value if Cloudflare rejects large chunks (Cloudflare's default limit is 100 MB per request). Has no effect when the bypass is disabled. |
+| `TUS_EXPIRY_MS` | `86400000` | Expiry delay in milliseconds for incomplete (interrupted) TUS uploads. After this delay, the partial file is deleted by the cleanup job. Default: 24 h. |
 
 > [!NOTE]
 > Any SMTP password saved through the settings form is stored **encrypted** in the database (AES-256-GCM, key derived from `JWT_SECRET`).
@@ -257,6 +260,7 @@ Application de partage de fichiers **auto-hébergée**, sans stockage S3. Design
 | Fonctionnalité | Description |
 |---|---|
 | **Envoi de fichiers** | Upload multi-fichiers avec barre de progression et glisser-déposer |
+| **Upload repris automatiquement** | Protocole TUS — les uploads interrompus reprennent automatiquement ; mode contournement Cloudflare (upload fragmenté) configurable dans les réglages admin |
 | **Protection** | Mot de passe optionnel par fichier/lien |
 | **Limitation de débit** | Protection brute-force sur login, reset mot de passe et dépôt de fichiers |
 | **Expiration** | 1h / 24h / 7j / 30j / jamais |
@@ -322,6 +326,8 @@ labels:
 | `LOG_LEVEL` | `info` | Seuil minimum de log (Pino). Le code émet `debug`, `info`, `warn`, `error`. Utiliser `debug` pour plus de verbosité, `warn` pour le silence relatif, `silent` pour tout désactiver. |
 | `UPLOAD_TIMEOUT_MS` | `1800000` | Délai d'attente des uploads (ms — défaut 30 min, min 1 min, max 2 h) |
 | `TRUST_PROXY` | `false` | Niveau de confiance pour les en-têtes reverse proxy (`X-Forwarded-*`). Accepte `false`, `true`, une adresse IP ou une plage CIDR (ex. `127.0.0.1`). À activer uniquement si Filyo est derrière un proxy de confiance. |
+| `TUS_CF_CHUNK_MB` | `90` | Taille en Mo de chaque morceau lors de l'upload en mode **contournement Cloudflare** (toggle admin dans Réglages). Réduisez cette valeur si Cloudflare rejette les gros morceaux (limite par défaut de Cloudflare : 100 Mo par requête). Sans effet lorsque le mode est désactivé. |
+| `TUS_EXPIRY_MS` | `86400000` | Délai d'expiration en millisecondes des uploads TUS incomplets (interrompus). Après ce délai, le fichier partiel est supprimé par le job de nettoyage. Défaut : 24 h. |
 
 > [!NOTE]
 > Tout mot de passe SMTP enregistré via le formulaire de réglages est stocké **chiffré** en base de données (AES-256-GCM, clé dérivée de `JWT_SECRET`).
