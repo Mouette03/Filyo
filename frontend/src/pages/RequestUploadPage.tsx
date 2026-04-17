@@ -179,8 +179,12 @@ export default function RequestUploadPage() {
               }
             },
             onSuccess: () => { resolve() },
-            onError: (err: Error) => {
-              const remainingBytes = file.size - lastBytesUploaded
+            onError: (err: Error) => {              const status401 = (err as any).originalResponse?.getStatus?.() === 401
+              if (status401) {
+                toast.error(t(info?.hasPassword ? 'toast.passwordWrong' : 'toast.unauthorized'))
+                reject(err)
+                return
+              }              const remainingBytes = file.size - lastBytesUploaded
               const remaining = formatBytes(remainingBytes)
               const expiresDisplay = uploadExpiresAtRef.current
                 ? new Date(uploadExpiresAtRef.current).toLocaleString()

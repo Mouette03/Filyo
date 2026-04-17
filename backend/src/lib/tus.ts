@@ -67,8 +67,14 @@ function getTusDir(subdirectory: string): string {
 }
 
 const TUS_EXPIRY_MS = (() => {
-  const v = parseInt(process.env.TUS_EXPIRY_MS || '', 10)
-  return Number.isFinite(v) && v > 0 ? v : 24 * 60 * 60 * 1000 // 24h par défaut
+  const raw = (process.env.TUS_EXPIRY || '').trim()
+  if (raw) {
+    const mMatch = raw.match(/^(\d+)m$/i)
+    const hMatch = raw.match(/^(\d+)h$/i)
+    if (mMatch) return parseInt(mMatch[1], 10) * 60 * 1000
+    if (hMatch) return parseInt(hMatch[1], 10) * 60 * 60 * 1000
+  }
+  return 60 * 60 * 1000 // 1h par défaut
 })()
 
 // ── TUS serveur — fichiers (authentifié) ──────────────────────────────────────

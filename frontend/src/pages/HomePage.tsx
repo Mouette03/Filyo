@@ -39,6 +39,7 @@ export default function HomePage() {
   const uploadExpiresAtRef = useRef<string | null>(null)
   const tusUploadRef = useRef<tus.Upload | null>(null)
   const abortedRef = useRef(false)
+  const [pendingResume, setPendingResume] = useState<{ url: string; filename: string; remaining: number; expiry: string } | null>(null)
 
   // Bloquer navigation pendant upload en cours
   useEffect(() => {
@@ -57,6 +58,42 @@ export default function HomePage() {
     if (!url) return null
     try { return localStorage.getItem(tusExpiryKey(url)) } catch { return null }
   }
+  const storeTusInfo = (url: string | null | undefined, info: { filename: string; totalSize: number; bytesUploaded: number }) => {
+    if (!url) return
+    try { localStorage.setItem(`tus-info:${url}`, JSON.stringify(info)) } catch {}
+  }
+  const removeTusInfo = (url: string | null | undefined) => {
+    if (!url) return
+    try {
+      localStorage.removeItem(`tus-info:${url}`)
+      localStorage.removeItem(tusExpiryKey(url))
+    } catch {}
+  }
+
+  // Vérifier au montage si un upload a été interrompu
+  useEffect(() => {
+    const now = Date.now()
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i)
+      if (!key?.startsWith('tus-expiry:')) continue
+      const url = key.slice('tus-expiry:'.length)
+      const expiry = localStorage.getItem(key)
+      if (!expiry) continue
+      const expiryMs = new Date(expiry).getTime()
+      if (expiryMs <= now) {
+        localStorage.removeItem(key)
+        localStorage.removeItem(`tus-info:${url}`)
+        continue
+      }
+      const infoRaw = localStorage.getItem(`tus-info:${url}`)
+      if (!infoRaw) continue
+      try {
+        const info = JSON.parse(infoRaw)
+        setPendingResume({ url, filename: info.filename, remaining: info.totalSize - info.bytesUploaded, expiry })
+        break
+      } catch {}
+    }
+  }, [])
 
   const onDrop = useCallback((accepted: File[]) => {
     setFiles(prev => [...prev, ...accepted])
@@ -121,6 +158,7 @@ export default function HomePage() {
       for (let fi = 0; fi < files.length; fi++) {
         const file = files[fi]
         let lastBytesUploaded = 0
+        let lastInfoWriteTime = 0
 
         await new Promise<void>((resolve, reject) => {
           const tusUpload = new tus.Upload(file, {
@@ -148,6 +186,11 @@ export default function HomePage() {
               if (speed > 0) setUploadSpeed(speed)
               const speedStr = speed > 0 ? ` · ${formatSpeed(speed)}` : ''
               setProgressLabel(`${globalPct}%${speedStr}`)
+              const now2 = Date.now()
+              if (now2 - lastInfoWriteTime > 2000 && tusUploadRef.current?.url) {
+                storeTusInfo(tusUploadRef.current.url, { filename: file.name, totalSize: file.size, bytesUploaded })
+                lastInfoWriteTime = now2
+              }
             },
             onAfterResponse: (_req: unknown, res: { getHeader: (h: string) => string | undefined }) => {
               const exp = res.getHeader('Upload-Expires')
@@ -158,6 +201,8 @@ export default function HomePage() {
             },
             onSuccess: async () => {
               const tusUrl = (tusUpload as any).url as string
+              removeTusInfo(tusUrl)
+              setPendingResume(null)
               const uploadId = tusUrl.split('/').pop()!
               try {
                 const res = await getTusFileResult(uploadId)
@@ -410,6 +455,22 @@ export default function HomePage() {
         </p>
       </div>
 
+      {/* Bannière reprise upload interrompu */}
+      {pendingResume && !uploading && (
+        <div className="mb-4 rounded-xl bg-amber-500/10 border border-amber-500/30 px-4 py-3 flex items-start gap-3">
+          <span className="text-lg text-amber-400 mt-0.5">⏸</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-amber-300 truncate">{pendingResume.filename}</p>
+            <p className="text-xs text-white/60 mt-0.5">
+              {t('home.pendingResume', { remaining: formatBytes(pendingResume.remaining), expires: new Date(pendingResume.expiry).toLocaleString() })}
+            </p>
+          </div>
+          <button onClick={() => setPendingResume(null)} className="text-white/30 hover:text-white/60 flex-shrink-0">
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
       {/* Drop Zone */}
       {!results.length && (
         <div
@@ -553,7 +614,7 @@ export default function HomePage() {
                 className="btn-primary flex-1 flex items-center justify-center gap-2 py-3 opacity-80 cursor-not-allowed"
               >
                 {progressLabel
-                  ? <>{progressLabel}{uploadSpeed > 0 ? <span className="text-white/60"> · {formatSpeed(uploadSpeed)}</span> : null}</>
+                  ? <>{progressLabel}</>
                   : t('home.uploading', { pct: String(progress) })}
               </button>
               <button
