@@ -180,8 +180,8 @@ export function createFilesTusServer(app: FastifyInstance): Server {
         throw err
       })
 
-      // Nettoyer le fichier .info TUS
-      await fs.remove(path.join(tusDir, `${upload.id}.info`)).catch(() => {})
+      // Nettoyer le fichier .json TUS
+      await fs.remove(path.join(tusDir, `${upload.id}.json`)).catch(() => {})
 
       app.log.info({ uploadId: upload.id, filename, size: upload.size }, '✅ TUS file upload completed')
 
@@ -307,8 +307,8 @@ export function createRequestsTusServer(app: FastifyInstance): Server {
 
       app.log.info({ uploadId: upload.id, filename, size: upload.size, uploadRequestId }, '✅ TUS request upload completed')
 
-      // Nettoyer le fichier .info TUS
-      await fs.remove(path.join(tusDir, `${upload.id}.info`)).catch(() => {})
+      // Nettoyer le fichier .json TUS
+      await fs.remove(path.join(tusDir, `${upload.id}.json`)).catch(() => {})
 
       return {}
     }
@@ -325,15 +325,13 @@ export async function cleanupExpiredTusUploads(): Promise<number> {
     if (!await fs.pathExists(dir)) continue
     const entries = await fs.readdir(dir).catch(() => [] as string[])
     for (const entry of entries) {
-      // @tus/file-store v2 utilise .json (v1 utilisait .info)
-      const isInfo = entry.endsWith('.json') || entry.endsWith('.info')
-      if (!isInfo) continue
+      if (!entry.endsWith('.json')) continue
       const infoPath = path.join(dir, entry)
       try {
         const info = await fs.readJson(infoPath)
         const creationDate = info.creation_date ? new Date(info.creation_date) : null
         if (creationDate && Date.now() - creationDate.getTime() > TUS_EXPIRY_MS) {
-          const id = entry.replace(/\.(json|info)$/, '')
+          const id = entry.replace(/\.json$/, '')
           await fs.remove(path.join(dir, id)).catch(() => {})
           await fs.remove(infoPath).catch(() => {})
           cleaned++
