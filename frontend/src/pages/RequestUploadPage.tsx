@@ -90,30 +90,27 @@ export default function RequestUploadPage() {
         knownKeys.push({ url, filename: info2.filename, totalSize: info2.totalSize, bytesUploaded: info2.bytesUploaded })
       } catch {}
     }
-    // HEAD sur les entrées connues pour corriger l'expiry (réveil PC) ou nettoyer si fichier supprimé
+    // HEAD sur les entrées connues : nettoyer si supprimé, mettre à jour l'offset
     knownKeys.forEach(({ url, filename, totalSize }) => {
-      fetch(url, { method: 'HEAD', credentials: 'include' })
+      fetch(url, { method: 'HEAD', credentials: 'include', headers: { 'Tus-Resumable': '1.0.0' } })
         .then(res => {
           if (!res.ok) {
             removeTusInfo(url)
             setPendingResumes(prev => prev.filter(r => r.url !== url))
             return
           }
-          const exp = res.headers.get('Upload-Expires')
-          if (!exp) return
           const offset = parseInt(res.headers.get('Upload-Offset') ?? '0', 10)
-          const bytesUploaded = isNaN(offset) ? 0 : offset
-          storeTusExpiry(url, exp)
-          storeTusInfo(url, { filename, totalSize, bytesUploaded })
-          const remaining = totalSize - bytesUploaded
-          setPendingResumes(prev => prev.map(r => r.url === url ? { ...r, expiry: exp, remaining } : r))
+          if (isNaN(offset)) return
+          storeTusInfo(url, { filename, totalSize, bytesUploaded: offset })
+          const remaining = totalSize - offset
+          setPendingResumes(prev => prev.map(r => r.url === url ? { ...r, remaining } : r))
         })
         .catch(() => {})
     })
 
     // 2. Fallback : clés tus-js-client (refresh page pendant upload — nos handlers n'ont pas tourné)
     const reqPrefix = `tus::tus::filyo::req::${token}::`
-    const tusKeys: { url: string; filename: string; totalSize: number }[] = []
+    const tusKeys: { url: string; filename: string; totalSize: number; creationTime: number }[] = []
     for (let i = localStorage.length - 1; i >= 0; i--) {
       const key = localStorage.key(i)
       if (!key?.startsWith(reqPrefix)) continue
@@ -123,24 +120,24 @@ export default function RequestUploadPage() {
         if (!url || seen.has(url)) continue
         const filename: string = stored.metadata?.filename ?? ''
         const totalSize: number = stored.size ?? 0
+        const creationTime: number = stored.creationTime ? new Date(stored.creationTime).getTime() : Date.now()
         seen.add(url)
-        tusKeys.push({ url, filename, totalSize })
+        tusKeys.push({ url, filename, totalSize, creationTime })
       } catch {}
     }
-    // HEAD request pour récupérer Upload-Expires et Upload-Offset réels
-    tusKeys.forEach(({ url, filename, totalSize }) => {
-      fetch(url, { method: 'HEAD', credentials: 'include' })
+    // HEAD request : vérifier existence + offset réel. Expiry calculée via creationTime + tusExpiryMs
+    tusKeys.forEach(({ url, filename, totalSize, creationTime }) => {
+      const expiry = new Date(creationTime + tusExpiryMs).toISOString()
+      if (new Date(expiry).getTime() <= Date.now()) { removeTusInfo(url); return }
+      fetch(url, { method: 'HEAD', credentials: 'include', headers: { 'Tus-Resumable': '1.0.0' } })
         .then(res => {
           if (!res.ok) { removeTusInfo(url); return }
-          const exp = res.headers.get('Upload-Expires')
-          if (!exp) return
           const offset = parseInt(res.headers.get('Upload-Offset') ?? '0', 10)
           const bytesUploaded = isNaN(offset) ? 0 : offset
-          storeTusExpiry(url, exp)
+          storeTusExpiry(url, expiry)
           storeTusInfo(url, { filename, totalSize, bytesUploaded })
           const remaining = totalSize - bytesUploaded
-          if (new Date(exp).getTime() > Date.now())
-            setPendingResumes(prev => prev.some(r => r.url === url) ? prev : [...prev, { url, filename, remaining, expiry: exp }])
+          setPendingResumes(prev => prev.some(r => r.url === url) ? prev : [...prev, { url, filename, remaining, expiry }])
         })
         .catch(() => {})
     })
@@ -150,6 +147,7 @@ export default function RequestUploadPage() {
   const [msgReq, setMsgReq] = useState<FieldReq>('optional')
   const { t } = useT()
   const { settings, setSettings } = useAppSettingsStore()
+  const tusExpiryMs = settings.tusExpiryMs ?? 3600000
   const appName = settings.appName || 'Filyo'
 
   useEffect(() => {

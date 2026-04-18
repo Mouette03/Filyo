@@ -6,6 +6,7 @@ import sharp from 'sharp'
 import { prisma } from '../lib/prisma'
 import { UPLOAD_DIR } from '../lib/config'
 import { getAppSettings } from '../lib/appSettings'
+import { TUS_EXPIRY_MS } from '../lib/tus'
 import { encrypt, decrypt } from '../lib/crypto'
 
 const ENC_KEY = process.env.JWT_SECRET || null
@@ -42,6 +43,7 @@ export async function settingsRoutes(app: FastifyInstance) {
       maxFileSizeBytes: s.maxFileSizeBytes ? s.maxFileSizeBytes.toString() : null,
       cfBypassEnabled: s.cfBypassEnabled ?? false,
       cfBypassChunkMb: parseInt(process.env.TUS_CF_CHUNK_MB || '90', 10),
+      tusExpiryMs: TUS_EXPIRY_MS,
       updatedAt: s.updatedAt
     }
   })

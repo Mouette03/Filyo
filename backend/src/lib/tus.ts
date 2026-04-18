@@ -66,7 +66,7 @@ function getTusDir(subdirectory: string): string {
   return dir
 }
 
-const TUS_EXPIRY_MS = (() => {
+export const TUS_EXPIRY_MS = (() => {
   const raw = (process.env.TUS_EXPIRY || '').trim()
   if (raw) {
     const mMatch = raw.match(/^(\d+)m$/i)

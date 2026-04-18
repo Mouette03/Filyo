@@ -14,6 +14,7 @@ interface AppSettings {
   maxFileSizeBytes: string | null
   cfBypassEnabled: boolean
   cfBypassChunkMb: number
+  tusExpiryMs: number
 }
 
 interface AppSettingsStore {
@@ -35,7 +36,8 @@ export const useAppSettingsStore = create<AppSettingsStore>()(
         cleanupAfterDays: null,
         maxFileSizeBytes: null,
         cfBypassEnabled: false,
-        cfBypassChunkMb: 90
+        cfBypassChunkMb: 90,
+        tusExpiryMs: 3600000
       },
       setSettings: (s) => set(prev => ({ settings: { ...prev.settings, ...s } }))
     }),
