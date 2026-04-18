@@ -90,10 +90,15 @@ export default function RequestUploadPage() {
         knownKeys.push({ url, filename: info2.filename, totalSize: info2.totalSize, bytesUploaded: info2.bytesUploaded })
       } catch {}
     }
-    // HEAD sur les entrées connues pour corriger l'expiry si elle était un fallback (ex: réveil PC)
+    // HEAD sur les entrées connues pour corriger l'expiry (réveil PC) ou nettoyer si fichier supprimé
     knownKeys.forEach(({ url, filename, totalSize }) => {
       fetch(url, { method: 'HEAD', credentials: 'include' })
         .then(res => {
+          if (!res.ok) {
+            removeTusInfo(url)
+            setPendingResumes(prev => prev.filter(r => r.url !== url))
+            return
+          }
           const exp = res.headers.get('Upload-Expires')
           if (!exp) return
           const offset = parseInt(res.headers.get('Upload-Offset') ?? '0', 10)
@@ -126,19 +131,18 @@ export default function RequestUploadPage() {
     tusKeys.forEach(({ url, filename, totalSize }) => {
       fetch(url, { method: 'HEAD', credentials: 'include' })
         .then(res => {
+          if (!res.ok) { removeTusInfo(url); return }
           const exp = res.headers.get('Upload-Expires')
+          if (!exp) return
           const offset = parseInt(res.headers.get('Upload-Offset') ?? '0', 10)
-          const expiry = exp ?? new Date(Date.now() + 60 * 60 * 1000).toISOString()
           const bytesUploaded = isNaN(offset) ? 0 : offset
-          storeTusExpiry(url, expiry)
+          storeTusExpiry(url, exp)
           storeTusInfo(url, { filename, totalSize, bytesUploaded })
           const remaining = totalSize - bytesUploaded
-          if (new Date(expiry).getTime() > Date.now())
-            setPendingResumes(prev => prev.some(r => r.url === url) ? prev : [...prev, { url, filename, remaining, expiry }])
+          if (new Date(exp).getTime() > Date.now())
+            setPendingResumes(prev => prev.some(r => r.url === url) ? prev : [...prev, { url, filename, remaining, expiry: exp }])
         })
-        .catch(() => {
-          // URL expirée ou serveur injoignable — on ignore
-        })
+        .catch(() => {})
     })
   }, [])
   const [nameReq, setNameReq] = useState<FieldReq>('optional')
