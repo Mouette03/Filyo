@@ -45,10 +45,6 @@ export default function RequestUploadPage() {
     if (!url) return
     try { localStorage.setItem(tusExpiryKey(url), expiry) } catch {}
   }
-  const loadTusExpiry = (url: string | null | undefined): string | null => {
-    if (!url) return null
-    try { return localStorage.getItem(tusExpiryKey(url)) } catch { return null }
-  }
   const storeTusInfo = (url: string | null | undefined, info: { filename: string; totalSize: number; bytesUploaded: number }) => {
     if (!url) return
     try { localStorage.setItem(`tus-info:${url}`, JSON.stringify(info)) } catch {}
