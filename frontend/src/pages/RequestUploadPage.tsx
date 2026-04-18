@@ -112,8 +112,10 @@ export default function RequestUploadPage() {
           const exp = res.headers.get('Upload-Expires')
           const offset = parseInt(res.headers.get('Upload-Offset') ?? '0', 10)
           const expiry = exp ?? new Date(Date.now() + 60 * 60 * 1000).toISOString()
-          if (exp) storeTusExpiry(url, exp)
-          const remaining = totalSize - (isNaN(offset) ? 0 : offset)
+          const bytesUploaded = isNaN(offset) ? 0 : offset
+          storeTusExpiry(url, expiry)
+          storeTusInfo(url, { filename, totalSize, bytesUploaded })
+          const remaining = totalSize - bytesUploaded
           if (new Date(expiry).getTime() > Date.now())
             setPendingResumes(prev => prev.some(r => r.url === url) ? prev : [...prev, { url, filename, remaining, expiry }])
         })
