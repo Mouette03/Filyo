@@ -209,30 +209,37 @@ export default function RequestUploadPage() {
               const exp = res.getHeader('Upload-Expires')
               if (exp) {
                 uploadExpiresAtRef.current = exp
-                storeTusExpiry(tusUploadRef.current?.url, exp)
+                const url = (tusUpload as any).url as string | null
+                if (url) storeTusExpiry(url, exp)
               }
             },
-            onSuccess: () => { const doneUrl = tusUploadRef.current?.url; removeTusInfo(doneUrl); setPendingResumes(prev => prev.filter(r => r.url !== doneUrl)); resolve() },
+            onSuccess: () => {
+              const doneUrl = (tusUpload as any).url as string | null
+              removeTusInfo(doneUrl)
+              setPendingResumes(prev => prev.filter(r => r.url !== doneUrl))
+              resolve()
+            },
             onError: (err: Error) => {
-              const status = (err as any).originalResponse?.getStatus?.()
-              if (status === 429) {
+              const httpStatus = (err as any).originalResponse?.getStatus?.()
+              if (httpStatus === 429) {
                 toast.error(t('toast.tooManyRequests'))
                 reject(err)
                 return
               }
-              const status401 = status === 401
-              if (status401) {
+              if (httpStatus === 401) {
                 toast.error(t(!password.trim() ? 'toast.unauthorized' : 'toast.passwordWrong'))
                 reject(err)
                 return
               }
+              const errUrl = (tusUpload as any).url as string | null
               const remainingBytes = file.size - lastBytesUploaded
-              const expiry = uploadExpiresAtRef.current
-              if (expiry) {
-                const errUrl = tusUploadRef.current?.url ?? ''
+              const expiry = uploadExpiresAtRef.current ?? new Date(Date.now() + 60 * 60 * 1000).toISOString()
+              if (errUrl) {
+                storeTusInfo(errUrl, { filename: file.name, totalSize: file.size, bytesUploaded: lastBytesUploaded })
+                storeTusExpiry(errUrl, expiry)
                 setPendingResumes(prev => prev.some(r => r.url === errUrl) ? prev : [...prev, { url: errUrl, filename: file.name, remaining: remainingBytes, expiry }])
               } else {
-                toast(t('home.uploadPaused'), { duration: 8000, icon: '⏸' })
+                toast(t('home.uploadPaused'), { duration: 8000, icon: '\u23f8' })
               }
               reject(err)
             }

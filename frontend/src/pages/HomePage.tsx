@@ -187,7 +187,8 @@ export default function HomePage() {
               const exp = res.getHeader('Upload-Expires')
               if (exp) {
                 uploadExpiresAtRef.current = exp
-                storeTusExpiry(tusUploadRef.current?.url, exp)
+                const url = (tusUpload as any).url as string | null
+                if (url) storeTusExpiry(url, exp)
               }
             },
             onSuccess: async () => {
@@ -204,16 +205,18 @@ export default function HomePage() {
               resolve()
             },
             onError: (err: Error) => {
-              const status = (err as any).originalResponse?.getStatus?.()
-              if (status === 429) {
+              const httpStatus = (err as any).originalResponse?.getStatus?.()
+              if (httpStatus === 429) {
                 toast.error(t('toast.tooManyRequests'))
                 reject(err)
                 return
               }
+              const errUrl = (tusUpload as any).url as string | null
               const remainingBytes = file.size - lastBytesUploaded
-              const expiry = uploadExpiresAtRef.current
-              if (expiry) {
-                const errUrl = tusUploadRef.current?.url ?? ''
+              const expiry = uploadExpiresAtRef.current ?? new Date(Date.now() + 60 * 60 * 1000).toISOString()
+              if (errUrl) {
+                storeTusInfo(errUrl, { filename: file.name, totalSize: file.size, bytesUploaded: lastBytesUploaded })
+                storeTusExpiry(errUrl, expiry)
                 setPendingResumes(prev => prev.some(r => r.url === errUrl) ? prev : [...prev, { url: errUrl, filename: file.name, remaining: remainingBytes, expiry }])
               } else {
                 toast.error(t('toast.uploadFailed'))
