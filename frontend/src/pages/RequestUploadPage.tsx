@@ -73,6 +73,7 @@ export default function RequestUploadPage() {
     const seen = new Set<string>()
 
     // 1. Entrées complètes (tus-expiry + tus-info écrits par nos handlers)
+    const knownKeys: { url: string; filename: string; totalSize: number; bytesUploaded: number }[] = []
     for (let i = localStorage.length - 1; i >= 0; i--) {
       const key = localStorage.key(i)
       if (!key?.startsWith('tus-expiry:')) continue
@@ -86,8 +87,24 @@ export default function RequestUploadPage() {
         const info2 = JSON.parse(infoRaw)
         seen.add(url)
         setPendingResumes(prev => [...prev, { url, filename: info2.filename, remaining: info2.totalSize - info2.bytesUploaded, expiry }])
+        knownKeys.push({ url, filename: info2.filename, totalSize: info2.totalSize, bytesUploaded: info2.bytesUploaded })
       } catch {}
     }
+    // HEAD sur les entrées connues pour corriger l'expiry si elle était un fallback (ex: réveil PC)
+    knownKeys.forEach(({ url, filename, totalSize }) => {
+      fetch(url, { method: 'HEAD', credentials: 'include' })
+        .then(res => {
+          const exp = res.headers.get('Upload-Expires')
+          if (!exp) return
+          const offset = parseInt(res.headers.get('Upload-Offset') ?? '0', 10)
+          const bytesUploaded = isNaN(offset) ? 0 : offset
+          storeTusExpiry(url, exp)
+          storeTusInfo(url, { filename, totalSize, bytesUploaded })
+          const remaining = totalSize - bytesUploaded
+          setPendingResumes(prev => prev.map(r => r.url === url ? { ...r, expiry: exp, remaining } : r))
+        })
+        .catch(() => {})
+    })
 
     // 2. Fallback : clés tus-js-client (refresh page pendant upload — nos handlers n'ont pas tourné)
     const reqPrefix = `tus::tus::filyo::req::${token}::`
