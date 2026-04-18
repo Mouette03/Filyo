@@ -175,6 +175,25 @@ export default function RequestUploadPage() {
         let lastInfoWriteTime = 0
 
         await new Promise<void>((resolve, reject) => {
+          let offlineHandled = false
+
+          const handleOffline = () => {
+            if (offlineHandled) return
+            offlineHandled = true
+            const currentUrl = (tusUpload as any).url as string | null
+            const expiry = uploadExpiresAtRef.current ?? new Date(Date.now() + 60 * 60 * 1000).toISOString()
+            if (currentUrl) {
+              storeTusInfo(currentUrl, { filename: file.name, totalSize: file.size, bytesUploaded: lastBytesUploaded })
+              storeTusExpiry(currentUrl, expiry)
+              setPendingResumes(prev => prev.some(r => r.url === currentUrl) ? prev : [...prev, { url: currentUrl, filename: file.name, remaining: file.size - lastBytesUploaded, expiry }])
+            }
+            tusUpload.abort().catch(() => {})
+            window.removeEventListener('offline', handleOffline)
+            setStatus('ready')
+            reject(new Error('offline'))
+          }
+          window.addEventListener('offline', handleOffline)
+
           const tusUpload = new tus.Upload(file, {
             endpoint: '/api/upload-requests/tus',
             retryDelays: [0, 1000, 3000, 5000],
@@ -214,12 +233,15 @@ export default function RequestUploadPage() {
               }
             },
             onSuccess: () => {
+              window.removeEventListener('offline', handleOffline)
               const doneUrl = (tusUpload as any).url as string | null
               removeTusInfo(doneUrl)
               setPendingResumes(prev => prev.filter(r => r.url !== doneUrl))
               resolve()
             },
             onError: (err: Error) => {
+              window.removeEventListener('offline', handleOffline)
+              if (offlineHandled) return
               const httpStatus = (err as any).originalResponse?.getStatus?.()
               if (httpStatus === 429) {
                 toast.error(t('toast.tooManyRequests'))
