@@ -16,6 +16,9 @@ on:
 jobs:
   notify:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      models: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -33,6 +36,8 @@ jobs:
           if [ -z "$RAW" ]; then
             RAW="Aucun commit spécifique à cette branche."
           fi
+          echo "=== COMMITS TROUVÉS ==="
+          echo "$RAW"
           echo "raw<<EOF" >> $GITHUB_OUTPUT
           echo "$RAW" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -43,6 +48,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           COMMITS="${{ steps.commits.outputs.raw }}"
+          echo "=== APPEL API ==="
           RESPONSE=$(curl -s https://models.inference.ai.azure.com/chat/completions \
             -H "Authorization: Bearer $GITHUB_TOKEN" \
             -H "Content-Type: application/json" \
@@ -54,7 +60,9 @@ jobs:
               }],
               \"max_tokens\": 400
             }")
-          SUMMARY=$(echo "$RESPONSE" | jq -r '.choices[0].message.content')
+          echo "=== RÉPONSE API ==="
+          echo "$RESPONSE"
+          SUMMARY=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // "Résumé indisponible"')
           echo "summary<<EOF" >> $GITHUB_OUTPUT
           echo "$SUMMARY" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
