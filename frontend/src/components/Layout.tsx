@@ -164,9 +164,9 @@ export default function Layout() {
         <Outlet />
       </main>
 
-      <footer className="border-t border-white/5 py-4 px-6 text-white/25 text-xs relative flex items-center justify-center">
-        {/* Version actuelle + alerte mise à jour */}
-        <div className="absolute left-6 flex items-center gap-2">
+      <footer className="border-t border-white/5 py-4 px-6 text-white/25 text-xs flex items-center justify-between gap-2">
+        {/* Gauche : version + alerte mise à jour */}
+        <div className="flex items-center gap-2 flex-shrink-0">
           <span>v{currentVersion}</span>
           {hasUpdate && (
             <a
@@ -182,12 +182,17 @@ export default function Layout() {
           )}
         </div>
 
-        <span>{settings.appName} — {t('nav.footer')}</span>
+        {/* Centre : nom de l'app + slogan (slogan masqué sur mobile) */}
+        <span className="truncate text-center">
+          {settings.appName}<span className="hidden sm:inline"> — {t('nav.footer')}</span>
+        </span>
+
+        {/* Droite : GitHub */}
         <a
           href="https://github.com/Mouette03/Filyo"
           target="_blank"
           rel="noopener noreferrer"
-          className="absolute right-6 flex items-center gap-1.5 hover:text-white/60 transition-colors"
+          className="flex items-center gap-1.5 hover:text-white/60 transition-colors flex-shrink-0"
           title="Voir sur GitHub"
         >
           <Github size={14} />

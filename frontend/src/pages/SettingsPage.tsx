@@ -306,7 +306,7 @@ export default function SettingsPage() {
           <Globe size={16} className="text-brand-400" />
           <h3 className="font-semibold">{t('settings.siteUrlSection')}</h3>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           <input
             id="settings-site-url"
             name="siteUrl"
@@ -316,7 +316,7 @@ export default function SettingsPage() {
             placeholder={t('settings.siteUrlPlaceholder')}
           />
           <button onClick={handleSaveUrl} disabled={savingUrl}
-            className="btn-primary flex items-center gap-2 px-5 whitespace-nowrap">
+            className="btn-primary flex items-center justify-center gap-2 px-5 whitespace-nowrap">
             {savingUrl ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
             {t('common.save')}
           </button>
@@ -335,7 +335,7 @@ export default function SettingsPage() {
           <h3 className="font-semibold">{t('settings.authSection')}</h3>
         </div>
         <div className="flex items-center justify-between py-3 px-4 bg-white/3 rounded-xl">
-          <div>
+          <div className="min-w-0 mr-4">
             <p className="text-sm font-medium">{t('settings.freeReg')}</p>
             <p className="text-xs text-white/40 mt-0.5">{t('settings.freeRegHint')}</p>
           </div>
@@ -363,10 +363,12 @@ export default function SettingsPage() {
 
       {/* Section : Nettoyage automatique */}
       <div className="card mb-6">
-        <div className="flex items-center gap-2 mb-5">
-          <Clock size={16} className="text-brand-400" />
-          <h3 className="font-semibold">{t('settings.cleanupSection')}</h3>
-          <span className="text-xs text-white/30 ml-auto">{t('settings.cleanupHint')}</span>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-5">
+          <div className="flex items-center gap-2">
+            <Clock size={16} className="text-brand-400" />
+            <h3 className="font-semibold">{t('settings.cleanupSection')}</h3>
+          </div>
+          <span className="text-xs text-white/30 sm:ml-auto">{t('settings.cleanupHint')}</span>
         </div>
         <div className="flex items-center justify-between py-3 px-4 bg-white/3 rounded-xl">
           <p className="text-sm font-medium">{t('settings.cleanupLabel')}</p>
