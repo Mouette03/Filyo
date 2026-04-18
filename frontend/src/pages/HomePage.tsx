@@ -177,6 +177,7 @@ export default function HomePage() {
             retryDelays: [0, 1000, 3000, 5000],
             storeFingerprintForResuming: true,
             removeFingerprintOnSuccess: true,
+            fingerprint: async (f: File) => `tus::filyo::${f.name}::${f.size}::${f.lastModified}`,
             chunkSize: settings.cfBypassEnabled ? settings.cfBypassChunkMb * 1024 * 1024 : Infinity,
             metadata: {
               filename: file.name,

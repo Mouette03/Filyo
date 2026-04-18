@@ -199,6 +199,7 @@ export default function RequestUploadPage() {
             retryDelays: [0, 1000, 3000, 5000],
             storeFingerprintForResuming: true,
             removeFingerprintOnSuccess: true,
+            fingerprint: async (f: File) => `tus::filyo::req::${token}::${f.name}::${f.size}::${f.lastModified}`,
             chunkSize: settings.cfBypassEnabled ? settings.cfBypassChunkMb * 1024 * 1024 : Infinity,
             metadata: {
               requestToken: token!,
@@ -270,13 +271,7 @@ export default function RequestUploadPage() {
           tusUpload.findPreviousUploads().then((prev: tus.PreviousUpload[]) => {
             if (prev.length > 0) {
               tusUpload.resumeFromPreviousUpload(prev[0])
-              const storedExpiry = loadTusExpiry(prev[0].uploadUrl)
-              if (storedExpiry) {
-                const expiresDisplay = new Date(storedExpiry).toLocaleString()
-                toast(t('request.resumingWithExpiry', { expires: expiresDisplay }), { duration: 8000, icon: '⏸' })
-              } else {
-                setProgressLabel(t('request.resuming'))
-              }
+              toast(t('request.resuming'), { duration: 5000, icon: '⏸' })
             }
             tusUpload.start()
           })
