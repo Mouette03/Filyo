@@ -94,7 +94,7 @@ export default function HomePage() {
     // 2. Fallback : clés tus-js-client (refresh page pendant upload — nos handlers n'ont pas tourné)
     for (let i = localStorage.length - 1; i >= 0; i--) {
       const key = localStorage.key(i)
-      if (!key?.startsWith('tus::filyo::')) continue
+      if (!key?.startsWith('tus::tus::filyo::')) continue
       try {
         const stored = JSON.parse(localStorage.getItem(key) ?? '{}')
         const url: string | undefined = stored.uploadUrl

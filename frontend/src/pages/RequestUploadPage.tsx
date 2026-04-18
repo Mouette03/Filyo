@@ -80,7 +80,7 @@ export default function RequestUploadPage() {
     }
 
     // 2. Fallback : clés tus-js-client (refresh page pendant upload — nos handlers n'ont pas tourné)
-    const reqPrefix = `tus::filyo::req::${token}::`
+    const reqPrefix = `tus::tus::filyo::req::${token}::`
     for (let i = localStorage.length - 1; i >= 0; i--) {
       const key = localStorage.key(i)
       if (!key?.startsWith(reqPrefix)) continue
