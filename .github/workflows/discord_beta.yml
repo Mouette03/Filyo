@@ -8,10 +8,14 @@ on:
         required: true
         type: string
       branch:
-        description: "Branche à analyser (ex: develop)"
+        description: "Branche à analyser"
         required: true
         default: "develop"
-        type: string
+        type: choice
+        options:
+          - develop
+          - staging
+          - beta
 
 jobs:
   notify:
@@ -23,15 +27,22 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.inputs.branch }}
 
+      - name: Fetch toutes les branches
+        run: git fetch --all
+
       - name: Récupérer les commits depuis le dernier tag stable
         id: commits
         run: |
+          git checkout ${{ github.event.inputs.branch }}
           LAST_TAG=$(git tag --sort=-creatordate | grep -v -E 'beta|alpha|rc' | head -n 1)
           if [ -z "$LAST_TAG" ]; then
             RAW=$(git log --oneline -10 --pretty=format:"%s")
             LAST_TAG="début du projet"
           else
-            RAW=$(git log ${LAST_TAG}..HEAD --pretty=format:"%s")
+            RAW=$(git log origin/${{ github.event.inputs.branch }} --not origin/main --pretty=format:"%s")
+          fi
+          if [ -z "$RAW" ]; then
+            RAW="Aucun commit depuis \`${LAST_TAG}\`"
           fi
           echo "last_tag=$LAST_TAG" >> $GITHUB_OUTPUT
           echo "raw<<EOF" >> $GITHUB_OUTPUT
@@ -69,7 +80,7 @@ jobs:
             **Image :** `ghcr.io/mouette03/filyo:${{ github.event.inputs.sha_tag }}`
             **Branche :** `${{ github.event.inputs.branch }}`
             **Déclenché par :** ${{ github.actor }}
-            **Changements depuis `${{ steps.commits.outputs.last_tag }}` :**
+            **Changements depuis `main` :**
 
             ${{ steps.summary.outputs.summary }}
           embed-color: 16753920
