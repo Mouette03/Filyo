@@ -184,6 +184,7 @@ export const en = {
   'request.uploading': 'Uploading… {{pct}}%',
   'request.submitBtn': 'Deposit {{count}} file(s)',
   'request.maxFiles': 'Max {{count}} file(s)',
+  'request.tooManyFiles': 'Maximum {{count}} file(s) allowed',
   'request.maxSize': 'Max {{size}} / file',
 
   // ── Profile ──────────────────────────────────────────────────

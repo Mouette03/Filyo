@@ -153,10 +153,13 @@ export default function RequestUploadPage() {
   const onDrop = useCallback((accepted: File[]) => {
     setFiles(prev => {
       const merged = [...prev, ...accepted]
-      if (info?.maxFiles) return merged.slice(0, info.maxFiles)
+      if (info?.maxFiles && merged.length > info.maxFiles) {
+        toast.error(t('request.tooManyFiles', { count: String(info.maxFiles) }))
+        return merged.slice(0, info.maxFiles)
+      }
       return merged
     })
-  }, [info])
+  }, [info, t])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop })
 

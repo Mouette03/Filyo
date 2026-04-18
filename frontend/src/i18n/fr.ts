@@ -184,6 +184,7 @@ export const fr = {
   'request.uploading': 'Envoi en cours… {{pct}}%',
   'request.submitBtn': 'Déposer {{count}} fichier(s)',
   'request.maxFiles': 'Max {{count}} fichier(s)',
+  'request.tooManyFiles': 'Maximum {{count}} fichier(s) autorisé(s)',
   'request.maxSize': 'Max {{size}} / fichier',
 
   // ── Profil ──────────────────────────────────────────────────
