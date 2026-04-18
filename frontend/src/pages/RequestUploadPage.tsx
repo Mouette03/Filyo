@@ -91,6 +91,7 @@ export default function RequestUploadPage() {
 
     // 2. Fallback : clés tus-js-client (refresh page pendant upload — nos handlers n'ont pas tourné)
     const reqPrefix = `tus::tus::filyo::req::${token}::`
+    const tusKeys: { url: string; filename: string; totalSize: number }[] = []
     for (let i = localStorage.length - 1; i >= 0; i--) {
       const key = localStorage.key(i)
       if (!key?.startsWith(reqPrefix)) continue
@@ -100,11 +101,26 @@ export default function RequestUploadPage() {
         if (!url || seen.has(url)) continue
         const filename: string = stored.metadata?.filename ?? ''
         const totalSize: number = stored.size ?? 0
-        const expiry = new Date(Date.now() + 60 * 60 * 1000).toISOString()
         seen.add(url)
-        setPendingResumes(prev => [...prev, { url, filename, remaining: totalSize, expiry }])
+        tusKeys.push({ url, filename, totalSize })
       } catch {}
     }
+    // HEAD request pour récupérer Upload-Expires et Upload-Offset réels
+    tusKeys.forEach(({ url, filename, totalSize }) => {
+      fetch(url, { method: 'HEAD', credentials: 'include' })
+        .then(res => {
+          const exp = res.headers.get('Upload-Expires')
+          const offset = parseInt(res.headers.get('Upload-Offset') ?? '0', 10)
+          const expiry = exp ?? new Date(Date.now() + 60 * 60 * 1000).toISOString()
+          if (exp) storeTusExpiry(url, exp)
+          const remaining = totalSize - (isNaN(offset) ? 0 : offset)
+          if (new Date(expiry).getTime() > Date.now())
+            setPendingResumes(prev => prev.some(r => r.url === url) ? prev : [...prev, { url, filename, remaining, expiry }])
+        })
+        .catch(() => {
+          // URL expirée ou serveur injoignable — on ignore
+        })
+    })
   }, [])
   const [nameReq, setNameReq] = useState<FieldReq>('optional')
   const [emailReq, setEmailReq] = useState<FieldReq>('optional')
