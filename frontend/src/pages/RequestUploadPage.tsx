@@ -54,6 +54,16 @@ export default function RequestUploadPage() {
     try {
       localStorage.removeItem(`tus-info:${url}`)
       localStorage.removeItem(tusExpiryKey(url))
+      // Supprimer aussi la clé tus-js-client (sinon bannière réapparaît au refresh)
+      const reqPrefix = `tus::tus::filyo::req::${token}::`
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const k = localStorage.key(i)
+        if (!k?.startsWith(reqPrefix)) continue
+        try {
+          const stored = JSON.parse(localStorage.getItem(k) ?? '{}')
+          if (stored.uploadUrl === url) { localStorage.removeItem(k); break }
+        } catch {}
+      }
     } catch {}
   }
 
@@ -237,9 +247,9 @@ export default function RequestUploadPage() {
               const speedStr = speed > 0 ? ` · ${formatSpeed(speed)}` : ''
               setProgressLabel(`${globalPct}%${speedStr}`)
               const now2 = Date.now()
-              if (now2 - lastInfoWriteTime > 2000) {
+              if (now2 - lastInfoWriteTime > 2000 && tusUploadRef.current?.url) {
+                storeTusInfo(tusUploadRef.current.url, { filename: file.name, totalSize: file.size, bytesUploaded })
                 lastInfoWriteTime = now2
-                storeTusInfo(tusUploadRef.current?.url, { filename: file.name, totalSize: file.size, bytesUploaded })
               }
             },
             onAfterResponse: (_req: unknown, res: { getHeader: (h: string) => string | undefined }) => {

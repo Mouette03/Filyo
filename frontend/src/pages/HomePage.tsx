@@ -61,6 +61,15 @@ export default function HomePage() {
     try {
       localStorage.removeItem(`tus-info:${url}`)
       localStorage.removeItem(tusExpiryKey(url))
+      // Supprimer aussi la clé tus-js-client (sinon bannière réapparaît au refresh)
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const k = localStorage.key(i)
+        if (!k?.startsWith('tus::tus::filyo::')) continue
+        try {
+          const stored = JSON.parse(localStorage.getItem(k) ?? '{}')
+          if (stored.uploadUrl === url) { localStorage.removeItem(k); break }
+        } catch {}
+      }
     } catch {}
   }
 
