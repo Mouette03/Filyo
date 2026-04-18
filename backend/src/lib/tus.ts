@@ -325,14 +325,15 @@ export async function cleanupExpiredTusUploads(): Promise<number> {
     if (!await fs.pathExists(dir)) continue
     const entries = await fs.readdir(dir).catch(() => [] as string[])
     for (const entry of entries) {
-      // Les fichiers .info contiennent les métadonnées TUS dont creation_date
-      if (!entry.endsWith('.info')) continue
+      // @tus/file-store v2 utilise .json (v1 utilisait .info)
+      const isInfo = entry.endsWith('.json') || entry.endsWith('.info')
+      if (!isInfo) continue
       const infoPath = path.join(dir, entry)
       try {
         const info = await fs.readJson(infoPath)
         const creationDate = info.creation_date ? new Date(info.creation_date) : null
         if (creationDate && Date.now() - creationDate.getTime() > TUS_EXPIRY_MS) {
-          const id = entry.replace(/\.info$/, '')
+          const id = entry.replace(/\.(json|info)$/, '')
           await fs.remove(path.join(dir, id)).catch(() => {})
           await fs.remove(infoPath).catch(() => {})
           cleaned++
