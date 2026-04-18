@@ -48,7 +48,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           COMMITS="${{ steps.commits.outputs.raw }}"
-          echo "=== APPEL API ==="
           RESPONSE=$(curl -s https://models.inference.ai.azure.com/chat/completions \
             -H "Authorization: Bearer $GITHUB_TOKEN" \
             -H "Content-Type: application/json" \
@@ -56,7 +55,7 @@ jobs:
               \"model\": \"gpt-4o-mini\",
               \"messages\": [{
                 \"role\": \"user\",
-                \"content\": \"Voici une liste de commits git pour une release bêta. Fais un résumé clair et lisible en français, groupé par thème (nouveautés, corrections, etc.), avec des emojis. Maximum 10 lignes. Commits :\n${COMMITS}\"
+                \"content\": $(echo "Voici une liste de commits git pour une release bêta. Fais un résumé clair et lisible en français, groupé par thème (nouveautés, corrections, etc.), avec des emojis. Maximum 10 lignes. Commits : $COMMITS" | jq -Rs .)
               }],
               \"max_tokens\": 400
             }")
