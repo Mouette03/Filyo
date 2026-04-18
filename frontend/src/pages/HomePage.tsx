@@ -67,6 +67,9 @@ export default function HomePage() {
   // Vérifier au montage si un upload a été interrompu
   useEffect(() => {
     const now = Date.now()
+    const seen = new Set<string>()
+
+    // 1. Entrées complètes (tus-expiry + tus-info écrits par nos handlers)
     for (let i = localStorage.length - 1; i >= 0; i--) {
       const key = localStorage.key(i)
       if (!key?.startsWith('tus-expiry:')) continue
@@ -83,7 +86,24 @@ export default function HomePage() {
       if (!infoRaw) continue
       try {
         const info = JSON.parse(infoRaw)
+        seen.add(url)
         setPendingResumes(prev => [...prev, { url, filename: info.filename, remaining: info.totalSize - info.bytesUploaded, expiry }])
+      } catch {}
+    }
+
+    // 2. Fallback : clés tus-js-client (refresh page pendant upload — nos handlers n'ont pas tourné)
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i)
+      if (!key?.startsWith('tus::filyo::')) continue
+      try {
+        const stored = JSON.parse(localStorage.getItem(key) ?? '{}')
+        const url: string | undefined = stored.uploadUrl
+        if (!url || seen.has(url)) continue
+        const filename: string = stored.metadata?.filename ?? ''
+        const totalSize: number = stored.size ?? 0
+        const expiry = new Date(Date.now() + 60 * 60 * 1000).toISOString()
+        seen.add(url)
+        setPendingResumes(prev => [...prev, { url, filename, remaining: totalSize, expiry }])
       } catch {}
     }
   }, [])
