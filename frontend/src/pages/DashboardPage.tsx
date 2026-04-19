@@ -425,8 +425,8 @@ export default function DashboardPage() {
       )}
 
       {/* Tabs + Actions */}
-      <div className="flex flex-wrap items-center gap-2 mb-6">
-        <div className="flex gap-1 bg-white/5 rounded-xl p-1">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-6">
+        <div className="flex gap-1 bg-white/5 rounded-xl p-1 w-fit">
           <button onClick={() => setTab('sent')}
             className={`px-5 py-2 rounded-lg text-sm font-medium transition-all
               ${tab === 'sent' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white'}`}>
@@ -438,13 +438,13 @@ export default function DashboardPage() {
             {t('dash.tabRequests')} ({requests.length})
           </button>
         </div>
-        <div className="flex gap-2 ml-auto">
+        <div className="flex gap-2 sm:ml-auto">
           {isAdmin && tab === 'sent' && (
-            <button onClick={handleCleanup} className="btn-danger flex items-center gap-1.5 text-xs px-2.5 py-2">
+            <button onClick={handleCleanup} className="btn-danger flex items-center justify-center gap-1.5 text-xs px-2.5 py-2 flex-1 sm:flex-none">
               <Trash2 size={13} /> {t('dash.cleanExpired')}
             </button>
           )}
-          <button onClick={load} className="flex items-center gap-1.5 text-xs px-2.5 py-2 rounded-lg bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 transition-colors">
+          <button onClick={load} className="flex items-center justify-center gap-1.5 text-xs px-2.5 py-2 rounded-lg bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 transition-colors flex-1 sm:flex-none">
             <RefreshCw size={13} /> {t('common.refresh')}
           </button>
         </div>
