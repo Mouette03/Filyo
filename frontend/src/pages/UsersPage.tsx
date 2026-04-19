@@ -20,7 +20,7 @@ interface AdminFile {
 }
 
 interface AdminUploadRequest {
-  id: string; token: string; title: string; active: boolean; createdAt: string; filesCount: number
+  id: string; token: string; title: string; active: boolean; createdAt: string; expiresAt: string | null; filesCount: number
   user: { id: string; name: string; email: string } | null
 }
 
@@ -507,9 +507,11 @@ export default function UsersPage() {
                       </td>
                       <td className="px-4 py-3 text-white/80 text-xs font-medium">{d.title}</td>
                       <td className="px-4 py-3">
-                        <span className={`badge ${d.active ? 'badge-green' : 'badge-red'}`}>
-                          {d.active ? t('common.active') : t('common.inactive')}
-                        </span>
+                        {(() => { const isExpired = d.expiresAt && new Date(d.expiresAt) <= new Date(); return (
+                          <span className={`badge ${d.active && !isExpired ? 'badge-green' : isExpired ? 'badge-orange' : 'badge-red'}`}>
+                            {d.active && !isExpired ? t('common.active') : isExpired ? t('dash.expired') : t('common.inactive')}
+                          </span>
+                        ); })()}
                       </td>
                       <td className="px-4 py-3 text-white/50 text-xs">{t('users.filesCount', { count: String(d.filesCount) })}</td>
                       <td className="px-4 py-3 text-white/50 text-xs">{formatDate(d.createdAt)}</td>
