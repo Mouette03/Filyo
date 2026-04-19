@@ -98,7 +98,7 @@ export const fr = {
 
   // ── Tableau de bord ─────────────────────────────────────────
   'dash.title': 'Tableau de bord',
-  'dash.cleanExpired': 'Nettoyer expirés',
+  'dash.cleanExpired': 'Supprimer fichiers expirés',
   'dash.statFilesSent': 'Fichiers envoyés',
   'dash.statShares': 'Partages actifs',
   'dash.statRequests': 'Demandes de dépôt',

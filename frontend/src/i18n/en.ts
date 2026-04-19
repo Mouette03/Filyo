@@ -98,7 +98,7 @@ export const en = {
 
   // ── Dashboard ────────────────────────────────────────────────
   'dash.title': 'Dashboard',
-  'dash.cleanExpired': 'Clean expired',
+  'dash.cleanExpired': 'Delete expired files',
   'dash.statFilesSent': 'Files sent',
   'dash.statShares': 'Active shares',
   'dash.statRequests': 'Deposit requests',

@@ -359,18 +359,8 @@ export default function DashboardPage() {
   return (
     <div className="max-w-5xl mx-auto px-4 py-10">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-2">
+      <div className="mb-8">
         <h1 className="text-3xl sm:text-2xl font-bold text-center sm:text-left">{t('dash.title')}</h1>
-        <div className="flex flex-col sm:flex-row gap-2">
-          {isAdmin && (
-            <button onClick={handleCleanup} className="btn-secondary flex items-center justify-center gap-1.5 text-xs sm:text-sm px-2.5 py-2 sm:px-3 sm:py-2 w-full sm:w-auto">
-              <Trash2 size={13} /> {t('dash.cleanExpired')}
-            </button>
-          )}
-          <button onClick={load} className="btn-secondary flex items-center justify-center gap-1.5 text-xs sm:text-sm px-2.5 py-2 sm:px-3 sm:py-2 w-full sm:w-auto">
-            <RefreshCw size={13} /> {t('common.refresh')}
-          </button>
-        </div>
       </div>
 
       {/* Stats */}
@@ -434,18 +424,30 @@ export default function DashboardPage() {
         </>
       )}
 
-      {/* Tabs */}
-      <div className="flex gap-1 bg-white/5 rounded-xl p-1 mb-6 w-fit">
-        <button onClick={() => setTab('sent')}
-          className={`px-5 py-2 rounded-lg text-sm font-medium transition-all
-            ${tab === 'sent' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white'}`}>
-          {t('dash.tabSent')} ({displayItems.length})
-        </button>
-        <button onClick={() => setTab('requests')}
-          className={`px-5 py-2 rounded-lg text-sm font-medium transition-all
-            ${tab === 'requests' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white'}`}>
-          {t('dash.tabRequests')} ({requests.length})
-        </button>
+      {/* Tabs + Actions */}
+      <div className="flex flex-wrap items-center gap-2 mb-6">
+        <div className="flex gap-1 bg-white/5 rounded-xl p-1">
+          <button onClick={() => setTab('sent')}
+            className={`px-5 py-2 rounded-lg text-sm font-medium transition-all
+              ${tab === 'sent' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white'}`}>
+            {t('dash.tabSent')} ({displayItems.length})
+          </button>
+          <button onClick={() => setTab('requests')}
+            className={`px-5 py-2 rounded-lg text-sm font-medium transition-all
+              ${tab === 'requests' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white'}`}>
+            {t('dash.tabRequests')} ({requests.length})
+          </button>
+        </div>
+        <div className="flex gap-2 ml-auto">
+          {isAdmin && tab === 'sent' && (
+            <button onClick={handleCleanup} className="btn-danger flex items-center gap-1.5 text-xs px-2.5 py-2">
+              <Trash2 size={13} /> {t('dash.cleanExpired')}
+            </button>
+          )}
+          <button onClick={load} className="flex items-center gap-1.5 text-xs px-2.5 py-2 rounded-lg bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 transition-colors">
+            <RefreshCw size={13} /> {t('common.refresh')}
+          </button>
+        </div>
       </div>
 
       {loading && (
