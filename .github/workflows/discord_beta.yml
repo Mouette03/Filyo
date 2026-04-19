@@ -75,7 +75,7 @@ jobs:
             **Image :** `ghcr.io/mouette03/filyo:${{ github.event.inputs.sha_tag }}`
             **Branche :** `${{ github.event.inputs.branch }}`
             **Déclenché par :** ${{ github.actor }}
-            **Changements depuis main :**
+            **Changements depuis latest :**
 
             ${{ steps.summary.outputs.summary }}
           embed-color: 16753920
