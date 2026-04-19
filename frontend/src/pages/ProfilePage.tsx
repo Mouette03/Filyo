@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
-import { User, Camera, Trash2, Lock, RefreshCw, Check, Pencil, Eraser, Palette, Moon, Sun, Monitor } from 'lucide-react'
+import { User, Camera, Trash2, Lock, RefreshCw, Check, Pencil, Eraser, Palette, Moon, Sun, Monitor, Globe } from 'lucide-react'
 import { usePreferencesStore, ACCENT_PRESETS, BG_PRESETS, type ThemeMode, type AccentKey, type BgColorKey } from '../stores/usePreferencesStore'
+import { LANGUAGES } from '../components/LanguageSwitcher'
 import toast from 'react-hot-toast'
 import { uploadAvatar, deleteAvatar, changePassword, updateProfile, updateCleanupPreference, getSettings } from '../api/client'
 import { useAuthStore } from '../stores/useAuthStore'
@@ -18,6 +19,7 @@ export default function ProfilePage() {
   const { user, updateAvatar, updateName, updateCleanupPref } = useAuthStore()
   const { t } = useT()
   const { theme, accentColor, bgColorKey, setTheme, setAccentColor, setBgColor } = usePreferencesStore()
+  const { lang, setLang } = useT()
   const isDark = theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)
   const THEME_OPTIONS: { value: ThemeMode; label: string; icon: typeof Moon }[] = [
     { value: 'dark',  label: t('settings.themeDark'),  icon: Moon },
@@ -199,6 +201,24 @@ export default function ProfilePage() {
             </span>
           </div>
         </div>
+      </div>
+
+      {/* Section Langue */}
+      <div className="card mb-5">
+        <div className="flex items-center gap-2 mb-4">
+          <Globe size={16} className="text-brand-400" />
+          <h3 className="font-semibold">{t('profile.langSection')}</h3>
+        </div>
+        <p className="text-xs text-white/30 mb-3">{t('profile.langHint')}</p>
+        <select
+          value={lang}
+          onChange={e => setLang(e.target.value as any)}
+          className="input w-full"
+        >
+          {LANGUAGES.map(l => (
+            <option key={l.code} value={l.code}>{l.flag} {l.label}</option>
+          ))}
+        </select>
       </div>
 
       {/* Section Avatar */}

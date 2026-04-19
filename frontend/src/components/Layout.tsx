@@ -6,7 +6,6 @@ import { useAppSettingsStore } from '../stores/useAppSettingsStore'
 import { getSettings, logoutApi } from '../api/client'
 import toast from 'react-hot-toast'
 import { useT } from '../i18n'
-import LanguageSwitcher from './LanguageSwitcher'
 
 declare const __APP_VERSION__: string
 
@@ -89,9 +88,8 @@ export default function Layout() {
             </NavLink>
           </nav>
 
-          {/* Droite : sélecteur de langue + menu utilisateur */}
+          {/* Droite : menu utilisateur */}
           <div className="flex items-center gap-1">
-            <LanguageSwitcher />
             <div className="relative" ref={menuRef}>
             <button
               onClick={() => setUserMenuOpen(!userMenuOpen)}

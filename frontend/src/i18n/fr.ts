@@ -189,6 +189,8 @@ export const fr = {
 
   // ── Profil ──────────────────────────────────────────────────
   'profile.title': 'Mon profil',
+  'profile.langSection': 'Langue d\'interface',
+  'profile.langHint': 'Choisissez la langue d\'affichage de l\'interface.',
   'profile.avatarSection': 'Photo de profil',
   'profile.changePhoto': 'Changer la photo',
   'profile.choosePhoto': 'Choisir une photo',
