@@ -402,12 +402,14 @@ export default function SettingsPage() {
 
       {/* Section : Taille max fichier */}
       <div className="card mb-6">
-        <div className="flex items-center gap-2 mb-5">
-          <Upload size={16} className="text-brand-400" />
-          <h3 className="font-semibold">{t('settings.maxFileSizeSection')}</h3>
-          <span className="text-xs text-white/30 ml-auto">{t('settings.maxFileSizeHint')}</span>
+        <div className="mb-5">
+          <div className="flex items-center gap-2 mb-1">
+            <Upload size={16} className="text-brand-400" />
+            <h3 className="font-semibold">{t('settings.maxFileSizeSection')}</h3>
+          </div>
+          <p className="text-xs text-white/30">{t('settings.maxFileSizeHint')}</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <input
             id="settings-max-file-size"
             name="maxFileSizeMb"
@@ -459,10 +461,12 @@ export default function SettingsPage() {
 
       {/* Section : Contournement Cloudflare */}
       <div className="card mb-6">
-        <div className="flex items-center gap-2 mb-5">
-          <Upload size={16} className="text-brand-400" />
-          <h3 className="font-semibold">{t('settings.cfBypassSection')}</h3>
-          <span className="text-xs text-white/30 ml-auto">{t('settings.cfBypassHint')}</span>
+        <div className="mb-5">
+          <div className="flex items-center gap-2 mb-1">
+            <Upload size={16} className="text-brand-400" />
+            <h3 className="font-semibold">{t('settings.cfBypassSection')}</h3>
+          </div>
+          <p className="text-xs text-white/30">{t('settings.cfBypassHint')}</p>
         </div>
         <div className="flex items-center justify-between py-3 px-4 bg-white/3 rounded-xl">
           <div>
@@ -487,10 +491,12 @@ export default function SettingsPage() {
 
       {/* Section : Champs formulaire déposant */}
       <div className="card mb-6">
-        <div className="flex items-center gap-2 mb-5">
-          <Users size={16} className="text-brand-400" />
-          <h3 className="font-semibold">{t('settings.uploaderFieldsSection')}</h3>
-          <span className="text-xs text-white/30 ml-auto">{t('settings.uploaderFormHint')}</span>
+        <div className="mb-5">
+          <div className="flex items-center gap-2 mb-1">
+            <Users size={16} className="text-brand-400" />
+            <h3 className="font-semibold">{t('settings.uploaderFieldsSection')}</h3>
+          </div>
+          <p className="text-xs text-white/30">{t('settings.uploaderFormHint')}</p>
         </div>
 
         {([
@@ -530,10 +536,12 @@ export default function SettingsPage() {
 
       {/* Section : Serveur SMTP */}
       <div className="card">
-        <div className="flex items-center gap-2 mb-5">
-          <Mail size={16} className="text-brand-400" />
-          <h3 className="font-semibold">{t('settings.smtpSection')}</h3>
-          <span className="text-xs text-white/30 ml-auto">{t('settings.smtpHint')}</span>
+        <div className="mb-5">
+          <div className="flex items-center gap-2 mb-1">
+            <Mail size={16} className="text-brand-400" />
+            <h3 className="font-semibold">{t('settings.smtpSection')}</h3>
+          </div>
+          <p className="text-xs text-white/30">{t('settings.smtpHint')}</p>
         </div>
 
         <div className="grid grid-cols-2 gap-4 mb-4">
