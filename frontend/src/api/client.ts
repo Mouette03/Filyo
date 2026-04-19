@@ -1,4 +1,7 @@
 import axios from 'axios'
+import toast from 'react-hot-toast'
+import { fr, en } from '../i18n'
+import { useI18nStore } from '../stores/useI18nStore'
 import { useAuthStore } from '../stores/useAuthStore'
 
 const api = axios.create({
@@ -15,6 +18,11 @@ api.interceptors.response.use(
     // Déconnecter si le token est invalide/expiré ou si l'utilisateur n'existe plus — pas sur un mauvais mot de passe applicatif
     const SESSION_ENDING_CODES = ['INVALID_TOKEN', 'NOT_FOUND', 'ACCOUNT_DISABLED']
     if (err.response?.status === 401 && SESSION_ENDING_CODES.includes(code) && useAuthStore.getState().isAuthenticated) {
+      if (code === 'ACCOUNT_DISABLED') {
+        const lang = useI18nStore.getState().lang
+        const dict = lang === 'en' ? en : fr
+        toast.error(dict['toast.accountDisabled'])
+      }
       useAuthStore.getState().logout()
       window.location.href = '/login'
     }

@@ -104,7 +104,8 @@ export function createFilesTusServer(app: FastifyInstance): Server {
         where: { id: jwtUser!.id },
         select: { id: true, active: true, role: true, storageQuotaBytes: true }
       })
-      if (!dbUser || !dbUser.active) tusReject(401, 'INVALID_TOKEN')
+      if (!dbUser) tusReject(401, 'INVALID_TOKEN')
+      if (!dbUser!.active) tusReject(401, 'ACCOUNT_DISABLED')
 
       // 2. Vérification taille fichier
       const totalSize = upload.size ?? 0

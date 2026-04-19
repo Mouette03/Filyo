@@ -372,6 +372,7 @@ export const en = {
   'toast.linkEmailSent': 'Link sent to {{email}}',
   'toast.downloadStarted': 'Download started!',
   'toast.passwordWrong': 'Incorrect password',
+  'toast.accountDisabled': 'Your account has been disabled',
   'toast.unauthorized': 'Password required',
   'toast.imageRequired': 'Image file required',
   'toast.imageTooLarge3': 'Max size: 3 MB',
