@@ -51,9 +51,13 @@ CREATE TABLE `File` (
     `password` VARCHAR(191) NULL,
     `batchToken` VARCHAR(191) NULL,
     `hideFilenames` BOOLEAN NOT NULL DEFAULT false,
+    `tusUploadId` VARCHAR(191) NULL,
     `userId` VARCHAR(191) NULL,
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateIndex
+CREATE UNIQUE INDEX `File_tusUploadId_key` ON `File`(`tusUploadId`);
 
 CREATE TABLE `Share` (
     `id` VARCHAR(191) NOT NULL,

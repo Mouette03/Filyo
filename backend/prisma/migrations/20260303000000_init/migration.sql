@@ -52,9 +52,13 @@ CREATE TABLE "File" (
     "password" TEXT,
     "batchToken" TEXT,
     "hideFilenames" BOOLEAN NOT NULL DEFAULT false,
+    "tusUploadId" TEXT,
     "userId" TEXT,
     CONSTRAINT "File_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
+
+-- CreateIndex
+CREATE UNIQUE INDEX "File_tusUploadId_key" ON "File"("tusUploadId");
 
 -- CreateTable
 CREATE TABLE "Share" (

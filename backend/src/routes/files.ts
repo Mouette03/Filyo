@@ -184,9 +184,25 @@ export async function fileRoutes(app: FastifyInstance) {
   // GET /api/files/tus-result/:uploadId — Récupère le résultat d'un upload TUS terminé
   // Appelé par le client après onSuccess de tus-js-client
   app.get<{ Params: { uploadId: string } }>('/tus-result/:uploadId', auth, async (req, reply) => {
+    // Tentative 1 : map en mémoire (cas nominal)
     const result = getTusFileResult(req.params.uploadId)
-    if (!result) return reply.code(404).send({ code: 'RESULT_NOT_FOUND' })
-    return result
+    if (result) return result
+
+    // Tentative 2 : fallback DB (redémarrage entre PATCH et GET)
+    const file = await prisma.file.findUnique({
+      where: { tusUploadId: req.params.uploadId },
+      include: { shares: true }
+    })
+    if (!file) return reply.code(404).send({ code: 'RESULT_NOT_FOUND' })
+    return {
+      id: file.id,
+      originalName: file.originalName,
+      mimeType: file.mimeType,
+      size: file.size.toString(),
+      expiresAt: file.expiresAt?.toISOString() ?? null,
+      shareToken: file.shares[0]?.token ?? '',
+      batchToken: file.batchToken
+    }
   })
 
   // GET /api/files - Fichiers de l utilisateur courant

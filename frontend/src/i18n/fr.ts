@@ -455,9 +455,11 @@ export const fr = {
   'profile.cleanupSection': 'Nettoyage automatique',
   'profile.cleanupHint': 'Par défaut, vos fichiers expirés sont supprimés selon le délai du serveur. Vous pouvez choisir un délai plus court.',
   'profile.cleanupDefault': 'Défaut du serveur ({{days}} j)',
+  'profile.cleanupDefaultAtExpiry': "Défaut du serveur (à l'expiration)",
   'profile.cleanupSaved': 'Préférence enregistrée',
   'profile.cleanupDisabled': "Le nettoyage automatique est désactivé par l'administrateur",
-  'profile.cleanupServerDefault': 'Délai par défaut du serveur : {{days}} j après expiration',
+  'profile.cleanupServerDefault': 'Délai par défaut du serveur : {{days}} j après expiration',
+  'profile.cleanupServerDefaultAtExpiry': "Délai par défaut du serveur : à l'expiration",
 
   'toast.loadError': 'Erreur de chargement',
   'toast.uploadError': 'Erreur lors du téléversement',

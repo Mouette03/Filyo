@@ -457,9 +457,11 @@ export const en = {
   'profile.cleanupSection': 'Auto-cleanup',
   'profile.cleanupHint': 'By default, your expired files are deleted according to the server’s delay. You can choose a shorter delay.',
   'profile.cleanupDefault': 'Server default ({{days}} d)',
+  'profile.cleanupDefaultAtExpiry': 'Server default (at expiration)',
   'profile.cleanupSaved': 'Preference saved',
   'profile.cleanupDisabled': 'Auto-cleanup is disabled by the administrator',
-  'profile.cleanupServerDefault': 'Server default delay: {{days}} d after expiration',
+  'profile.cleanupServerDefault': 'Server default delay: {{days}} d after expiration',
+  'profile.cleanupServerDefaultAtExpiry': 'Server default delay: at expiration',
 
   'toast.loadError': 'Loading error',
   'toast.uploadError': 'Upload error',

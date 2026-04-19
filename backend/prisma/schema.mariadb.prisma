@@ -61,6 +61,7 @@ model File {
   password         String?
   batchToken       String?
   hideFilenames    Boolean  @default(false)
+  tusUploadId      String?  @unique
   shares           Share[]
   userId           String?
   user             User?    @relation(fields: [userId], references: [id])

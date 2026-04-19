@@ -181,7 +181,7 @@ export default function Layout() {
         </div>
 
         {/* Centre : nom de l'app + slogan (slogan masqué sur mobile) */}
-        <span className="flex-1 truncate text-center">
+        <span className="flex-1 min-w-0 truncate text-center">
           {settings.appName}<span className="hidden sm:inline"> — {t('nav.footer')}</span>
         </span>
 

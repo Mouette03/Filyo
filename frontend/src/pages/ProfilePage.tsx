@@ -398,7 +398,9 @@ export default function ProfilePage() {
             <div className="flex items-center gap-2 rounded-lg bg-brand-500/10 border border-brand-500/20 px-3 py-2">
               <Eraser size={13} className="text-brand-400 flex-shrink-0" />
               <p className="text-xs text-brand-300">
-                {t('profile.cleanupServerDefault', { days: String(adminMax) })}
+                {adminMax === 0
+                  ? t('profile.cleanupServerDefaultAtExpiry')
+                  : t('profile.cleanupServerDefault', { days: String(adminMax) })}
               </p>
             </div>
             <p className="text-xs text-white/50">{t('profile.cleanupHint')}</p>
@@ -412,8 +414,8 @@ export default function ProfilePage() {
                 disabled={savingCleanup}
                 className="input bg-surface-700 flex-1"
               >
-                <option value="">{t('profile.cleanupDefault', { days: String(adminMax) })}</option>
-                {adminMax >= 0 && <option value="0">{t('settings.cleanupAtExpiry')}</option>}
+                <option value="">{adminMax === 0 ? t('profile.cleanupDefaultAtExpiry') : t('profile.cleanupDefault', { days: String(adminMax) })}</option>
+                {adminMax > 0 && <option value="0">{t('settings.cleanupAtExpiry')}</option>}
                 {adminMax >= 1 && <option value="1">{t('settings.cleanup1d')}</option>}
                 {adminMax >= 3 && <option value="3">{t('settings.cleanup3d')}</option>}
                 {adminMax >= 7 && <option value="7">{t('settings.cleanup7d')}</option>}

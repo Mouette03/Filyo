@@ -165,6 +165,7 @@ export function createFilesTusServer(app: FastifyInstance): Server {
           password: hashedPassword,
           batchToken: batchToken || null,
           hideFilenames,
+          tusUploadId: upload.id,
           shares: {
             create: {
               token: nanoid(16),
@@ -329,8 +330,9 @@ export async function cleanupExpiredTusUploads(): Promise<number> {
       const infoPath = path.join(dir, entry)
       try {
         const info = await fs.readJson(infoPath)
-        const creationDate = info.creation_date ? new Date(info.creation_date) : null
-        if (creationDate && Date.now() - creationDate.getTime() > TUS_EXPIRY_MS) {
+        // @tus/file-store v2 stocke le timestamp d'expiration dans info.expiration (ms)
+        const expiration = info.expiration ? new Date(info.expiration) : null
+        if (expiration && expiration.getTime() < Date.now()) {
           const id = entry.replace(/\.json$/, '')
           await fs.remove(path.join(dir, id)).catch(() => {})
           await fs.remove(infoPath).catch(() => {})
