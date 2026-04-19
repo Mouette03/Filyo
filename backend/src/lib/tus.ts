@@ -84,7 +84,7 @@ export function createFilesTusServer(app: FastifyInstance): Server {
   const server = new Server({
     path: '/api/files/tus',
     datastore: new FileStore({ directory: tusDir, expirationPeriodInMilliseconds: TUS_EXPIRY_MS }),
-    respectForwardedHeaders: false,
+    respectForwardedHeaders: process.env.TRUST_PROXY === 'true',
 
     async onUploadCreate(req: unknown, upload: Upload) {
       // 1. Authentification via cookie JWT
@@ -212,7 +212,7 @@ export function createRequestsTusServer(app: FastifyInstance): Server {
   const server = new Server({
     path: '/api/upload-requests/tus',
     datastore: new FileStore({ directory: tusDir, expirationPeriodInMilliseconds: TUS_EXPIRY_MS }),
-    respectForwardedHeaders: false,
+    respectForwardedHeaders: process.env.TRUST_PROXY === 'true',
 
     async onUploadCreate(_req: unknown, upload: Upload) {
       const meta = upload.metadata ?? {}

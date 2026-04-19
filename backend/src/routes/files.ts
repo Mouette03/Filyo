@@ -179,7 +179,7 @@ export async function fileRoutes(app: FastifyInstance) {
     })
   }
   app.all('/tus', { config: { rateLimit: { max: 10, timeWindow: '1 minute', keyGenerator: (req) => req.ip } } }, handleTus)
-  app.all('/tus/*', handleTus)
+  app.all('/tus/*', { config: { rateLimit: { max: 200, timeWindow: '1 minute', keyGenerator: (req) => req.ip } } }, handleTus)
 
   // GET /api/files/tus-result/:uploadId — Récupère le résultat d'un upload TUS terminé
   // Appelé par le client après onSuccess de tus-js-client
