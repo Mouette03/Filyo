@@ -30,6 +30,11 @@ export default function UsersPage() {
   const { user: me } = useAuthStore()
   const { t } = useT()
   const [tab, setTab] = useState<Tab>('users')
+  const [now, setNow] = useState(Date.now())
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 60_000)
+    return () => clearInterval(timer)
+  }, [])
 
   // --- Onglet Utilisateurs ---
   const [users, setUsers] = useState<UserItem[]>([])
@@ -507,7 +512,7 @@ export default function UsersPage() {
                       </td>
                       <td className="px-4 py-3 text-white/80 text-xs font-medium">{d.title}</td>
                       <td className="px-4 py-3">
-                        {(() => { const isExpired = d.expiresAt && new Date(d.expiresAt) <= new Date(); return (
+                        {(() => { const isExpired = d.expiresAt && new Date(d.expiresAt).getTime() <= now; return (
                           <span className={`badge ${d.active && !isExpired ? 'badge-green' : isExpired ? 'badge-orange' : 'badge-red'}`}>
                             {d.active && !isExpired ? t('common.active') : isExpired ? t('dash.expired') : t('common.inactive')}
                           </span>

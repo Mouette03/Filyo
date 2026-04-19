@@ -42,20 +42,15 @@ jobs:
         id: summary
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMMITS: ${{ steps.commits.outputs.raw }}
         run: |
-          COMMITS="${{ steps.commits.outputs.raw }}"
+          PROMPT="Voici une liste de commits git pour une release bêta. Fais un résumé clair et lisible en français, groupé par thème (nouveautés, corrections, etc.), avec des emojis. Maximum 10 lignes. Commits :\n${COMMITS}"
+          BODY=$(jq -n --arg content "$PROMPT" '{"model":"gpt-4o-mini","messages":[{"role":"user","content":$content}],"max_tokens":400}')
           RESPONSE=$(curl -s https://models.inference.ai.azure.com/chat/completions \
             -H "Authorization: Bearer $GITHUB_TOKEN" \
             -H "Content-Type: application/json" \
-            -d "{
-              \"model\": \"gpt-4o-mini\",
-              \"messages\": [{
-                \"role\": \"user\",
-                \"content\": \"Voici une liste de commits git pour une release bêta. Fais un résumé clair et lisible en français, groupé par thème (nouveautés, corrections, etc.), avec des emojis. Maximum 10 lignes. Commits :\n${COMMITS}\"
-              }],
-              \"max_tokens\": 400
-            }")
-          SUMMARY=$(echo "$RESPONSE" | jq -r '.choices[0].message.content')
+            -d "$BODY")
+          SUMMARY=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // "Résumé indisponible"')
           echo "summary<<EOF" >> $GITHUB_OUTPUT
           echo "$SUMMARY" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT

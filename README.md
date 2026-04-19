@@ -81,7 +81,7 @@ docker compose up -d
 
 ```bash
 cp .env.example .env
-docker compose -f docker-compose.mariadb.yml up -d
+docker compose -f docker-compose-mariadb.yml up -d
 ```
 
 **http://localhost:3001** → Create your admin account on first launch.
@@ -112,8 +112,8 @@ labels:
 | `LOG_LEVEL` | `info` | Minimum log level (Pino). The app emits `debug`, `info`, `warn`, `error`. Use `debug` for verbose output, `warn` for quiet, `silent` to disable all logs. |
 | `UPLOAD_TIMEOUT_MS` | `1800000` | Upload timeout in ms (default 30 min, min 1 min, max 2 h) |
 | `TRUST_PROXY` | `false` | Trust level for reverse proxy headers (`X-Forwarded-*`). Accepts `false`, `true`, an IP address, or a CIDR range (e.g. `127.0.0.1`). Enable only if Filyo is behind a trusted proxy. |
-| `TUS_CF_CHUNK_MB` | `90` | Chunk size in MB used when the **Cloudflare bypass** mode is enabled (admin toggle in Settings). Lower this value if Cloudflare rejects large chunks (Cloudflare's default limit is 100 MB per request). Has no effect when the bypass is disabled. |
-| `TUS_EXPIRY_MS` | `86400000` | Expiry delay in milliseconds for incomplete (interrupted) TUS uploads. After this delay, the partial file is deleted by the cleanup job. Default: 24 h. |
+| `TUS_CF_CHUNK_MB` | `90` | Chunk size in MB used when the **Cloudflare bypass** mode is enabled (admin toggle in Settings). Lower this value if Cloudflare rejects large chunks. Cloudflare's limit varies by plan: 100 MB (Free/Pro), 200 MB (Business), 500 MB (Enterprise). Has no effect when the bypass is disabled. |
+| `TUS_EXPIRY` | `1h` | Expiry delay for incomplete (interrupted) TUS uploads. Accepts `30m` or `2h` format. After this delay, the partial file is deleted by the cleanup job. Default: 1 h. |
 
 > [!NOTE]
 > Any SMTP password saved through the settings form is stored **encrypted** in the database (AES-256-GCM, key derived from `JWT_SECRET`).
@@ -295,7 +295,7 @@ docker compose up -d
 
 ```bash
 cp .env.example .env
-docker compose -f docker-compose.mariadb.yml up -d
+docker compose -f docker-compose-mariadb.yml up -d
 ```
 
 **http://localhost:3001** → Crée ton compte admin au 1er lancement.
@@ -326,8 +326,8 @@ labels:
 | `LOG_LEVEL` | `info` | Seuil minimum de log (Pino). Le code émet `debug`, `info`, `warn`, `error`. Utiliser `debug` pour plus de verbosité, `warn` pour le silence relatif, `silent` pour tout désactiver. |
 | `UPLOAD_TIMEOUT_MS` | `1800000` | Délai d'attente des uploads (ms — défaut 30 min, min 1 min, max 2 h) |
 | `TRUST_PROXY` | `false` | Niveau de confiance pour les en-têtes reverse proxy (`X-Forwarded-*`). Accepte `false`, `true`, une adresse IP ou une plage CIDR (ex. `127.0.0.1`). À activer uniquement si Filyo est derrière un proxy de confiance. |
-| `TUS_CF_CHUNK_MB` | `90` | Taille en Mo de chaque morceau lors de l'upload en mode **contournement Cloudflare** (toggle admin dans Réglages). Réduisez cette valeur si Cloudflare rejette les gros morceaux (limite par défaut de Cloudflare : 100 Mo par requête). Sans effet lorsque le mode est désactivé. |
-| `TUS_EXPIRY_MS` | `86400000` | Délai d'expiration en millisecondes des uploads TUS incomplets (interrompus). Après ce délai, le fichier partiel est supprimé par le job de nettoyage. Défaut : 24 h. |
+| `TUS_CF_CHUNK_MB` | `90` | Taille en Mo de chaque morceau lors de l'upload en mode **contournement Cloudflare** (toggle admin dans Réglages). Réduisez cette valeur si Cloudflare rejette les gros morceaux. La limite varie selon le plan Cloudflare : 100 Mo (Free/Pro), 200 Mo (Business), 500 Mo (Enterprise). Sans effet lorsque le mode est désactivé. |
+| `TUS_EXPIRY` | `1h` | Délai d'expiration des uploads TUS incomplets (interrompus). Accepte le format `30m` ou `2h`. Après ce délai, le fichier partiel est supprimé par le job de nettoyage. Défaut : 1 h. |
 
 > [!NOTE]
 > Tout mot de passe SMTP enregistré via le formulaire de réglages est stocké **chiffré** en base de données (AES-256-GCM, clé dérivée de `JWT_SECRET`).

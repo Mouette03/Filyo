@@ -40,6 +40,9 @@ export default function RequestUploadPage() {
   const tusUploadRef = useRef<tus.Upload | null>(null)
   const [pendingResumes, setPendingResumes] = useState<{ url: string; filename: string; remaining: number; expiry: string }[]>([])
 
+  const { settings, setSettings } = useAppSettingsStore()
+  const tusExpiryMs = settings.tusExpiryMs ?? 3600000
+
   const tusExpiryKey = (url: string) => `tus-expiry:${url}`
   const storeTusExpiry = (url: string | null | undefined, expiry: string) => {
     if (!url) return
@@ -146,8 +149,6 @@ export default function RequestUploadPage() {
   const [emailReq, setEmailReq] = useState<FieldReq>('optional')
   const [msgReq, setMsgReq] = useState<FieldReq>('optional')
   const { t } = useT()
-  const { settings, setSettings } = useAppSettingsStore()
-  const tusExpiryMs = settings.tusExpiryMs ?? 3600000
   const appName = settings.appName || 'Filyo'
 
   useEffect(() => {

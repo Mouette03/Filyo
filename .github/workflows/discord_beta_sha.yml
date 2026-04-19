@@ -35,17 +35,20 @@ jobs:
 
       - name: Récupérer les commits depuis le SHA précédent
         id: commits
+        env:
+          PREV_INPUT: ${{ github.event.inputs.previous_sha }}
+          BRANCH_INPUT: ${{ github.event.inputs.branch }}
         run: |
-          PREV="${{ github.event.inputs.previous_sha }}"
+          PREV="$PREV_INPUT"
 
           if [ -z "$PREV" ]; then
             # Pas de SHA précédent → compare depuis main
-            RAW=$(git log origin/${{ github.event.inputs.branch }} --not origin/main --pretty=format:"%s")
+            RAW=$(git log "origin/$BRANCH_INPUT" --not origin/main --pretty=format:"%s")
             BASE="main"
           else
             # Extrait le hash court depuis "sha-9878b78" → "9878b78"
             PREV_HASH=$(echo "$PREV" | sed 's/sha-//')
-            RAW=$(git log ${PREV_HASH}..HEAD --pretty=format:"%s")
+            RAW=$(git log "${PREV_HASH}..HEAD" --pretty=format:"%s")
             BASE="$PREV"
           fi
 
@@ -64,19 +67,14 @@ jobs:
         id: summary
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMMITS: ${{ steps.commits.outputs.raw }}
         run: |
-          COMMITS="${{ steps.commits.outputs.raw }}"
+          PROMPT="Voici une liste de commits git pour une release bêta. Fais un résumé clair et lisible en français, groupé par thème (nouveautés, corrections, etc.), avec des emojis. Maximum 10 lignes. Commits :\n${COMMITS}"
+          BODY=$(jq -n --arg content "$PROMPT" '{"model":"gpt-4o-mini","messages":[{"role":"user","content":$content}],"max_tokens":400}')
           RESPONSE=$(curl -s https://models.inference.ai.azure.com/chat/completions \
             -H "Authorization: Bearer $GITHUB_TOKEN" \
             -H "Content-Type: application/json" \
-            -d "{
-              \"model\": \"gpt-4o-mini\",
-              \"messages\": [{
-                \"role\": \"user\",
-                \"content\": $(echo "Voici une liste de commits git pour une release bêta. Fais un résumé clair et lisible en français, groupé par thème (nouveautés, corrections, etc.), avec des emojis. Maximum 10 lignes. Commits : $COMMITS" | jq -Rs .)
-              }],
-              \"max_tokens\": 400
-            }")
+            -d "$BODY")
           SUMMARY=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // "Résumé indisponible"')
           echo "summary<<EOF" >> $GITHUB_OUTPUT
           echo "$SUMMARY" >> $GITHUB_OUTPUT

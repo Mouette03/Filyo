@@ -214,6 +214,7 @@ export default function ProfilePage() {
           value={lang}
           onChange={e => setLang(e.target.value as any)}
           className="input w-full"
+          aria-label={t('profile.langSection')}
         >
           {LANGUAGES.map(l => (
             <option key={l.code} value={l.code}>{l.flag} {l.label}</option>

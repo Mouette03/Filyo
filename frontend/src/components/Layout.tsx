@@ -164,7 +164,7 @@ export default function Layout() {
 
       <footer className="border-t border-white/5 py-4 px-6 text-white/25 text-xs flex items-center justify-between gap-2">
         {/* Gauche : version + alerte mise à jour */}
-        <div className="flex flex-1 items-center gap-2">
+        <div className="flex w-32 shrink-0 items-center gap-2">
           <span>v{currentVersion}</span>
           {hasUpdate && (
             <a
@@ -190,7 +190,7 @@ export default function Layout() {
           href="https://github.com/Mouette03/Filyo"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex flex-1 items-center justify-end gap-1.5 hover:text-white/60 transition-colors"
+          className="flex w-32 shrink-0 items-center justify-end gap-1.5 hover:text-white/60 transition-colors"
           title="Voir sur GitHub"
         >
           <Github size={14} />

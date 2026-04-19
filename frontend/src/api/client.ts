@@ -13,7 +13,7 @@ api.interceptors.response.use(
   err => {
     const code = err.response?.data?.code
     // Déconnecter si le token est invalide/expiré ou si l'utilisateur n'existe plus — pas sur un mauvais mot de passe applicatif
-    const SESSION_ENDING_CODES = ['INVALID_TOKEN', 'NOT_FOUND']
+    const SESSION_ENDING_CODES = ['INVALID_TOKEN', 'NOT_FOUND', 'ACCOUNT_DISABLED']
     if (err.response?.status === 401 && SESSION_ENDING_CODES.includes(code) && useAuthStore.getState().isAuthenticated) {
       useAuthStore.getState().logout()
       window.location.href = '/login'

@@ -282,7 +282,7 @@ export default function HomePage() {
               const tusUrl = (tusUpload as any).url as string
               removeTusInfo(tusUrl)
               setPendingResumes(prev => prev.filter(r => r.url !== tusUrl))
-              const uploadId = tusUrl.split('/').pop()!
+              const uploadId = tusUrl.split('/').filter(Boolean).pop() ?? ''
               try {
                 const res = await getTusFileResult(uploadId)
                 accumulated.push(res.data)
