@@ -409,53 +409,57 @@ export default function SettingsPage() {
           </div>
           <p className="text-xs text-white/30">{t('settings.maxFileSizeHint')}</p>
         </div>
-        <div className="flex items-center gap-3 flex-wrap">
-          <input
-            id="settings-max-file-size"
-            name="maxFileSizeMb"
-            type="number"
-            min="1"
-            value={maxFileSizeMb}
-            onChange={e => setMaxFileSizeMb(e.target.value)}
-            placeholder={t('settings.maxFileSizePlaceholder')}
-            className="input w-40"
-          />
-          <span className="text-sm text-white/50">MB</span>
-          <button
-            onClick={async () => {
-              setSavingMaxFileSize(true)
-              try {
-                const bytes = maxFileSizeMb ? Math.round(parseFloat(maxFileSizeMb) * 1024 * 1024) : null
-                await updateMaxFileSize(bytes)
-                setSettings({ maxFileSizeBytes: bytes ? String(bytes) : null })
-                toast.success(t('settings.maxFileSizeSaved'))
-              } catch { toast.error(t('toast.saveError')) }
-              setSavingMaxFileSize(false)
-            }}
-            disabled={savingMaxFileSize}
-            className="btn-primary flex items-center gap-2 py-2 px-4"
-          >
-            {savingMaxFileSize ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
-            {t('common.save')}
-          </button>
-          {maxFileSizeMb && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <input
+              id="settings-max-file-size"
+              name="maxFileSizeMb"
+              type="number"
+              min="1"
+              value={maxFileSizeMb}
+              onChange={e => setMaxFileSizeMb(e.target.value)}
+              placeholder={t('settings.maxFileSizePlaceholder')}
+              className="input flex-1"
+            />
+            <span className="text-sm text-white/50 flex-shrink-0">MB</span>
+          </div>
+          <div className="flex gap-3">
             <button
               onClick={async () => {
                 setSavingMaxFileSize(true)
                 try {
-                  await updateMaxFileSize(null)
-                  setSettings({ maxFileSizeBytes: null })
-                  setMaxFileSizeMb('')
-                  toast.success(t('settings.maxFileSizeRemoved'))
+                  const bytes = maxFileSizeMb ? Math.round(parseFloat(maxFileSizeMb) * 1024 * 1024) : null
+                  await updateMaxFileSize(bytes)
+                  setSettings({ maxFileSizeBytes: bytes ? String(bytes) : null })
+                  toast.success(t('settings.maxFileSizeSaved'))
                 } catch { toast.error(t('toast.saveError')) }
                 setSavingMaxFileSize(false)
               }}
               disabled={savingMaxFileSize}
-              className="btn-secondary flex items-center gap-2 py-2 px-4 text-sm"
+              className="btn-primary flex items-center gap-2 py-2 px-4"
             >
-              {t('settings.maxFileSizeUnlimited')}
+              {savingMaxFileSize ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
+              {t('common.save')}
             </button>
-          )}
+            {maxFileSizeMb && (
+              <button
+                onClick={async () => {
+                  setSavingMaxFileSize(true)
+                  try {
+                    await updateMaxFileSize(null)
+                    setSettings({ maxFileSizeBytes: null })
+                    setMaxFileSizeMb('')
+                    toast.success(t('settings.maxFileSizeRemoved'))
+                  } catch { toast.error(t('toast.saveError')) }
+                  setSavingMaxFileSize(false)
+                }}
+                disabled={savingMaxFileSize}
+                className="btn-secondary flex items-center gap-2 py-2 px-4 text-sm"
+              >
+                {t('settings.maxFileSizeUnlimited')}
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
