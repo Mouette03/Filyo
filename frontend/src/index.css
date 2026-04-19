@@ -145,6 +145,16 @@
     background: rgba(239,68,68,0.25);
     color: rgb(252,165,165);
   }
+  .btn-success {
+    @apply font-medium px-4 py-2 rounded-xl transition-all duration-200 active:scale-95;
+    background: rgba(16,185,129,0.15);
+    border: 1px solid rgba(16,185,129,0.30);
+    color: rgb(52,211,153);
+  }
+  .btn-success:hover {
+    background: rgba(16,185,129,0.25);
+    color: rgb(110,231,183);
+  }
 
   .btn-icon {
     @apply rounded-xl transition-all duration-200 active:scale-95 flex items-center justify-center flex-shrink-0;

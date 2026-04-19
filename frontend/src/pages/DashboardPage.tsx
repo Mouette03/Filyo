@@ -444,7 +444,7 @@ export default function DashboardPage() {
               <Trash2 size={13} /> {t('dash.cleanExpired')}
             </button>
           )}
-          <button onClick={load} className="flex items-center justify-center gap-1.5 text-xs px-2.5 py-2 rounded-lg bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 transition-colors flex-1 sm:flex-none border border-emerald-500/30">
+          <button onClick={load} className="btn-success flex items-center justify-center gap-1.5 text-xs flex-1 sm:flex-none">
             <RefreshCw size={13} /> {t('common.refresh')}
           </button>
         </div>
