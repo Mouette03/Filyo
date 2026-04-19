@@ -1,4 +1,4 @@
-name: 🧪 Notif Discord Beta Release
+name: 🧪 Beta Release (changes from main)
 
 on:
   workflow_dispatch:
