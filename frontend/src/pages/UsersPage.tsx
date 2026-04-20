@@ -46,6 +46,7 @@ export default function UsersPage() {
   const [newConfirmPassword, setNewConfirmPassword] = useState('')
   const [newRole, setNewRole] = useState('USER')
   const [newQuotaMB, setNewQuotaMB] = useState('')
+  const [newQuotaUnit, setNewQuotaUnit] = useState<'MB' | 'GB'>('GB')
   const [creating, setCreating] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
@@ -53,6 +54,7 @@ export default function UsersPage() {
   const [editRole, setEditRole] = useState('')
   const [editActive, setEditActive] = useState(true)
   const [editQuotaMB, setEditQuotaMB] = useState('')
+  const [editQuotaUnit, setEditQuotaUnit] = useState<'MB' | 'GB'>('GB')
 
   // --- Onglet Fichiers ---
   const [allFiles, setAllFiles] = useState<AdminFile[]>([])
@@ -104,11 +106,12 @@ export default function UsersPage() {
     if (newPassword !== newConfirmPassword) return toast.error(t('toast.passwordMismatch'))
     setCreating(true)
     try {
-      const quotaMB = newQuotaMB !== '' ? parseFloat(newQuotaMB) : null
+      const quotaVal = newQuotaMB !== '' ? parseFloat(newQuotaMB) : null
+      const quotaMB = quotaVal != null ? (newQuotaUnit === 'GB' ? quotaVal * 1024 : quotaVal) : null
       const res = await createUser({ name: newName, email: newEmail, password: newPassword, role: newRole, storageQuotaMB: quotaMB })
       setUsers(prev => [...prev, res.data])
       setShowCreate(false)
-      setNewName(''); setNewEmail(''); setNewPassword(''); setNewConfirmPassword(''); setNewRole('USER'); setNewQuotaMB('')
+      setNewName(''); setNewEmail(''); setNewPassword(''); setNewConfirmPassword(''); setNewRole('USER'); setNewQuotaMB(''); setNewQuotaUnit('GB')
       toast.success(t('toast.userCreated'))
     } catch (err: any) {
       const code = err.response?.data?.code
@@ -121,12 +124,19 @@ export default function UsersPage() {
   const startEdit = (u: UserItem) => {
     setEditId(u.id); setEditName(u.name); setEditEmail(u.email); setEditRole(u.role); setEditActive(u.active)
     const quotaBytes = u.storageQuotaBytes ? BigInt(u.storageQuotaBytes) : null
-    setEditQuotaMB(quotaBytes ? (Number(quotaBytes) / (1024 * 1024)).toFixed(0) : '')
+    if (quotaBytes && quotaBytes >= BigInt(1024 * 1024 * 1024) && Number(quotaBytes) % (1024 * 1024 * 1024) === 0) {
+      setEditQuotaMB((Number(quotaBytes) / (1024 * 1024 * 1024)).toFixed(0))
+      setEditQuotaUnit('GB')
+    } else {
+      setEditQuotaMB(quotaBytes ? (Number(quotaBytes) / (1024 * 1024)).toFixed(0) : '')
+      setEditQuotaUnit('MB')
+    }
   }
 
   const saveEdit = async (id: string) => {
     try {
-      const quotaMB = editQuotaMB !== '' ? parseFloat(editQuotaMB) : null
+      const editQuotaVal = editQuotaMB !== '' ? parseFloat(editQuotaMB) : null
+      const quotaMB = editQuotaVal != null ? (editQuotaUnit === 'GB' ? editQuotaVal * 1024 : editQuotaVal) : null
       const res = await updateUser(id, { name: editName, email: editEmail, role: editRole, active: editActive, storageQuotaMB: quotaMB })
       setUsers(prev => prev.map(u => u.id === id ? { ...u, ...res.data } : u))
       setEditId(null)
@@ -273,7 +283,13 @@ export default function UsersPage() {
                 </div>
                 <div className="sm:col-span-2">
                   <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('users.quotaLabel')}</label>
-                  <input type="number" min="1" value={newQuotaMB} onChange={e => setNewQuotaMB(e.target.value)} placeholder={t('users.quotaPlaceholder')} className="input" />
+                  <div className="flex gap-2">
+                    <input type="number" min="1" value={newQuotaMB} onChange={e => setNewQuotaMB(e.target.value)} placeholder={t('users.quotaPlaceholder')} className="input flex-1" />
+                    <select value={newQuotaUnit} onChange={e => setNewQuotaUnit(e.target.value as 'MB' | 'GB')} className="input bg-surface-700 w-20">
+                      <option value="MB">MB</option>
+                      <option value="GB">GB</option>
+                    </select>
+                  </div>
                 </div>
               </div>
               <div className="flex gap-3 pt-1">
@@ -329,7 +345,13 @@ export default function UsersPage() {
                         </div>
                         <div className="sm:col-span-2">
                           <label className="text-xs text-white/50 mb-1.5 block">{t('users.quotaLabel')}</label>
-                          <input type="number" min="1" value={editQuotaMB} onChange={e => setEditQuotaMB(e.target.value)} placeholder={t('users.quotaPlaceholder')} className="input text-sm py-2" />
+                          <div className="flex gap-2">
+                            <input type="number" min="1" value={editQuotaMB} onChange={e => setEditQuotaMB(e.target.value)} placeholder={t('users.quotaPlaceholder')} className="input text-sm py-2 flex-1" />
+                            <select value={editQuotaUnit} onChange={e => setEditQuotaUnit(e.target.value as 'MB' | 'GB')} className="input bg-surface-700 text-sm py-2 w-20">
+                              <option value="MB">MB</option>
+                              <option value="GB">GB</option>
+                            </select>
+                          </div>
                         </div>
                       </div>
                       <div className="flex gap-2">
