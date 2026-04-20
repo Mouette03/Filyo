@@ -81,6 +81,7 @@ export const TUS_EXPIRY_MS = (() => {
     const hMatch = raw.match(/^(\d+)h$/i)
     if (mMatch) return parseInt(mMatch[1], 10) * 60 * 1000
     if (hMatch) return parseInt(hMatch[1], 10) * 60 * 60 * 1000
+    console.warn(`[tus] TUS_EXPIRY="${raw}" non reconnu (formats acceptés : <n>m, <n>h). Fallback : 1h.`)
   }
   return 60 * 60 * 1000 // 1h par défaut
 })()
