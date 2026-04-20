@@ -272,8 +272,10 @@ export function createRequestsTusServer(app: FastifyInstance): Server {
       }
 
       // Stocker l'uploadRequestId dans les métadonnées
+      // Exclure le mot de passe : déjà vérifié, inutile de le persister en clair sur disque
+      const { password: _pw, ...metaSafe } = meta
       app.log.info({ uploadId: upload.id, filename: meta.filename, size: upload.size }, '⬆️  TUS request upload started')
-      return { metadata: { ...meta, _uploadRequestId: request!.id } }
+      return { metadata: { ...metaSafe, _uploadRequestId: request!.id } }
     },
 
     async onUploadFinish(_req: unknown, upload: Upload) {
