@@ -23,8 +23,8 @@ export interface TusFileResult {
 }
 
 // ── Résultats en mémoire (shareToken etc.) ─────────────────────────────────
-// Clé : upload.id  Valeur : résultat + timestamp pour TTL
-const tusFileResultsMap = new Map<string, TusFileResult & { _ts: number }>()
+// Clé : upload.id  Valeur : résultat + timestamp pour TTL + userId pour vérification ownership
+const tusFileResultsMap = new Map<string, TusFileResult & { _ts: number; _userId: string | null }>()
 
 // Nettoyage TTL : > 5 min sans consommation → on libère la mémoire
 setInterval(() => {
@@ -34,12 +34,16 @@ setInterval(() => {
   }
 }, 60_000).unref()
 
-/** Récupère et supprime le résultat d'un upload TUS fichier. */
-export function getTusFileResult(uploadId: string): TusFileResult | null {
+/**
+ * Récupère et supprime le résultat d'un upload TUS fichier.
+ * Retourne null si l'uploadId est inconnu ou si userId ne correspond pas au propriétaire.
+ */
+export function getTusFileResult(uploadId: string, userId: string): TusFileResult | null {
   const entry = tusFileResultsMap.get(uploadId)
   if (!entry) return null
+  if (entry._userId !== userId) return null
   tusFileResultsMap.delete(uploadId)
-  const { _ts: _, ...result } = entry
+  const { _ts: _, _userId: __, ...result } = entry
   return result
 }
 
@@ -201,7 +205,8 @@ export function createFilesTusServer(app: FastifyInstance): Server {
         expiresAt: file.expiresAt?.toISOString() ?? null,
         shareToken: file.shares[0]?.token ?? '',
         batchToken: file.batchToken,
-        _ts: Date.now()
+        _ts: Date.now(),
+        _userId: userId
       })
 
       return {}
