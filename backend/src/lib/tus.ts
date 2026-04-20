@@ -66,6 +66,12 @@ function getTusDir(subdirectory: string): string {
   return dir
 }
 
+// true si TRUST_PROXY est 'true' ou une valeur IP/CIDR (non vide, non 'false')
+const TRUST_PROXY_ENABLED = (() => {
+  const v = (process.env.TRUST_PROXY ?? 'false').trim()
+  return v !== '' && v !== 'false'
+})()
+
 export const TUS_EXPIRY_MS = (() => {
   const raw = (process.env.TUS_EXPIRY || '').trim()
   if (raw) {
@@ -84,7 +90,7 @@ export function createFilesTusServer(app: FastifyInstance): Server {
   const server = new Server({
     path: '/api/files/tus',
     datastore: new FileStore({ directory: tusDir, expirationPeriodInMilliseconds: TUS_EXPIRY_MS }),
-    respectForwardedHeaders: process.env.TRUST_PROXY === 'true',
+    respectForwardedHeaders: TRUST_PROXY_ENABLED,
 
     async onUploadCreate(req: unknown, upload: Upload) {
       // 1. Authentification via cookie JWT
@@ -213,7 +219,7 @@ export function createRequestsTusServer(app: FastifyInstance): Server {
   const server = new Server({
     path: '/api/upload-requests/tus',
     datastore: new FileStore({ directory: tusDir, expirationPeriodInMilliseconds: TUS_EXPIRY_MS }),
-    respectForwardedHeaders: process.env.TRUST_PROXY === 'true',
+    respectForwardedHeaders: TRUST_PROXY_ENABLED,
 
     async onUploadCreate(_req: unknown, upload: Upload) {
       const meta = upload.metadata ?? {}
@@ -331,8 +337,9 @@ export async function cleanupExpiredTusUploads(): Promise<number> {
       const infoPath = path.join(dir, entry)
       try {
         const info = await fs.readJson(infoPath)
-        // @tus/file-store v2 stocke le timestamp d'expiration dans info.expiration (ms)
-        const expiration = info.expiration ? new Date(info.expiration) : null
+        // @tus/file-store v2 stocke creation_date (ISO string) dans le JSON — pas d'expiration directe
+        const creationDate = info.creation_date ? new Date(info.creation_date) : null
+        const expiration = creationDate ? new Date(creationDate.getTime() + TUS_EXPIRY_MS) : null
         if (expiration && expiration.getTime() < Date.now()) {
           const id = entry.replace(/\.json$/, '')
           await fs.remove(path.join(dir, id)).catch(() => {})
