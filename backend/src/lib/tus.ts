@@ -146,9 +146,11 @@ export function createFilesTusServer(app: FastifyInstance): Server {
       const userId = meta._userId || null
       const filename = meta.filename || 'file'
       const mimeType = meta.mimeType || (mime.lookup(filename) || 'application/octet-stream')
-      const expiresIn = meta.expiresIn ? parseInt(meta.expiresIn, 10) : null
-      const maxDownloads = meta.maxDownloads ? parseInt(meta.maxDownloads, 10) : null
-      const rawPassword = meta.password || null
+      const _expiresIn = parseInt(meta.expiresIn ?? '', 10)
+      const expiresIn = Number.isFinite(_expiresIn) && _expiresIn > 0 ? _expiresIn : null
+      const _maxDownloads = parseInt(meta.maxDownloads ?? '', 10)
+      const maxDownloads = Number.isFinite(_maxDownloads) && _maxDownloads > 0 ? _maxDownloads : null
+      const rawPassword = meta.password?.trim() || null
       const hideFilenames = meta.hideFilenames === 'true'
       const batchToken = meta.batchToken || null
 
