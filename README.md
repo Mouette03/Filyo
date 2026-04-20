@@ -138,6 +138,9 @@ If you run Filyo behind a reverse proxy (Traefik, Nginx, etc.), set `TRUST_PROXY
 | `127.0.0.1` | Trust only localhost proxy (recommended) |
 | `10.0.0.0/8` | Trust a specific IP range / CIDR |
 
+> [!NOTE]
+> For the TUS upload server, `@tus/server` only accepts a boolean for `respectForwardedHeaders`. Any IP or CIDR value will therefore behave like `true` (all forwarded headers trusted). Fastify itself still validates the IP/CIDR correctly for the rest of the API.
+
 ---
 
 ## 🍪 Authentication cookie
@@ -349,6 +352,9 @@ Si vous exécutez Filyo derrière un reverse proxy (Traefik, Nginx, etc.), défi
 | `true` | Fait confiance à tous les proxies (pratique mais moins sécurisé) |
 | `127.0.0.1` | Fait confiance uniquement au proxy local (recommandé) |
 | `10.0.0.0/8` | Fait confiance à une plage IP / CIDR spécifique |
+
+> [!NOTE]
+> Pour le serveur TUS, `@tus/server` n'accepte qu'un booléen pour `respectForwardedHeaders`. Toute valeur IP ou CIDR sera donc traitée comme `true` (tous les headers forwarded sont acceptés). Fastify continue de valider l'IP/CIDR correctement pour le reste de l'API.
 
 ---
 

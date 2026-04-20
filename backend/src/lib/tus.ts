@@ -66,11 +66,9 @@ function getTusDir(subdirectory: string): string {
   return dir
 }
 
-// true si TRUST_PROXY est 'true' ou une valeur IP/CIDR (non vide, non 'false')
-const TRUST_PROXY_ENABLED = (() => {
-  const v = (process.env.TRUST_PROXY ?? 'false').trim()
-  return v !== '' && v !== 'false'
-})()
+// Actif si TRUST_PROXY est défini et différent de 'false' (cohérent avec Fastify)
+// Note : @tus/server n'accepte qu'un booléen — les valeurs IP/CIDR sont donc traitées comme true
+const TRUST_PROXY_ENABLED = (() => { const v = (process.env.TRUST_PROXY ?? '').trim(); return v !== '' && v !== 'false' })()
 
 export const TUS_EXPIRY_MS = (() => {
   const raw = (process.env.TUS_EXPIRY || '').trim()
@@ -114,7 +112,8 @@ export function createFilesTusServer(app: FastifyInstance): Server {
       if (!dbUser!.active) tusReject(401, 'ACCOUNT_DISABLED')
 
       // 2. Vérification taille fichier
-      const totalSize = upload.size ?? 0
+      if (upload.size == null) tusReject(411, 'UPLOAD_LENGTH_REQUIRED')
+      const totalSize = upload.size
       const appSettings = await getAppSettings()
       const globalMaxBytes = appSettings.maxFileSizeBytes ?? null
       if (globalMaxBytes !== null && BigInt(totalSize) > globalMaxBytes) {
@@ -244,7 +243,8 @@ export function createRequestsTusServer(app: FastifyInstance): Server {
       }
 
       // Vérification taille
-      const totalSize = upload.size ?? 0
+      if (upload.size == null) tusReject(411, 'UPLOAD_LENGTH_REQUIRED')
+      const totalSize = upload.size
       const appSettings = await getAppSettings()
       const globalMaxBytes = appSettings.maxFileSizeBytes ?? null
       const perRequestMax = request!.maxSizeBytes ?? null
