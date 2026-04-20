@@ -128,7 +128,8 @@ export async function userRoutes(app: FastifyInstance) {
         ])
         const storageUsedBytes = ((usedAgg._sum.size ?? BigInt(0)) + (receivedAgg._sum.size ?? BigInt(0))).toString()
         return { ...user, storageQuotaBytes: user.storageQuotaBytes?.toString() ?? null, storageUsedBytes }
-      } catch {
+      } catch (err: any) {
+        if (err?.code === 'P2002') return reply.code(409).send({ code: 'EMAIL_TAKEN' })
         return reply.code(404).send({ code: 'USER_NOT_FOUND' })
       }
     }

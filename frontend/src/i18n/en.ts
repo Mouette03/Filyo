@@ -106,6 +106,11 @@ export const en = {
   'dash.statSizeSent': 'Volume sent',
   'dash.statSizeReceived': 'Volume received',
   'dash.disk': 'Disk space',
+  'dash.storageQuota': 'Storage quota',
+  'dash.storageUsedOf': '{{used}} used of {{total}}',
+  'dash.storageUnlimited': 'No storage limit',
+  'dash.storageUsedOnly': '{{used}} used',
+
   'dash.noFiles': 'No files sent yet.',
   'dash.noRequests': 'No deposit requests.',
   'dash.noReceived': 'No files received.',

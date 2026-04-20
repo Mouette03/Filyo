@@ -106,6 +106,11 @@ export const fr = {
   'dash.statSizeSent': 'Volume envoyé',
   'dash.statSizeReceived': 'Volume reçu',
   'dash.disk': 'Espace disque',
+  'dash.storageQuota': 'Quota de stockage',
+  'dash.storageUsedOf': '{{used}} utilisé sur {{total}}',
+  'dash.storageUnlimited': 'Aucune limite de stockage',
+  'dash.storageUsedOnly': '{{used}} utilisés',
+
   'dash.noFiles': 'Aucun fichier envoyé pour le moment.',
   'dash.noRequests': 'Aucune demande de dépôt.',
   'dash.noReceived': 'Aucun fichier reçu.',
