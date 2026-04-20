@@ -387,29 +387,6 @@ export default function DashboardPage() {
             ))}
           </div>
 
-          {/* Quota de stockage (si un quota est défini pour cet utilisateur) */}
-          {quota?.storageQuotaBytes != null && (() => {
-            const qUsed = parseInt(quota.storageUsedBytes, 10) || 0
-            const qTotal = parseInt(quota.storageQuotaBytes!, 10) || 1
-            const qPct = Math.min(100, Math.round((qUsed / qTotal) * 100))
-            const qBar = qPct >= 90 ? 'bg-red-500' : qPct >= 70 ? 'bg-amber-500' : 'bg-brand-500'
-            const qText = qPct >= 90 ? 'text-red-400' : qPct >= 70 ? 'text-amber-400' : 'text-brand-400'
-            return (
-              <div className="card mb-4 py-3 px-4">
-                <div className="flex items-center gap-3 mb-2">
-                  <HardDrive size={14} className="text-brand-400 flex-shrink-0" />
-                  <p className="text-xs font-medium text-white/70 flex-1">{t('dash.storageQuota')}</p>
-                  <span className={`text-xs font-semibold tabular-nums ${qText}`}>
-                    {t('dash.storageUsedOf', { used: formatBytes(qUsed), total: formatBytes(qTotal) })} · {qPct}%
-                  </span>
-                </div>
-                <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
-                  <div className={`h-full rounded-full transition-all ${qBar}`} style={{ width: `${qPct}%` }} />
-                </div>
-              </div>
-            )
-          })()}
-
           {/* Espace disque */}
           {stats.disk && (() => {
             const totalBytes = stats.disk.totalBytes || 1
@@ -452,6 +429,29 @@ export default function DashboardPage() {
           {!stats.disk && <div className="mb-8" />}
         </>
       )}
+
+      {/* Quota de stockage (si un quota est défini pour cet utilisateur) */}
+      {quota?.storageQuotaBytes != null && (() => {
+        const qUsed = parseInt(quota.storageUsedBytes, 10) || 0
+        const qTotal = parseInt(quota.storageQuotaBytes!, 10) || 1
+        const qPct = Math.min(100, Math.round((qUsed / qTotal) * 100))
+        const qBar = qPct >= 90 ? 'bg-red-500' : qPct >= 70 ? 'bg-amber-500' : 'bg-brand-500'
+        const qText = qPct >= 90 ? 'text-red-400' : qPct >= 70 ? 'text-amber-400' : 'text-brand-400'
+        return (
+          <div className="card mb-6 py-3 px-4">
+            <div className="flex items-center gap-3 mb-2">
+              <HardDrive size={14} className="text-brand-400 flex-shrink-0" />
+              <p className="text-xs font-medium text-white/70 flex-1">{t('dash.storageQuota')}</p>
+              <span className={`text-xs font-semibold tabular-nums ${qText}`}>
+                {t('dash.storageUsedOf', { used: formatBytes(qUsed), total: formatBytes(qTotal) })} · {qPct}%
+              </span>
+            </div>
+            <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
+              <div className={`h-full rounded-full transition-all ${qBar}`} style={{ width: `${qPct}%` }} />
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Tabs + Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-6">

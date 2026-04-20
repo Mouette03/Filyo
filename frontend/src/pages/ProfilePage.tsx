@@ -203,6 +203,61 @@ export default function ProfilePage() {
         </div>
       </div>
 
+      {/* Section Mot de passe */}
+      <div className="card mb-5">
+        <div className="flex items-center gap-2 mb-5">
+          <Lock size={16} className="text-brand-400" />
+          <h3 className="font-semibold">{t('profile.passwordSection')}</h3>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label htmlFor="profile-current-pwd" className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('profile.currentPassword')}</label>
+            <input
+              id="profile-current-pwd"
+              name="current-password"
+              type="password"
+              value={currentPwd}
+              onChange={e => setCurrentPwd(e.target.value)}
+              placeholder={t('profile.currentPassword')}
+              className="input"
+            />
+          </div>
+          <div>
+            <label htmlFor="profile-new-pwd" className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('profile.newPassword')}</label>
+            <input
+              id="profile-new-pwd"
+              name="new-password"
+              type="password"
+              value={newPwd}
+              onChange={e => setNewPwd(e.target.value)}
+              placeholder={t('login.passwordPlaceholder')}
+              className="input"
+            />
+          </div>
+          <div>
+            <label htmlFor="profile-confirm-pwd" className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('profile.confirmNewPassword')}</label>
+            <input
+              id="profile-confirm-pwd"
+              name="confirm-new-password"
+              type="password"
+              value={confirmPwd}
+              onChange={e => setConfirmPwd(e.target.value)}
+              placeholder={t('login.confirmPasswordPlaceholder')}
+              className="input"
+            />
+          </div>
+          <button
+            onClick={handleChangePassword}
+            disabled={savingPwd}
+            className="btn-primary flex items-center gap-2 py-2.5 px-6"
+          >
+            {savingPwd ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
+            {t('profile.updatePassword')}
+          </button>
+        </div>
+      </div>
+
       {/* Section Langue */}
       <div className="card mb-5">
         <div className="flex items-center gap-2 mb-4">
@@ -428,60 +483,6 @@ export default function ProfilePage() {
         )}
       </div>
 
-      {/* Section Mot de passe */}
-      <div className="card">
-        <div className="flex items-center gap-2 mb-5">
-          <Lock size={16} className="text-brand-400" />
-          <h3 className="font-semibold">{t('profile.passwordSection')}</h3>
-        </div>
-
-        <div className="space-y-4">
-          <div>
-            <label htmlFor="profile-current-pwd" className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('profile.currentPassword')}</label>
-            <input
-              id="profile-current-pwd"
-              name="current-password"
-              type="password"
-              value={currentPwd}
-              onChange={e => setCurrentPwd(e.target.value)}
-              placeholder={t('profile.currentPassword')}
-              className="input"
-            />
-          </div>
-          <div>
-            <label htmlFor="profile-new-pwd" className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('profile.newPassword')}</label>
-            <input
-              id="profile-new-pwd"
-              name="new-password"
-              type="password"
-              value={newPwd}
-              onChange={e => setNewPwd(e.target.value)}
-              placeholder={t('login.passwordPlaceholder')}
-              className="input"
-            />
-          </div>
-          <div>
-            <label htmlFor="profile-confirm-pwd" className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('profile.confirmNewPassword')}</label>
-            <input
-              id="profile-confirm-pwd"
-              name="confirm-new-password"
-              type="password"
-              value={confirmPwd}
-              onChange={e => setConfirmPwd(e.target.value)}
-              placeholder={t('login.confirmPasswordPlaceholder')}
-              className="input"
-            />
-          </div>
-          <button
-            onClick={handleChangePassword}
-            disabled={savingPwd}
-            className="btn-primary flex items-center gap-2 py-2.5 px-6"
-          >
-            {savingPwd ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
-            {t('profile.updatePassword')}
-          </button>
-        </div>
-      </div>
     </div>
   )
 }
