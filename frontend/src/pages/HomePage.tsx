@@ -161,7 +161,8 @@ export default function HomePage() {
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    multiple: true
+    multiple: true,
+    disabled: uploading
   })
 
   const removeFile = (index: number) => {
@@ -546,10 +547,12 @@ export default function HomePage() {
       {!results.length && (
         <div
           {...getRootProps()}
-          className={`relative border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all duration-300 mb-6
-            ${isDragActive
-              ? 'border-brand-500 bg-brand-500/10 scale-[1.01]'
-              : 'border-white/20 bg-white/3 hover:border-brand-500/50 hover:bg-brand-500/5'
+          className={`relative border-2 border-dashed rounded-2xl p-10 text-center transition-all duration-300 mb-6
+            ${uploading
+              ? 'border-white/10 bg-white/2 opacity-50 cursor-not-allowed'
+              : isDragActive
+                ? 'border-brand-500 bg-brand-500/10 scale-[1.01] cursor-pointer'
+                : 'border-white/20 bg-white/3 hover:border-brand-500/50 hover:bg-brand-500/5 cursor-pointer'
             }`}
           style={{ animation: isDragActive ? 'borderPulse 1s infinite' : undefined }}
         >

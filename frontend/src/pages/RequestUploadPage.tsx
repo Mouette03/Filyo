@@ -199,7 +199,7 @@ export default function RequestUploadPage() {
     })
   }, [info, t])
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop })
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, disabled: status === 'uploading' })
 
   const handleSubmit = async () => {
     if (!files.length || !token) return
@@ -540,10 +540,12 @@ export default function RequestUploadPage() {
             {/* Drop zone */}
             <div
               {...getRootProps()}
-              className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all duration-300
-                ${isDragActive
-                  ? 'border-brand-500 bg-brand-500/10'
-                  : '[border-color:var(--glass-border)] hover:border-brand-500/50 hover:bg-brand-500/5'}`}
+              className={`border-2 border-dashed rounded-2xl p-8 text-center transition-all duration-300
+                ${status === 'uploading'
+                  ? 'opacity-50 cursor-not-allowed [border-color:var(--glass-border)]'
+                  : isDragActive
+                    ? 'border-brand-500 bg-brand-500/10 cursor-pointer'
+                    : '[border-color:var(--glass-border)] hover:border-brand-500/50 hover:bg-brand-500/5 cursor-pointer'}`}
             >
               <input {...getInputProps()} />
               <Upload size={24} className={`mx-auto mb-3 ${isDragActive ? 'text-brand-400' : '[color:var(--text-40)]'}`} />
