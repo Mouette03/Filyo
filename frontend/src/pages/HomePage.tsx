@@ -434,7 +434,7 @@ export default function HomePage() {
                       <div key={r.id} className="flex items-center gap-2 text-xs text-white/50">
                         <span>{getFileIcon(r.mimeType)}</span>
                         <span className="truncate">
-                          {hideFilenames ? `Fichier ${idx + 1}` : r.originalName}
+                          {hideFilenames ? t('share.hiddenFilename', { index: String(idx + 1) }) : r.originalName}
                         </span>
                         <span className="flex-shrink-0 text-white/30">{formatBytes(r.size)}</span>
                       </div>

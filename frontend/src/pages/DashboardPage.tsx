@@ -735,7 +735,7 @@ export default function DashboardPage() {
                           <span className="text-base flex-shrink-0">{getFileIcon(f.mimeType)}</span>
                           <p className="flex-1 min-w-0 text-sm truncate text-white/80">
                             {firstFile.hideFilenames
-                              ? `Fichier ${idx + 1}`
+                              ? t('share.hiddenFilename', { index: String(idx + 1) })
                               : f.originalName}
                           </p>
                           <span className="text-xs text-white/40 flex-shrink-0">{formatBytes(f.size)}</span>

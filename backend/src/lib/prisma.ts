@@ -16,5 +16,5 @@ if (dbUrl.startsWith('file:') || dbUrl === '') {
   prisma.$executeRaw`PRAGMA journal_mode=WAL`
     .then(() => prisma.$executeRaw`PRAGMA busy_timeout=10000`)
     .then(() => prisma.$executeRaw`PRAGMA synchronous=NORMAL`)
-    .catch(err => console.warn('[prisma] Impossible d\'appliquer les pragmas SQLite :', err))
+    .catch((err: unknown) => console.warn('[prisma] Impossible d\'appliquer les pragmas SQLite :', err))
 }

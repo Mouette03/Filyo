@@ -39,7 +39,7 @@ export async function runScheduledCleanup(): Promise<{ deletedFiles: number }> {
 
   for (const file of filesToDelete) await fs.remove(file.path).catch(() => {})
   if (filesToDelete.length) {
-    await prisma.file.deleteMany({ where: { id: { in: filesToDelete.map(f => f.id) } } })
+    await prisma.file.deleteMany({ where: { id: { in: filesToDelete.map((f: { id: string }) => f.id) } } })
   }
 
   return { deletedFiles: filesToDelete.length }
@@ -57,7 +57,7 @@ export async function runForceCleanup(): Promise<{ deletedFiles: number }> {
   })
   for (const file of expiredFiles) await fs.remove(file.path).catch(() => {})
   if (expiredFiles.length) {
-    await prisma.file.deleteMany({ where: { id: { in: expiredFiles.map(f => f.id) } } })
+    await prisma.file.deleteMany({ where: { id: { in: expiredFiles.map((f: { id: string }) => f.id) } } })
   }
 
   return { deletedFiles: expiredFiles.length }

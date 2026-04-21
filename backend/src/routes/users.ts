@@ -17,11 +17,11 @@ export async function userRoutes(app: FastifyInstance) {
       prisma.receivedFile.groupBy({
         by: ['uploadRequestId'],
         _sum: { size: true },
-        where: { uploadRequest: { userId: { in: users.map(u => u.id) } } }
+        where: { uploadRequest: { userId: { in: users.map((u: { id: string }) => u.id) } } }
       })
     ])
     // Récupérer les uploadRequestId → userId pour agréger les ReceivedFile par propriétaire
-    const requestIds = receivedRows.map(r => r.uploadRequestId)
+    const requestIds = receivedRows.map((r: { uploadRequestId: string }) => r.uploadRequestId)
     const requestOwners = requestIds.length > 0
       ? await prisma.uploadRequest.findMany({
           where: { id: { in: requestIds } },
@@ -29,7 +29,7 @@ export async function userRoutes(app: FastifyInstance) {
         })
       : []
     const requestOwnerMap = new Map<string, string>(
-      requestOwners.map(r => [r.id, r.userId] as [string, string])
+      requestOwners.map((r: { id: string; userId: string }) => [r.id, r.userId] as [string, string])
     )
     const receivedByUser = new Map<string, bigint>()
     for (const row of receivedRows) {
@@ -39,9 +39,9 @@ export async function userRoutes(app: FastifyInstance) {
       }
     }
     const filesMap = new Map<string, bigint>(
-      filesRows.filter(r => r.userId).map(r => [r.userId!, r._sum.size ?? BigInt(0)] as [string, bigint])
+      filesRows.filter((r: { userId: string | null; _sum: { size: bigint | null } }) => r.userId).map((r: { userId: string | null; _sum: { size: bigint | null } }) => [r.userId!, r._sum.size ?? BigInt(0)] as [string, bigint])
     )
-    return users.map(u => ({
+    return users.map((u: { id: string; storageQuotaBytes?: bigint | null; [key: string]: unknown }) => ({
       ...u,
       storageQuotaBytes: u.storageQuotaBytes?.toString() ?? null,
       storageUsedBytes: ((filesMap.get(u.id) ?? BigInt(0)) + (receivedByUser.get(u.id) ?? BigInt(0))).toString()
@@ -115,23 +115,27 @@ export async function userRoutes(app: FastifyInstance) {
           : null
       }
 
+      let user: { id: string; email: string; name: string; role: string; active: boolean; createdAt: Date; storageQuotaBytes: bigint | null }
       try {
-        const user = await prisma.user.update({
+        user = await prisma.user.update({
           where: { id: req.params.id },
           data,
           select: { id: true, email: true, name: true, role: true, active: true, createdAt: true, storageQuotaBytes: true }
         })
         req.log.info({ id: req.params.id }, 'User updated by admin')
-        const [usedAgg, receivedAgg] = await Promise.all([
-          prisma.file.aggregate({ _sum: { size: true }, where: { userId: req.params.id } }),
-          prisma.receivedFile.aggregate({ _sum: { size: true }, where: { uploadRequest: { userId: req.params.id } } })
-        ])
-        const storageUsedBytes = ((usedAgg._sum.size ?? BigInt(0)) + (receivedAgg._sum.size ?? BigInt(0))).toString()
-        return { ...user, storageQuotaBytes: user.storageQuotaBytes?.toString() ?? null, storageUsedBytes }
       } catch (err: any) {
         if (err?.code === 'P2002') return reply.code(409).send({ code: 'EMAIL_TAKEN' })
-        return reply.code(404).send({ code: 'USER_NOT_FOUND' })
+        if (err?.code === 'P2025') return reply.code(404).send({ code: 'USER_NOT_FOUND' })
+        req.log.error({ err, id: req.params.id }, 'Failed to update user')
+        return reply.code(500).send({ code: 'INTERNAL_ERROR' })
       }
+
+      const [usedAgg, receivedAgg] = await Promise.all([
+        prisma.file.aggregate({ _sum: { size: true }, where: { userId: req.params.id } }),
+        prisma.receivedFile.aggregate({ _sum: { size: true }, where: { uploadRequest: { userId: req.params.id } } })
+      ])
+      const storageUsedBytes = ((usedAgg._sum.size ?? BigInt(0)) + (receivedAgg._sum.size ?? BigInt(0))).toString()
+      return { ...user, storageQuotaBytes: user.storageQuotaBytes?.toString() ?? null, storageUsedBytes }
     }
   )
 
