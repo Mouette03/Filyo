@@ -29,7 +29,9 @@ export async function userRoutes(app: FastifyInstance) {
         })
       : []
     const requestOwnerMap = new Map<string, string>(
-      requestOwners.map((r: { id: string; userId: string }) => [r.id, r.userId] as [string, string])
+      requestOwners
+        .filter((r): r is { id: string; userId: string } => r.userId !== null)
+        .map(r => [r.id, r.userId] as [string, string])
     )
     const receivedByUser = new Map<string, bigint>()
     for (const row of receivedRows) {
