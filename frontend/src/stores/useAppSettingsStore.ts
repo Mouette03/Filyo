@@ -1,4 +1,4 @@
-import { create } from 'zustand'
+﻿import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { FieldReq } from '../types/common'
 
@@ -12,8 +12,8 @@ interface AppSettings {
   uploaderMsgReq: FieldReq
   cleanupAfterDays: number | null
   maxFileSizeBytes: string | null
-  cfBypassEnabled: boolean
-  cfBypassChunkMb: number
+  proxyUploadEnabled: boolean
+  proxyUploadChunkMb: number
   tusExpiryMs: number
 }
 
@@ -35,8 +35,8 @@ export const useAppSettingsStore = create<AppSettingsStore>()(
         uploaderMsgReq: 'optional',
         cleanupAfterDays: null,
         maxFileSizeBytes: null,
-        cfBypassEnabled: false,
-        cfBypassChunkMb: 90,
+        proxyUploadEnabled: false,
+        proxyUploadChunkMb: 90,
         tusExpiryMs: 3600000
       },
       setSettings: (s) => set(prev => ({ settings: { ...prev.settings, ...s } }))

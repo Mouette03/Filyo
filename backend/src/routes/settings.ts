@@ -1,4 +1,4 @@
-import { FastifyInstance } from 'fastify'
+﻿import { FastifyInstance } from 'fastify'
 import path from 'path'
 import fs from 'fs-extra'
 import { nanoid } from 'nanoid'
@@ -41,8 +41,8 @@ export async function settingsRoutes(app: FastifyInstance) {
       allowRegistration: s.allowRegistration ?? false,
       cleanupAfterDays: s.cleanupAfterDays ?? null,
       maxFileSizeBytes: s.maxFileSizeBytes ? s.maxFileSizeBytes.toString() : null,
-      cfBypassEnabled: s.cfBypassEnabled ?? false,
-      cfBypassChunkMb: parseInt(process.env.TUS_CF_CHUNK_MB || '90', 10),
+      proxyUploadEnabled: s.proxyUploadEnabled ?? false,
+      proxyUploadChunkMb: parseInt(process.env.TUS_CHUNK_MB || '90', 10),
       tusExpiryMs: TUS_EXPIRY_MS,
       updatedAt: s.updatedAt
     }
@@ -331,11 +331,11 @@ export async function settingsRoutes(app: FastifyInstance) {
       if (typeof enabled !== 'boolean') return reply.code(400).send({ code: 'INVALID_VALUE' })
       const s = await prisma.appSettings.upsert({
         where: { id: 'singleton' },
-        update: { cfBypassEnabled: enabled },
-        create: { id: 'singleton', appName: 'Filyo', cfBypassEnabled: enabled }
+        update: { proxyUploadEnabled: enabled },
+        create: { id: 'singleton', appName: 'Filyo', proxyUploadEnabled: enabled }
       })
-      req.log.info({ cfBypassEnabled: enabled }, 'CF bypass setting updated')
-      return { cfBypassEnabled: s.cfBypassEnabled }
+      req.log.info({ proxyUploadEnabled: enabled }, 'Proxy-safe upload mode updated')
+      return { proxyUploadEnabled: s.proxyUploadEnabled }
     }
   )
 }

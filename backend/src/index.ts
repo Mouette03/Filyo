@@ -202,7 +202,19 @@ async function bootstrap() {
   await app.listen({ port, host })
   app.log.info(`🚀 Filyo backend running on http://${host}:${port}`)
 
-  // ── Job de nettoyage automatique (toutes les heures) ──────────────────────────────────
+  // ── Job de nettoyage automatique ──────────────────────────────────────────────────────────
+  const CLEANUP_INTERVAL_MS = (() => {
+    const raw = (process.env.CLEANUP_INTERVAL || '').trim()
+    if (raw) {
+      const mMatch = raw.match(/^(\d+)m$/i)
+      const hMatch = raw.match(/^(\d+)h$/i)
+      if (mMatch) return parseInt(mMatch[1], 10) * 60 * 1000
+      if (hMatch) return parseInt(hMatch[1], 10) * 60 * 60 * 1000
+      console.warn(`[cleanup] CLEANUP_INTERVAL="${raw}" non reconnu (formats acceptés : <n>m, <n>h). Fallback : 1h.`)
+    }
+    return 60 * 60 * 1000 // 1h par défaut
+  })()
+
   async function cleanupJob() {
     try {
       const result = await runScheduledCleanup()
@@ -217,8 +229,8 @@ async function bootstrap() {
       app.log.error(err, 'TUS cleanup failed')
     }
   }
-  // Premier passage 1 min après le démarrage, puis toutes les heures
-  setTimeout(() => { cleanupJob(); setInterval(cleanupJob, 60 * 60 * 1000) }, 60 * 1000)
+  // Premier passage 1 min après le démarrage, puis selon CLEANUP_INTERVAL (défaut 1h)
+  setTimeout(() => { cleanupJob(); setInterval(cleanupJob, CLEANUP_INTERVAL_MS) }, 60 * 1000)
 }
 
 bootstrap().catch(console.error)

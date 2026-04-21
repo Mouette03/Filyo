@@ -32,7 +32,7 @@ CREATE TABLE `AppSettings` (
     `allowRegistration` BOOLEAN NOT NULL DEFAULT false,
     `cleanupAfterDays` INTEGER NULL,
     `maxFileSizeBytes` BIGINT NULL,
-    `cfBypassEnabled` BOOLEAN NOT NULL DEFAULT false,
+    `proxyUploadEnabled` BOOLEAN NOT NULL DEFAULT false,
     `updatedAt` DATETIME(3) NOT NULL,
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

@@ -178,7 +178,34 @@ export async function fileRoutes(app: FastifyInstance) {
       reply.raw.once('close', resolve)
     })
   }
-  app.all('/tus', { config: { rateLimit: { max: 10, timeWindow: '1 minute', keyGenerator: (req) => req.ip } } }, handleTus)
+
+  // Extrait le batchToken du header Upload-Metadata (format TUS : "key base64val,key base64val,...")
+  const getBatchToken = (req: FastifyRequest): string | null => {
+    const meta = (req.headers['upload-metadata'] as string | undefined) ?? ''
+    for (const part of meta.split(',')) {
+      const [key, val] = part.trim().split(' ')
+      if (key === 'batchToken' && val) {
+        try { return Buffer.from(val, 'base64').toString('utf8') } catch { return null }
+      }
+    }
+    return null
+  }
+
+  // POST /tus : création d'un slot d'upload par fichier.
+  // Clé = IP:batchToken si lot → tous les fichiers du même lot partagent le compteur.
+  // Clé = IP seule si fichier isolé → limite plus stricte.
+  app.all('/tus', {
+    config: {
+      rateLimit: {
+        max: 60,
+        timeWindow: '1 minute',
+        keyGenerator: (req) => {
+          const batch = getBatchToken(req)
+          return batch ? `${req.ip}:batch:${batch}` : req.ip
+        }
+      }
+    }
+  }, handleTus)
   app.all('/tus/*', { config: { rateLimit: { max: 200, timeWindow: '1 minute', keyGenerator: (req) => req.ip } } }, handleTus)
 
   // GET /api/files/tus-result/:uploadId — Récupère le résultat d'un upload TUS terminé
@@ -254,8 +281,10 @@ export async function fileRoutes(app: FastifyInstance) {
         expiresAt = new Date(req.body.expiresAt)
         if (isNaN(expiresAt.getTime())) return reply.code(400).send({ code: 'INVALID_DATE' })
       }
-      await prisma.file.update({ where: { id: req.params.id }, data: { expiresAt } })
-      await prisma.share.updateMany({ where: { fileId: req.params.id }, data: { expiresAt } })
+      await prisma.$transaction([
+        prisma.file.update({ where: { id: req.params.id }, data: { expiresAt } }),
+        prisma.share.updateMany({ where: { fileId: req.params.id }, data: { expiresAt } })
+      ])
       return { expiresAt }
     }
   )
@@ -273,8 +302,10 @@ export async function fileRoutes(app: FastifyInstance) {
       if (maxDownloads !== null && (!Number.isInteger(maxDownloads) || maxDownloads < 1)) {
         return reply.code(400).send({ code: 'INVALID_MAX_DOWNLOADS' })
       }
-      await prisma.file.update({ where: { id: req.params.id }, data: { maxDownloads: maxDownloads ?? null } })
-      await prisma.share.updateMany({ where: { fileId: req.params.id }, data: { maxDownloads: maxDownloads ?? null } })
+      await prisma.$transaction([
+        prisma.file.update({ where: { id: req.params.id }, data: { maxDownloads: maxDownloads ?? null } }),
+        prisma.share.updateMany({ where: { fileId: req.params.id }, data: { maxDownloads: maxDownloads ?? null } })
+      ])
       return { maxDownloads }
     }
   )

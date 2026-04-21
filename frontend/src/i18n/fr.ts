@@ -1,4 +1,4 @@
-export const fr = {
+﻿export const fr = {
   // ── Navigation ──────────────────────────────────────────────
   'nav.send': 'Envoyer',
   'nav.reverseShare': 'Partage inversé',
@@ -435,11 +435,11 @@ export const fr = {
   'settings.maxFileSizeRemoved': 'Limite supprimée — uploads illimités',
   'settings.maxFileSizeUnlimited': 'Illimité',
   'error.fileTooLargeGlobal': 'Le fichier « {{name}} » dépasse la limite autorisée ({{max}})',
-  'settings.cfBypassSection': 'Contournement Cloudflare',
-  'settings.cfBypassHint': 'Découpe les fichiers en morceaux pour éviter les limites de taille imposées par Cloudflare.',
-  'settings.cfBypassEnabled': 'Activé',
-  'settings.cfBypassDisabled': 'Désactivé',
-  'settings.cfBypassSaved': 'Paramètre enregistré',
+  'settings.proxyUploadSection': 'Mode upload proxy-compatible',
+  'settings.proxyUploadHint': 'Découpe les fichiers en morceaux pour contourner les limites de taille par requête des proxies et CDN (Cloudflare, Nginx, Vercel…). Taille configurable via TUS_CHUNK_MB.',
+  'settings.proxyUploadEnabled': 'Activé',
+  'settings.proxyUploadDisabled': 'Désactivé',
+  'settings.proxyUploadSaved': 'Paramètre enregistré',
   'request.resumeTitle': 'Upload interrompu',
   'request.resumeHint': 'Sélectionnez à nouveau ce fichier pour reprendre automatiquement.',
   'request.resumeProgress': '{{remaining}} restants · Reprise possible jusqu\'au {{expires}}',

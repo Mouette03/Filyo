@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
+﻿import { useState, useCallback, useRef, useEffect } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { Upload, X, Copy, Check, Lock, Clock, Download, Plus, Trash2, Share2, Mail, Send, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -244,7 +244,7 @@ export default function HomePage() {
             storeFingerprintForResuming: true,
             removeFingerprintOnSuccess: true,
             fingerprint: async (f: File) => `tus::filyo::${f.name}::${f.size}::${f.lastModified}`,
-            chunkSize: settings.cfBypassEnabled ? settings.cfBypassChunkMb * 1024 * 1024 : Infinity,
+            chunkSize: settings.proxyUploadEnabled ? settings.proxyUploadChunkMb * 1024 * 1024 : Infinity,
             metadata: {
               filename: file.name,
               mimeType: file.type || 'application/octet-stream',

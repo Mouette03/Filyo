@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react'
+﻿import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { useDropzone } from 'react-dropzone'
 import { Upload, ArrowDownUp, AlertTriangle, Clock, Check, Lock, User, Mail, MessageSquare, X } from 'lucide-react'
@@ -268,7 +268,7 @@ export default function RequestUploadPage() {
             storeFingerprintForResuming: true,
             removeFingerprintOnSuccess: true,
             fingerprint: async (f: File) => `tus::filyo::req::${token}::${f.name}::${f.size}::${f.lastModified}`,
-            chunkSize: settings.cfBypassEnabled ? settings.cfBypassChunkMb * 1024 * 1024 : Infinity,
+            chunkSize: settings.proxyUploadEnabled ? settings.proxyUploadChunkMb * 1024 * 1024 : Infinity,
             metadata: {
               requestToken: token!,
               filename: file.name,

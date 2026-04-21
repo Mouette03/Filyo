@@ -1,4 +1,4 @@
-import axios from 'axios'
+﻿import axios from 'axios'
 import toast from 'react-hot-toast'
 import { fr, en } from '../i18n'
 import { useI18nStore } from '../stores/useI18nStore'
@@ -128,7 +128,7 @@ export const submitToUploadRequest = (
   })
 }
 
-export const updateCfBypass = (enabled: boolean) =>
+export const updateProxyUpload = (enabled: boolean) =>
   api.patch('/settings/cf-bypass', { enabled })
 
 export const getTusFileResult = (uploadId: string) =>

@@ -1,4 +1,4 @@
-// This is your Prisma schema file
+﻿// This is your Prisma schema file
 generator client {
   provider = "prisma-client-js"
 }
@@ -43,7 +43,7 @@ model AppSettings {
   allowRegistration Boolean  @default(false)
   cleanupAfterDays  Int?     // max autorisé : null=désactivé, 0=dès expiration, N=N jours max après expiration
   maxFileSizeBytes  BigInt?  // null=illimité
-  cfBypassEnabled   Boolean  @default(false)  // contournement Cloudflare (chunking TUS côté client)
+  proxyUploadEnabled   Boolean  @default(false)  // mode upload proxy-compatible (chunking TUS côté client)
   updatedAt         DateTime @updatedAt
 }
 

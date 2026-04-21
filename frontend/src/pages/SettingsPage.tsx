@@ -1,7 +1,7 @@
-import { useEffect, useState, useRef } from 'react'
+﻿import { useEffect, useState, useRef } from 'react'
 import { Settings, Upload, Trash2, Check, Type, Image, RefreshCw, Mail, Eye, EyeOff, Wifi, Globe, Users, Clock } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { updateAppName, uploadLogo, deleteLogo, getSmtpSettings, updateSmtpSettings, testSmtp, updateSiteUrl, updateUploaderFields, updateAllowRegistration, updateCleanupSetting, updateMaxFileSize, updateCfBypass } from '../api/client'
+import { updateAppName, uploadLogo, deleteLogo, getSmtpSettings, updateSmtpSettings, testSmtp, updateSiteUrl, updateUploaderFields, updateAllowRegistration, updateCleanupSetting, updateMaxFileSize, updateProxyUpload } from '../api/client'
 import { useAppSettingsStore } from '../stores/useAppSettingsStore'
 import { useT } from '../i18n'
 import type { FieldReq } from '../types/common'
@@ -68,21 +68,21 @@ export default function SettingsPage() {
     setMaxFileSizeMb(settings.maxFileSizeBytes ? String(Math.round(parseInt(settings.maxFileSizeBytes) / (1024 * 1024))) : '')
   }, [settings.maxFileSizeBytes])
 
-  // Contournement Cloudflare
-  const [cfBypassEnabled, setCfBypassEnabled] = useState<boolean>(settings.cfBypassEnabled ?? false)
-  const [savingCfBypass, setSavingCfBypass] = useState(false)
-  useEffect(() => { setCfBypassEnabled(settings.cfBypassEnabled ?? false) }, [settings.cfBypassEnabled])
+  // Mode upload proxy-compatible
+  const [proxyUploadEnabled, setProxyUploadEnabled] = useState<boolean>(settings.proxyUploadEnabled ?? false)
+  const [savingProxyUpload, setSavingProxyUpload] = useState(false)
+  useEffect(() => { setProxyUploadEnabled(settings.proxyUploadEnabled ?? false) }, [settings.proxyUploadEnabled])
 
-  const handleToggleCfBypass = async () => {
-    const next = !cfBypassEnabled
-    setSavingCfBypass(true)
+  const handleToggleProxyUpload = async () => {
+    const next = !proxyUploadEnabled
+    setSavingProxyUpload(true)
     try {
-      await updateCfBypass(next)
-      setCfBypassEnabled(next)
-      setSettings({ cfBypassEnabled: next })
-      toast.success(t('settings.cfBypassSaved'))
+      await updateProxyUpload(next)
+      setProxyUploadEnabled(next)
+      setSettings({ proxyUploadEnabled: next })
+      toast.success(t('settings.proxyUploadSaved'))
     } catch { toast.error(t('toast.saveError')) }
-    setSavingCfBypass(false)
+    setSavingProxyUpload(false)
   }
 
   useEffect(() => {
@@ -463,31 +463,31 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Section : Contournement Cloudflare */}
+      {/* Section : Mode upload proxy-compatible */}
       <div className="card mb-6">
         <div className="mb-5">
           <div className="flex items-center gap-2 mb-1">
             <Upload size={16} className="text-brand-400" />
-            <h3 className="font-semibold">{t('settings.cfBypassSection')}</h3>
+            <h3 className="font-semibold">{t('settings.proxyUploadSection')}</h3>
           </div>
-          <p className="text-xs text-white/30">{t('settings.cfBypassHint')}</p>
+          <p className="text-xs text-white/30">{t('settings.proxyUploadHint')}</p>
         </div>
         <div className="flex items-center justify-between py-3 px-4 bg-white/3 rounded-xl">
           <div>
             <p className="text-sm font-medium">
-              {cfBypassEnabled ? t('settings.cfBypassEnabled') : t('settings.cfBypassDisabled')}
+              {proxyUploadEnabled ? t('settings.proxyUploadEnabled') : t('settings.proxyUploadDisabled')}
             </p>
-            {cfBypassEnabled && (
-              <p className="text-xs text-white/40 mt-0.5">{settings.cfBypassChunkMb} MB / morceau</p>
+            {proxyUploadEnabled && (
+              <p className="text-xs text-white/40 mt-0.5">{settings.proxyUploadChunkMb} MB / morceau</p>
             )}
           </div>
           <div className="flex items-center gap-2">
-            {savingCfBypass && <div className="w-4 h-4 border-2 border-brand-500/30 border-t-brand-500 rounded-full animate-spin" />}
+            {savingProxyUpload && <div className="w-4 h-4 border-2 border-brand-500/30 border-t-brand-500 rounded-full animate-spin" />}
             <div
-              onClick={handleToggleCfBypass}
-              className={`w-11 h-6 rounded-full cursor-pointer transition-colors relative flex-shrink-0 ${cfBypassEnabled ? 'bg-brand-500' : 'bg-white/20'}`}
+              onClick={handleToggleProxyUpload}
+              className={`w-11 h-6 rounded-full cursor-pointer transition-colors relative flex-shrink-0 ${proxyUploadEnabled ? 'bg-brand-500' : 'bg-white/20'}`}
             >
-              <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${cfBypassEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+              <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${proxyUploadEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
             </div>
           </div>
         </div>

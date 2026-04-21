@@ -33,7 +33,7 @@ CREATE TABLE "AppSettings" (
     "allowRegistration" BOOLEAN NOT NULL DEFAULT false,
     "cleanupAfterDays" INTEGER,
     "maxFileSizeBytes" BIGINT,
-    "cfBypassEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "proxyUploadEnabled" BOOLEAN NOT NULL DEFAULT false,
     "updatedAt" DATETIME NOT NULL
 );
 
