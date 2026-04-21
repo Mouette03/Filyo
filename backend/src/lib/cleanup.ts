@@ -29,7 +29,7 @@ export async function runScheduledCleanup(): Promise<{ deletedFiles: number }> {
     include: { user: { select: { cleanupAfterDays: true } } }
   })
 
-  const filesToDelete = expiredFiles.filter(file => {
+  const filesToDelete = expiredFiles.filter((file: typeof expiredFiles[number]) => {
     // null = l'utilisateur suit le défaut admin (opt-out)
     const userPref = file.user?.cleanupAfterDays ?? adminMax
     const effective = Math.min(userPref, adminMax)  // capé au max admin
