@@ -343,11 +343,11 @@ export default function UsersPage() {
                             <span className="text-sm text-white/60">{editActive ? t('common.active') : t('common.inactive')}</span>
                           </label>
                         </div>
-                        <div className="sm:col-span-2">
+                        <div>
                           <label className="text-xs text-white/50 mb-1.5 block">{t('users.quotaLabel')}</label>
                           <div className="flex gap-2">
-                            <input type="number" min="1" value={editQuotaMB} onChange={e => setEditQuotaMB(e.target.value)} placeholder={t('users.quotaPlaceholder')} className="input text-sm py-2 flex-1" />
-                            <select value={editQuotaUnit} onChange={e => setEditQuotaUnit(e.target.value as 'MB' | 'GB')} className="input bg-surface-700 text-sm py-2 w-20">
+                            <input type="number" min="1" value={editQuotaMB} onChange={e => setEditQuotaMB(e.target.value)} placeholder={t('users.quotaPlaceholder')} className="input text-sm py-2 flex-1 min-w-0" />
+                            <select value={editQuotaUnit} onChange={e => setEditQuotaUnit(e.target.value as 'MB' | 'GB')} className="input bg-surface-700 text-sm py-2 w-20 flex-shrink-0">
                               <option value="MB">MB</option>
                               <option value="GB">GB</option>
                             </select>
