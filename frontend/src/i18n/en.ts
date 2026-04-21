@@ -1,4 +1,4 @@
-﻿export const en = {
+export const en = {
   // ── Navigation ──────────────────────────────────────────────
   'nav.send': 'Send',
   'nav.reverseShare': 'Reverse Share',
