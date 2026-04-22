@@ -89,6 +89,12 @@ docker compose -f docker-compose-mariadb.yml up -d
 
 ---
 
+## 📖 Full documentation
+
+→ [AIDE.md](AIDE.md) — Complete guide (EN + FR) covering all features, limits, TUS protocol, cleanup, quotas, security…
+
+---
+
 ## 🌐 Reverse proxy (Traefik/Nginx)
 
 Relative API paths → **zero config needed** !
