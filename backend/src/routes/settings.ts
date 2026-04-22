@@ -22,7 +22,7 @@ const LOGO_DIR = path.join(UPLOAD_DIR, 'logos')
  * instance's authentication and admin-only hooks.
  *
  * Notes:
- * - The logo upload endpoint streams files to disk and enforces a 2 MB maximum size.
+ * - The logo upload endpoint streams files to disk and enforces a 3 MB maximum size.
  * - Settings are persisted to a singleton database record and read via the application's
  *   settings accessor.
  */
@@ -253,8 +253,8 @@ export async function settingsRoutes(app: FastifyInstance) {
         return reply.code(400).send({ code: 'INVALID_FORMAT' })
       }
 
-      // Lire les chunks en mémoire (max 2 MB)
-      const MAX_BYTES = 2 * 1024 * 1024
+      // Lire les chunks en mémoire (max 3 MB)
+      const MAX_BYTES = 3 * 1024 * 1024
       const chunks: Buffer[] = []
       let received = 0
       for await (const chunk of data.file) {

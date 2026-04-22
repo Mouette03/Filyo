@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
-import { Upload, LayoutDashboard, ArrowDownUp, Plus, Settings, Users, LogOut, ChevronDown, User, Github, ArrowUpCircle } from 'lucide-react'
+import { Upload, LayoutDashboard, ArrowDownUp, Plus, Settings, Users, LogOut, ChevronDown, User, Github, ArrowUpCircle, BookOpen } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { useAuthStore } from '../stores/useAuthStore'
 import { useAppSettingsStore } from '../stores/useAppSettingsStore'
@@ -145,6 +145,15 @@ export default function Layout() {
                     </NavLink>
                   </>
                 )}
+                <a
+                  href="https://github.com/Mouette03/Filyo/blob/main/AIDE.md"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setUserMenuOpen(false)}
+                  className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors"
+                >
+                  <BookOpen size={14} /> {t('nav.help')}
+                </a>
                 <button
                   onClick={handleLogout}
                   className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
