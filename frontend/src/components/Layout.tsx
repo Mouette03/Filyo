@@ -14,9 +14,13 @@ export default function Layout() {
   const { settings, setSettings } = useAppSettingsStore()
   const navigate = useNavigate()
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [logoError, setLogoError] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const { t } = useT()
   const [latestVersion, setLatestVersion] = useState<string | null>(null)
+
+  // Réinitialise l'erreur logo si l'URL change (ex: admin met à jour le logo)
+  useEffect(() => { setLogoError(false) }, [settings.logoUrl])
 
   const currentVersion = __APP_VERSION__
   const hasUpdate = latestVersion && latestVersion !== `v${currentVersion}` && latestVersion !== currentVersion
@@ -62,12 +66,17 @@ export default function Layout() {
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between relative">
           {/* Logo + Nom */}
           <NavLink to="/" className="flex items-center gap-2.5 group">
-            {settings.logoUrl ? (
-              <img src={settings.logoUrl} alt="logo" className="h-8 w-auto object-contain" />
-            ) : (
+            {logoError ? (
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center shadow-lg shadow-brand-500/30 group-hover:shadow-brand-500/50 transition-shadow">
                 <ArrowDownUp size={16} className="text-white" />
               </div>
+            ) : (
+              <img
+                src={settings.logoUrl || '/filyo.svg'}
+                alt="logo"
+                className="h-8 w-auto object-contain"
+                onError={() => setLogoError(true)}
+              />
             )}
             <span className="hidden sm:inline font-bold text-lg tracking-tight">{settings.appName}</span>
           </NavLink>
