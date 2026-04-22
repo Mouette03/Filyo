@@ -2,7 +2,6 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import path from 'path'
 import fs from 'fs-extra'
 import { nanoid } from 'nanoid'
-import mime from 'mime-types'
 import { isValidEmail } from '../lib/utils'
 import bcrypt from 'bcryptjs'
 import { prisma } from '../lib/prisma'
@@ -115,198 +114,6 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
       maxFiles: request.maxFiles,
       maxSizeBytes: request.maxSizeBytes?.toString()
     }
-  })
-
-  // POST /api/upload-requests/:token/upload - Deposer des fichiers (public)
-  app.post<{ Params: { token: string } }>('/:token/upload', {
-    config: { rateLimit: { max: 3, timeWindow: '1 minute', keyGenerator: (req) => `${req.ip}:${(req.params as any).token}` } }
-  }, async (req, reply) => {
-    // Drainer le stream brut pour éviter de corrompre la connexion sur les retours anticipés
-    const drainBody = () => new Promise<void>((resolve) => {
-      if (req.raw.readableEnded || req.raw.destroyed) return resolve()
-
-      const done = () => {
-        clearTimeout(timer)
-        req.raw.off('end', done)
-        req.raw.off('error', done)
-        req.raw.off('close', done)
-        resolve()
-      }
-
-      const timer = setTimeout(done, 5000)
-      req.raw.resume()
-      req.raw.once('end', done)
-      req.raw.once('error', done)
-      req.raw.once('close', done)
-    })
-
-    const request = await prisma.uploadRequest.findUnique({
-      where: { token: req.params.token },
-      include: { _count: { select: { receivedFiles: true } } }
-    })
-    if (!request || !request.active) {
-      await drainBody()
-      return reply.code(404).send({ code: 'REQUEST_NOT_FOUND' })
-    }
-    if (request.expiresAt && request.expiresAt < new Date()) {
-      await drainBody()
-      return reply.code(410).send({ code: 'REQUEST_EXPIRED' })
-    }
-    if (request.maxFiles && request._count.receivedFiles >= request.maxFiles) {
-      await drainBody()
-      return reply.code(429).send({ code: 'REQUEST_LIMIT_REACHED' })
-    }
-
-    // Vérification anticipée du mot de passe via header (avant toute écriture sur disque)
-    if (request.password) {
-      const rawHeader = (req.headers['x-upload-password'] as string) ?? ''
-      let provided = ''
-      try { provided = Buffer.from(rawHeader, 'base64').toString('utf8') } catch { provided = rawHeader }
-      const ok = await bcrypt.compare(provided, request.password)
-      if (!ok) {
-        await drainBody()
-        return reply.code(401).send({ code: 'WRONG_PASSWORD' })
-      }
-    }
-
-    const appSettings = await getAppSettings()
-    const globalMaxBytes = appSettings.maxFileSizeBytes ?? null
-    const perRequestMax = request.maxSizeBytes ?? null
-    // Limite effective = le plus restrictif des deux
-    const effectiveMaxBytes = perRequestMax !== null && globalMaxBytes !== null
-      ? (perRequestMax < globalMaxBytes ? perRequestMax : globalMaxBytes)
-      : (perRequestMax ?? globalMaxBytes)
-
-    // Quota du propriétaire de la demande
-    const ownerId = request.userId
-    const owner = ownerId ? await prisma.user.findUnique({
-      where: { id: ownerId },
-      select: { storageQuotaBytes: true }
-    }) : null
-    const quotaBytes = owner?.storageQuotaBytes ?? null
-    let ownerUsedBytes = BigInt(0)
-    if (quotaBytes !== null && ownerId) {
-      const filesAgg = await prisma.file.aggregate({ _sum: { size: true }, where: { userId: ownerId } })
-      const receivedAgg = await prisma.receivedFile.aggregate({
-        _sum: { size: true },
-        where: { uploadRequest: { userId: ownerId } }
-      })
-      ownerUsedBytes = (filesAgg._sum.size ?? BigInt(0)) + (receivedAgg._sum.size ?? BigInt(0))
-      if (ownerUsedBytes >= quotaBytes) {
-        await drainBody()
-        return reply.code(413).send({ code: 'QUOTA_EXCEEDED' })
-      }
-    }
-
-    // Rejet anticipé via Content-Length (avant toute écriture sur disque)
-    const contentLength = req.headers['content-length'] ? BigInt(req.headers['content-length']) : null
-    if (effectiveMaxBytes !== null && contentLength !== null && contentLength > effectiveMaxBytes) {
-      await drainBody()
-      return reply.code(413).send({ code: 'FILE_TOO_LARGE' })
-    }
-    if (quotaBytes !== null && contentLength !== null && ownerUsedBytes + contentLength > quotaBytes) {
-      await drainBody()
-      return reply.code(413).send({ code: 'QUOTA_EXCEEDED' })
-    }
-
-    const parts = req.parts()
-    const savedFiles: any[] = []
-    let uploaderName: string | undefined
-    let uploaderEmail: string | undefined
-    let message: string | undefined
-
-    for await (const part of parts) {
-      if (part.type === 'field') {
-        if (part.fieldname === 'uploaderName') uploaderName = part.value as string
-        if (part.fieldname === 'uploaderEmail') uploaderEmail = part.value as string
-        if (part.fieldname === 'message') message = part.value as string
-      } else {
-        // Vérifier le quota restant en tenant compte des fichiers déjà sauvés dans cette requête
-        if (request.maxFiles) {
-          const total = request._count.receivedFiles + savedFiles.length
-          if (total >= request.maxFiles) {
-            // Drainer le reste du stream avant de retourner pour éviter de corrompre la connexion
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            for await (const _ of part.file) { /* drain */ }
-            await Promise.all(savedFiles.map((f: any) => fs.remove(f.path).catch(() => {})))
-            return reply.code(429).send({ code: 'REQUEST_LIMIT_REACHED' })
-          }
-        }
-        const ext = path.extname(part.filename || '') || ''
-        const filename = `recv_${nanoid(12)}${ext}`
-        const destDir = path.join(UPLOAD_DIR, 'received', request.id)
-        await fs.ensureDir(destDir)
-        const filePath = path.join(destDir, filename)
-
-        const writeStream = fs.createWriteStream(filePath)
-        writeStream.on('error', () => {})
-        let size = 0n
-
-        try {
-          for await (const chunk of part.file) {
-            size += BigInt(chunk.length)
-            if (effectiveMaxBytes !== null && size > effectiveMaxBytes) {
-              writeStream.destroy()
-              await fs.remove(filePath).catch(() => {})
-              await Promise.all(savedFiles.map((f: any) => fs.remove(f.path).catch(() => {})))
-              return reply.code(413).send({ code: 'FILE_TOO_LARGE' })
-            }
-            if (quotaBytes !== null) {
-              const savedSize = savedFiles.reduce((acc: bigint, f: any) => acc + f.size, BigInt(0))
-              if (ownerUsedBytes + savedSize + size > quotaBytes) {
-                writeStream.destroy()
-                await fs.remove(filePath).catch(() => {})
-                await Promise.all(savedFiles.map((f: any) => fs.remove(f.path).catch(() => {})))
-                return reply.code(413).send({ code: 'QUOTA_EXCEEDED' })
-              }
-            }
-            if (!writeStream.write(chunk)) {
-              await new Promise<void>((resolve, reject) => {
-                const onDrain = () => { writeStream.off('error', onError); resolve() }
-                const onError = (err: Error) => { writeStream.off('drain', onDrain); reject(err) }
-                writeStream.once('drain', onDrain)
-                writeStream.once('error', onError)
-              })
-            }
-          }
-          await new Promise<void>((resolve, reject) => {
-            const onFinish = () => { writeStream.off('error', onError); resolve() }
-            const onError = (err: Error) => { writeStream.off('finish', onFinish); reject(err) }
-            writeStream.once('finish', onFinish)
-            writeStream.once('error', onError)
-            writeStream.end()
-          })
-        } catch (err) {
-          writeStream.destroy()
-          await fs.remove(filePath).catch(() => {})
-          throw err
-        }
-
-        savedFiles.push({
-          uploadRequestId: request.id,
-          filename,
-          originalName: part.filename || 'file',
-          mimeType: mime.lookup(part.filename || '') || 'application/octet-stream',
-          size: size,
-          path: filePath,
-          uploaderName: uploaderName || null,
-          uploaderEmail: uploaderEmail || null,
-          message: message || null
-        })
-      }
-    }
-
-    const created = await Promise.all(
-      savedFiles.map((f: any) => prisma.receivedFile.create({ data: f }))
-    )
-    req.log.info({ token: req.params.token, count: created.length, uploaderName }, 'Files received via upload request')
-    return reply.code(201).send(
-      created.map((f: any) => ({
-        id: f.id,
-        originalName: f.originalName,
-        size: f.size.toString()
-      }))
-    )
   })
 
   // GET /api/upload-requests/dl/:dlToken — streaming direct (pas d'auth, token prouve l'autorisation)
@@ -494,6 +301,32 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
       reply.raw.once('close', resolve)
     })
   }
-  app.all('/tus', { config: { rateLimit: { max: 5, timeWindow: '1 minute', keyGenerator: (req) => req.ip } } }, handleTus)
-  app.all('/tus/*', handleTus)
+
+  // Extrait le requestToken depuis Upload-Metadata (format TUS : "key base64val,key base64val,...")
+  const getRequestToken = (req: FastifyRequest): string | null => {
+    const meta = (req.headers['upload-metadata'] as string | undefined) ?? ''
+    for (const part of meta.split(',')) {
+      const [key, val] = part.trim().split(' ')
+      if (key === 'requestToken' && val) {
+        try { return Buffer.from(val, 'base64').toString('utf8') } catch { return null }
+      }
+    }
+    return null
+  }
+
+  // POST /tus : 1 appel = 1 fichier initié. Clé = IP:requestToken → les uploaders
+  // vers des liens différents ne se bloquent pas mutuellement, même depuis le même NAT.
+  app.all('/tus', {
+    config: {
+      rateLimit: {
+        max: 60,
+        timeWindow: '1 minute',
+        keyGenerator: (req) => {
+          const token = getRequestToken(req)
+          return token ? `${req.ip}:${token}` : req.ip
+        }
+      }
+    }
+  }, handleTus)
+  app.all('/tus/*', { config: { rateLimit: { max: 300, timeWindow: '1 minute', keyGenerator: (req) => req.ip } } }, handleTus)
 }

@@ -66,23 +66,6 @@ export const uploadLogo = (formData: FormData) =>
 export const deleteLogo = () => api.delete('/settings/logo')
 
 // ---- Fichiers ----
-export const uploadFiles = (
-  formData: FormData,
-  onProgress?: (pct: number, speed: number) => void
-) => {
-  const startTime = Date.now()
-  return api.post('/files', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-    onUploadProgress: e => {
-      if (onProgress && e.total) {
-        const elapsed = (Date.now() - startTime) / 1000
-        const speed = elapsed > 0.5 ? e.loaded / elapsed : 0
-        onProgress(Math.round((e.loaded * 100) / e.total), speed)
-      }
-    }
-  })
-}
-
 export const listFiles = () => api.get('/files')
 export const deleteFile = (id: string) => api.delete(`/files/${id}`)
 
@@ -105,28 +88,6 @@ export const toggleUploadRequest = (id: string) => api.patch(`/upload-requests/$
 export const getUploadRequestInfo = (token: string) =>
   api.get(`/upload-requests/${token}/info`)
 export const getReceivedFiles = (id: string) => api.get(`/upload-requests/${id}/files`)
-
-export const submitToUploadRequest = (
-  token: string,
-  formData: FormData,
-  onProgress?: (pct: number, speed: number) => void,
-  password?: string
-) => {
-  const startTime = Date.now()
-  return api.post(`/upload-requests/${token}/upload`, formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-      ...(password ? { 'X-Upload-Password': btoa(unescape(encodeURIComponent(password))) } : {})
-    },
-    onUploadProgress: e => {
-      if (onProgress && e.total) {
-        const elapsed = (Date.now() - startTime) / 1000
-        const speed = elapsed > 0.5 ? e.loaded / elapsed : 0
-        onProgress(Math.round((e.loaded * 100) / e.total), speed)
-      }
-    }
-  })
-}
 
 export const updateProxyUpload = (enabled: boolean) =>
   api.patch('/settings/cf-bypass', { enabled })

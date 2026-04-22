@@ -294,7 +294,7 @@ export default function SettingsPage() {
         <input
           ref={fileInput}
           type="file"
-          accept="image/*"
+          accept="image/*,.svg"
           onChange={handleLogoUpload}
           className="hidden"
         />

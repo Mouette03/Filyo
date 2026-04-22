@@ -268,23 +268,30 @@ export async function settingsRoutes(app: FastifyInstance) {
       }
       const inputBuffer = Buffer.concat(chunks)
 
-      // Convertir en PNG 180×180 — compatible favicon + apple-touch-icon
-      // Fallback : si sharp échoue (ex. SVG sans librsvg), sauvegarder tel quel
+      // SVG : sauvegarder tel quel pour préserver les animations
+      // Autres formats : convertir en PNG 180×180 via sharp
       let filename: string
       let filePath: string
-      try {
-        filename = `logo_${nanoid(8)}.png`
-        filePath = path.join(LOGO_DIR, filename)
-        await sharp(inputBuffer)
-          .resize(180, 180, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
-          .png()
-          .toFile(filePath)
-        req.log.debug({ filename }, 'Logo converted to PNG 180x180')
-      } catch (convErr) {
-        req.log.warn({ err: (convErr as Error).message }, 'sharp conversion failed, saving original file')
-        filename = `logo_${nanoid(8)}${ext}`
+      if (ext === '.svg') {
+        filename = `logo_${nanoid(8)}.svg`
         filePath = path.join(LOGO_DIR, filename)
         await fs.writeFile(filePath, inputBuffer)
+        req.log.debug({ filename }, 'SVG logo saved as-is')
+      } else {
+        try {
+          filename = `logo_${nanoid(8)}.png`
+          filePath = path.join(LOGO_DIR, filename)
+          await sharp(inputBuffer)
+            .resize(180, 180, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+            .png()
+            .toFile(filePath)
+          req.log.debug({ filename }, 'Logo converted to PNG 180x180')
+        } catch (convErr) {
+          req.log.warn({ err: (convErr as Error).message }, 'sharp conversion failed, saving original file')
+          filename = `logo_${nanoid(8)}${ext}`
+          filePath = path.join(LOGO_DIR, filename)
+          await fs.writeFile(filePath, inputBuffer)
+        }
       }
 
       const logoUrl = `/uploads/logos/${filename}`
