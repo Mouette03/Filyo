@@ -197,9 +197,14 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
         expiresAt = new Date(req.body.expiresAt)
         if (isNaN(expiresAt.getTime())) return reply.code(400).send({ code: 'INVALID_DATE' })
       }
-      await prisma.uploadRequest.update({ where: { id: req.params.id }, data: { expiresAt } })
-      req.log.info({ id: req.params.id }, 'Upload request expiry updated')
-      return { expiresAt }
+      // Si on prolonge avec une date future, on réactive automatiquement
+      const shouldReactivate = expiresAt === null || expiresAt > new Date()
+      await prisma.uploadRequest.update({
+        where: { id: req.params.id },
+        data: { expiresAt, ...(shouldReactivate ? { active: true } : {}) }
+      })
+      req.log.info({ id: req.params.id, active: shouldReactivate || undefined }, 'Upload request expiry updated')
+      return { expiresAt, active: shouldReactivate ? true : request.active }
     }
   )
 

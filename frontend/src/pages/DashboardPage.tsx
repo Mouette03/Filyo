@@ -331,7 +331,12 @@ export default function DashboardPage() {
     try {
       const expiresAt = (!clear && requestExpiryValue) ? new Date(requestExpiryValue).toISOString() : null
       await updateRequestExpiry(requestId, expiresAt)
-      setRequests(prev => prev.map(r => r.id === requestId ? { ...r, expiresAt } : r))
+      // Si on prolonge (date future ou suppression d'expiry), on réactive localement
+      const isReactivated = expiresAt === null || new Date(expiresAt) > new Date()
+      setRequests(prev => prev.map(r => r.id === requestId
+        ? { ...r, expiresAt, ...(isReactivated ? { active: true } : {}) }
+        : r
+      ))
       setRequestExpiryEditId(null)
       toast.success(expiresAt ? t('toast.expiryUpdated') : t('toast.expiryRemoved'))
     } catch { toast.error(t('toast.updateError')) }
@@ -996,12 +1001,15 @@ export default function DashboardPage() {
                 </div>
                 ); })()}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-medium truncate text-sm">{r.title}</p>
-                    {(() => { const isExpired = r.expiresAt && new Date(r.expiresAt) <= new Date(); return (
-                    <span className={`flex-shrink-0 ${r.active && !isExpired ? 'badge-green' : isExpired ? 'badge-orange' : 'badge-red'}`}>
-                      {r.active && !isExpired ? t('common.active') : isExpired ? t('dash.expired') : t('common.inactive')}
-                    </span>
+                    {(() => { const isExpired = !!(r.expiresAt && new Date(r.expiresAt) <= new Date()); return (
+                    <>
+                      <span className={`flex-shrink-0 ${isExpired ? 'badge-orange' : 'badge-green'}`}>
+                        {isExpired ? t('dash.expired') : t('common.active')}
+                      </span>
+                      {!r.active && <span className="flex-shrink-0 badge-red">{t('common.inactive')}</span>}
+                    </>
                     ); })()}
                   </div>
                   <p className="text-xs text-white/40 mt-0.5 leading-relaxed">
@@ -1030,7 +1038,7 @@ export default function DashboardPage() {
                   <button onClick={() => handleToggleRequest(r.id)}
                     className="btn-icon"
                     title={r.active ? t('dash.disable') : t('dash.enable')}>
-                    {r.active && !(r.expiresAt && new Date(r.expiresAt) <= new Date()) ? <ToggleRight size={15} className="text-brand-400" /> : <ToggleLeft size={15} />}
+                    {r.active ? <ToggleRight size={15} className="text-brand-400" /> : <ToggleLeft size={15} />}
                   </button>
                   <button
                     onClick={() => { setRequestExpiryEditId(requestExpiryEditId === r.id ? null : r.id); setRequestExpiryValue(r.expiresAt ? toLocalDatetimeValue(r.expiresAt) : '') }}
@@ -1062,7 +1070,7 @@ export default function DashboardPage() {
                 <button onClick={() => handleToggleRequest(r.id)}
                   className="btn-icon flex-shrink-0"
                   title={r.active ? t('dash.disable') : t('dash.enable')}>
-                  {r.active && !(r.expiresAt && new Date(r.expiresAt) <= new Date()) ? <ToggleRight size={15} className="text-brand-400" /> : <ToggleLeft size={15} />}
+                  {r.active ? <ToggleRight size={15} className="text-brand-400" /> : <ToggleLeft size={15} />}
                 </button>
                 <button
                   onClick={() => { setRequestExpiryEditId(requestExpiryEditId === r.id ? null : r.id); setRequestExpiryValue(r.expiresAt ? toLocalDatetimeValue(r.expiresAt) : '') }}
