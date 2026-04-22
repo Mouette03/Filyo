@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
-import { User, Camera, Trash2, Lock, RefreshCw, Check, Pencil, Eraser, Palette, Moon, Sun, Monitor } from 'lucide-react'
+import { User, Camera, Trash2, Lock, RefreshCw, Check, Pencil, Eraser, Palette, Moon, Sun, Monitor, Globe } from 'lucide-react'
 import { usePreferencesStore, ACCENT_PRESETS, BG_PRESETS, type ThemeMode, type AccentKey, type BgColorKey } from '../stores/usePreferencesStore'
+import { LANGUAGES } from '../components/LanguageSwitcher'
 import toast from 'react-hot-toast'
 import { uploadAvatar, deleteAvatar, changePassword, updateProfile, updateCleanupPreference, getSettings } from '../api/client'
 import { useAuthStore } from '../stores/useAuthStore'
@@ -18,6 +19,7 @@ export default function ProfilePage() {
   const { user, updateAvatar, updateName, updateCleanupPref } = useAuthStore()
   const { t } = useT()
   const { theme, accentColor, bgColorKey, setTheme, setAccentColor, setBgColor } = usePreferencesStore()
+  const { lang, setLang } = useT()
   const isDark = theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)
   const THEME_OPTIONS: { value: ThemeMode; label: string; icon: typeof Moon }[] = [
     { value: 'dark',  label: t('settings.themeDark'),  icon: Moon },
@@ -201,6 +203,80 @@ export default function ProfilePage() {
         </div>
       </div>
 
+      {/* Section Mot de passe */}
+      <div className="card mb-5">
+        <div className="flex items-center gap-2 mb-5">
+          <Lock size={16} className="text-brand-400" />
+          <h3 className="font-semibold">{t('profile.passwordSection')}</h3>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label htmlFor="profile-current-pwd" className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('profile.currentPassword')}</label>
+            <input
+              id="profile-current-pwd"
+              name="current-password"
+              type="password"
+              value={currentPwd}
+              onChange={e => setCurrentPwd(e.target.value)}
+              placeholder={t('profile.currentPassword')}
+              className="input"
+            />
+          </div>
+          <div>
+            <label htmlFor="profile-new-pwd" className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('profile.newPassword')}</label>
+            <input
+              id="profile-new-pwd"
+              name="new-password"
+              type="password"
+              value={newPwd}
+              onChange={e => setNewPwd(e.target.value)}
+              placeholder={t('login.passwordPlaceholder')}
+              className="input"
+            />
+          </div>
+          <div>
+            <label htmlFor="profile-confirm-pwd" className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('profile.confirmNewPassword')}</label>
+            <input
+              id="profile-confirm-pwd"
+              name="confirm-new-password"
+              type="password"
+              value={confirmPwd}
+              onChange={e => setConfirmPwd(e.target.value)}
+              placeholder={t('login.confirmPasswordPlaceholder')}
+              className="input"
+            />
+          </div>
+          <button
+            onClick={handleChangePassword}
+            disabled={savingPwd}
+            className="btn-primary flex items-center gap-2 py-2.5 px-6"
+          >
+            {savingPwd ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
+            {t('profile.updatePassword')}
+          </button>
+        </div>
+      </div>
+
+      {/* Section Langue */}
+      <div className="card mb-5">
+        <div className="flex items-center gap-2 mb-4">
+          <Globe size={16} className="text-brand-400" />
+          <h3 className="font-semibold">{t('profile.langSection')}</h3>
+        </div>
+        <p className="text-xs text-white/30 mb-3">{t('profile.langHint')}</p>
+        <select
+          value={lang}
+          onChange={e => setLang(e.target.value as any)}
+          className="input w-full"
+          aria-label={t('profile.langSection')}
+        >
+          {LANGUAGES.map(l => (
+            <option key={l.code} value={l.code}>{l.flag} {l.label}</option>
+          ))}
+        </select>
+      </div>
+
       {/* Section Avatar */}
       <div className="card mb-5">
         <div className="flex items-center gap-2 mb-5">
@@ -378,7 +454,9 @@ export default function ProfilePage() {
             <div className="flex items-center gap-2 rounded-lg bg-brand-500/10 border border-brand-500/20 px-3 py-2">
               <Eraser size={13} className="text-brand-400 flex-shrink-0" />
               <p className="text-xs text-brand-300">
-                {t('profile.cleanupServerDefault', { days: String(adminMax) })}
+                {adminMax === 0
+                  ? t('profile.cleanupServerDefaultAtExpiry')
+                  : t('profile.cleanupServerDefault', { days: String(adminMax) })}
               </p>
             </div>
             <p className="text-xs text-white/50">{t('profile.cleanupHint')}</p>
@@ -392,8 +470,8 @@ export default function ProfilePage() {
                 disabled={savingCleanup}
                 className="input bg-surface-700 flex-1"
               >
-                <option value="">{t('profile.cleanupDefault', { days: String(adminMax) })}</option>
-                {adminMax >= 0 && <option value="0">{t('settings.cleanupAtExpiry')}</option>}
+                <option value="">{adminMax === 0 ? t('profile.cleanupDefaultAtExpiry') : t('profile.cleanupDefault', { days: String(adminMax) })}</option>
+                {adminMax > 0 && <option value="0">{t('settings.cleanupAtExpiry')}</option>}
                 {adminMax >= 1 && <option value="1">{t('settings.cleanup1d')}</option>}
                 {adminMax >= 3 && <option value="3">{t('settings.cleanup3d')}</option>}
                 {adminMax >= 7 && <option value="7">{t('settings.cleanup7d')}</option>}
@@ -405,60 +483,6 @@ export default function ProfilePage() {
         )}
       </div>
 
-      {/* Section Mot de passe */}
-      <div className="card">
-        <div className="flex items-center gap-2 mb-5">
-          <Lock size={16} className="text-brand-400" />
-          <h3 className="font-semibold">{t('profile.passwordSection')}</h3>
-        </div>
-
-        <div className="space-y-4">
-          <div>
-            <label htmlFor="profile-current-pwd" className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('profile.currentPassword')}</label>
-            <input
-              id="profile-current-pwd"
-              name="current-password"
-              type="password"
-              value={currentPwd}
-              onChange={e => setCurrentPwd(e.target.value)}
-              placeholder={t('profile.currentPassword')}
-              className="input"
-            />
-          </div>
-          <div>
-            <label htmlFor="profile-new-pwd" className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('profile.newPassword')}</label>
-            <input
-              id="profile-new-pwd"
-              name="new-password"
-              type="password"
-              value={newPwd}
-              onChange={e => setNewPwd(e.target.value)}
-              placeholder={t('login.passwordPlaceholder')}
-              className="input"
-            />
-          </div>
-          <div>
-            <label htmlFor="profile-confirm-pwd" className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('profile.confirmNewPassword')}</label>
-            <input
-              id="profile-confirm-pwd"
-              name="confirm-new-password"
-              type="password"
-              value={confirmPwd}
-              onChange={e => setConfirmPwd(e.target.value)}
-              placeholder={t('login.confirmPasswordPlaceholder')}
-              className="input"
-            />
-          </div>
-          <button
-            onClick={handleChangePassword}
-            disabled={savingPwd}
-            className="btn-primary flex items-center gap-2 py-2.5 px-6"
-          >
-            {savingPwd ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
-            {t('profile.updatePassword')}
-          </button>
-        </div>
-      </div>
     </div>
   )
 }

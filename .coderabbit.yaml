@@ -1,0 +1,7 @@
+reviews:
+  tools:
+    languagetool:
+      enabled: false
+  finishing_touches:
+    docstrings:
+      enabled: false

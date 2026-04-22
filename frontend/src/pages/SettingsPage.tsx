@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { Settings, Upload, Trash2, Check, Type, Image, RefreshCw, Mail, Eye, EyeOff, Wifi, Globe, Users, Clock } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { updateAppName, uploadLogo, deleteLogo, getSmtpSettings, updateSmtpSettings, testSmtp, updateSiteUrl, updateUploaderFields, updateAllowRegistration, updateCleanupSetting, updateMaxFileSize, updateChunkSize } from '../api/client'
+import { updateAppName, uploadLogo, deleteLogo, getSmtpSettings, updateSmtpSettings, testSmtp, updateSiteUrl, updateUploaderFields, updateAllowRegistration, updateCleanupSetting, updateMaxFileSize, updateProxyUpload } from '../api/client'
 import { useAppSettingsStore } from '../stores/useAppSettingsStore'
 import { useT } from '../i18n'
 import type { FieldReq } from '../types/common'
@@ -68,19 +68,21 @@ export default function SettingsPage() {
     setMaxFileSizeMb(settings.maxFileSizeBytes ? String(Math.round(parseInt(settings.maxFileSizeBytes) / (1024 * 1024))) : '')
   }, [settings.maxFileSizeBytes])
 
-  // Upload par morceaux
-  const [chunkSizeMb, setChunkSizeMb] = useState<string>(settings.uploadChunkSizeMb ? String(settings.uploadChunkSizeMb) : '0')
-  const [savingChunkSize, setSavingChunkSize] = useState(false)
-  useEffect(() => { setChunkSizeMb(settings.uploadChunkSizeMb ? String(settings.uploadChunkSizeMb) : '0') }, [settings.uploadChunkSizeMb])
+  // Mode upload proxy-compatible
+  const [proxyUploadEnabled, setProxyUploadEnabled] = useState<boolean>(settings.proxyUploadEnabled ?? false)
+  const [savingProxyUpload, setSavingProxyUpload] = useState(false)
+  useEffect(() => { setProxyUploadEnabled(settings.proxyUploadEnabled ?? false) }, [settings.proxyUploadEnabled])
 
-  const handleSaveChunkSize = async (mb: number | null) => {
-    setSavingChunkSize(true)
+  const handleToggleProxyUpload = async () => {
+    const next = !proxyUploadEnabled
+    setSavingProxyUpload(true)
     try {
-      await updateChunkSize(mb)
-      setSettings({ uploadChunkSizeMb: mb })
-      toast.success(mb ? t('settings.chunkSaved') : t('settings.chunkRemoved'))
+      await updateProxyUpload(next)
+      setProxyUploadEnabled(next)
+      setSettings({ proxyUploadEnabled: next })
+      toast.success(t('settings.proxyUploadSaved'))
     } catch { toast.error(t('toast.saveError')) }
-    setSavingChunkSize(false)
+    setSavingProxyUpload(false)
   }
 
   useEffect(() => {
@@ -292,7 +294,7 @@ export default function SettingsPage() {
         <input
           ref={fileInput}
           type="file"
-          accept="image/*"
+          accept="image/*,.svg"
           onChange={handleLogoUpload}
           className="hidden"
         />
@@ -304,7 +306,7 @@ export default function SettingsPage() {
           <Globe size={16} className="text-brand-400" />
           <h3 className="font-semibold">{t('settings.siteUrlSection')}</h3>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           <input
             id="settings-site-url"
             name="siteUrl"
@@ -314,7 +316,7 @@ export default function SettingsPage() {
             placeholder={t('settings.siteUrlPlaceholder')}
           />
           <button onClick={handleSaveUrl} disabled={savingUrl}
-            className="btn-primary flex items-center gap-2 px-5 whitespace-nowrap">
+            className="btn-primary flex items-center justify-center gap-2 px-5 whitespace-nowrap">
             {savingUrl ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
             {t('common.save')}
           </button>
@@ -333,7 +335,7 @@ export default function SettingsPage() {
           <h3 className="font-semibold">{t('settings.authSection')}</h3>
         </div>
         <div className="flex items-center justify-between py-3 px-4 bg-white/3 rounded-xl">
-          <div>
+          <div className="min-w-0 mr-4">
             <p className="text-sm font-medium">{t('settings.freeReg')}</p>
             <p className="text-xs text-white/40 mt-0.5">{t('settings.freeRegHint')}</p>
           </div>
@@ -361,10 +363,12 @@ export default function SettingsPage() {
 
       {/* Section : Nettoyage automatique */}
       <div className="card mb-6">
-        <div className="flex items-center gap-2 mb-5">
-          <Clock size={16} className="text-brand-400" />
-          <h3 className="font-semibold">{t('settings.cleanupSection')}</h3>
-          <span className="text-xs text-white/30 ml-auto">{t('settings.cleanupHint')}</span>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-5">
+          <div className="flex items-center gap-2">
+            <Clock size={16} className="text-brand-400" />
+            <h3 className="font-semibold">{t('settings.cleanupSection')}</h3>
+          </div>
+          <span className="text-xs text-white/30 sm:ml-auto">{t('settings.cleanupHint')}</span>
         </div>
         <div className="flex items-center justify-between py-3 px-4 bg-white/3 rounded-xl">
           <p className="text-sm font-medium">{t('settings.cleanupLabel')}</p>
@@ -398,97 +402,105 @@ export default function SettingsPage() {
 
       {/* Section : Taille max fichier */}
       <div className="card mb-6">
-        <div className="flex items-center gap-2 mb-5">
-          <Upload size={16} className="text-brand-400" />
-          <h3 className="font-semibold">{t('settings.maxFileSizeSection')}</h3>
-          <span className="text-xs text-white/30 ml-auto">{t('settings.maxFileSizeHint')}</span>
+        <div className="mb-5">
+          <div className="flex items-center gap-2 mb-1">
+            <Upload size={16} className="text-brand-400" />
+            <h3 className="font-semibold">{t('settings.maxFileSizeSection')}</h3>
+          </div>
+          <p className="text-xs text-white/30">{t('settings.maxFileSizeHint')}</p>
         </div>
-        <div className="flex items-center gap-3">
-          <input
-            id="settings-max-file-size"
-            name="maxFileSizeMb"
-            type="number"
-            min="1"
-            value={maxFileSizeMb}
-            onChange={e => setMaxFileSizeMb(e.target.value)}
-            placeholder={t('settings.maxFileSizePlaceholder')}
-            className="input w-40"
-          />
-          <span className="text-sm text-white/50">MB</span>
-          <button
-            onClick={async () => {
-              setSavingMaxFileSize(true)
-              try {
-                const bytes = maxFileSizeMb ? Math.round(parseFloat(maxFileSizeMb) * 1024 * 1024) : null
-                await updateMaxFileSize(bytes)
-                setSettings({ maxFileSizeBytes: bytes ? String(bytes) : null })
-                toast.success(t('settings.maxFileSizeSaved'))
-              } catch { toast.error(t('toast.saveError')) }
-              setSavingMaxFileSize(false)
-            }}
-            disabled={savingMaxFileSize}
-            className="btn-primary flex items-center gap-2 py-2 px-4"
-          >
-            {savingMaxFileSize ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
-            {t('common.save')}
-          </button>
-          {maxFileSizeMb && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <input
+              id="settings-max-file-size"
+              name="maxFileSizeMb"
+              type="number"
+              min="1"
+              value={maxFileSizeMb}
+              onChange={e => setMaxFileSizeMb(e.target.value)}
+              placeholder={t('settings.maxFileSizePlaceholder')}
+              className="input flex-1"
+            />
+            <span className="text-sm text-white/50 flex-shrink-0">MB</span>
+          </div>
+          <div className="flex gap-3">
             <button
               onClick={async () => {
                 setSavingMaxFileSize(true)
                 try {
-                  await updateMaxFileSize(null)
-                  setSettings({ maxFileSizeBytes: null })
-                  setMaxFileSizeMb('')
-                  toast.success(t('settings.maxFileSizeRemoved'))
+                  const bytes = maxFileSizeMb ? Math.round(parseFloat(maxFileSizeMb) * 1024 * 1024) : null
+                  await updateMaxFileSize(bytes)
+                  setSettings({ maxFileSizeBytes: bytes ? String(bytes) : null })
+                  toast.success(t('settings.maxFileSizeSaved'))
                 } catch { toast.error(t('toast.saveError')) }
                 setSavingMaxFileSize(false)
               }}
               disabled={savingMaxFileSize}
-              className="btn-secondary flex items-center gap-2 py-2 px-4 text-sm"
+              className="btn-primary flex items-center gap-2 py-2 px-4"
             >
-              {t('settings.maxFileSizeUnlimited')}
+              {savingMaxFileSize ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
+              {t('common.save')}
             </button>
-          )}
+            {maxFileSizeMb && (
+              <button
+                onClick={async () => {
+                  setSavingMaxFileSize(true)
+                  try {
+                    await updateMaxFileSize(null)
+                    setSettings({ maxFileSizeBytes: null })
+                    setMaxFileSizeMb('')
+                    toast.success(t('settings.maxFileSizeRemoved'))
+                  } catch { toast.error(t('toast.saveError')) }
+                  setSavingMaxFileSize(false)
+                }}
+                disabled={savingMaxFileSize}
+                className="btn-secondary flex items-center gap-2 py-2 px-4 text-sm"
+              >
+                {t('settings.maxFileSizeUnlimited')}
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Section : Upload par morceaux */}
+      {/* Section : Mode upload proxy-compatible */}
       <div className="card mb-6">
-        <div className="flex items-center gap-2 mb-5">
-          <Upload size={16} className="text-brand-400" />
-          <h3 className="font-semibold">{t('settings.chunkSection')}</h3>
-          <span className="text-xs text-white/30 ml-auto">{t('settings.chunkHint')}</span>
+        <div className="mb-5">
+          <div className="flex items-center gap-2 mb-1">
+            <Upload size={16} className="text-brand-400" />
+            <h3 className="font-semibold">{t('settings.proxyUploadSection')}</h3>
+          </div>
+          <p className="text-xs text-white/30">{t('settings.proxyUploadHint')}</p>
         </div>
-        <div className="flex items-center gap-3">
-          <select
-            value={chunkSizeMb}
-            onChange={e => setChunkSizeMb(e.target.value)}
-            className="input w-44"
-          >
-            <option value="0">{t('settings.chunkDisabled')}</option>
-            <option value="5">5 MB</option>
-            <option value="10">10 MB</option>
-            <option value="20">20 MB</option>
-            <option value="50">50 MB</option>
-          </select>
-          <button
-            onClick={() => handleSaveChunkSize(chunkSizeMb === '0' ? null : parseInt(chunkSizeMb))}
-            disabled={savingChunkSize}
-            className="btn-primary flex items-center gap-2 py-2 px-4"
-          >
-            {savingChunkSize ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
-            {t('common.save')}
-          </button>
+        <div className="flex items-center justify-between py-3 px-4 bg-white/3 rounded-xl">
+          <div>
+            <p className="text-sm font-medium">
+              {proxyUploadEnabled ? t('settings.proxyUploadEnabled') : t('settings.proxyUploadDisabled')}
+            </p>
+            {proxyUploadEnabled && (
+              <p className="text-xs text-white/40 mt-0.5">{settings.proxyUploadChunkMb} MB / morceau</p>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {savingProxyUpload && <div className="w-4 h-4 border-2 border-brand-500/30 border-t-brand-500 rounded-full animate-spin" />}
+            <div
+              onClick={handleToggleProxyUpload}
+              className={`w-11 h-6 rounded-full cursor-pointer transition-colors relative flex-shrink-0 ${proxyUploadEnabled ? 'bg-brand-500' : 'bg-white/20'}`}
+            >
+              <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${proxyUploadEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Section : Champs formulaire déposant */}
       <div className="card mb-6">
-        <div className="flex items-center gap-2 mb-5">
-          <Users size={16} className="text-brand-400" />
-          <h3 className="font-semibold">{t('settings.uploaderFieldsSection')}</h3>
-          <span className="text-xs text-white/30 ml-auto">{t('settings.uploaderFormHint')}</span>
+        <div className="mb-5">
+          <div className="flex items-center gap-2 mb-1">
+            <Users size={16} className="text-brand-400" />
+            <h3 className="font-semibold">{t('settings.uploaderFieldsSection')}</h3>
+          </div>
+          <p className="text-xs text-white/30">{t('settings.uploaderFormHint')}</p>
         </div>
 
         {([
@@ -528,10 +540,12 @@ export default function SettingsPage() {
 
       {/* Section : Serveur SMTP */}
       <div className="card">
-        <div className="flex items-center gap-2 mb-5">
-          <Mail size={16} className="text-brand-400" />
-          <h3 className="font-semibold">{t('settings.smtpSection')}</h3>
-          <span className="text-xs text-white/30 ml-auto">{t('settings.smtpHint')}</span>
+        <div className="mb-5">
+          <div className="flex items-center gap-2 mb-1">
+            <Mail size={16} className="text-brand-400" />
+            <h3 className="font-semibold">{t('settings.smtpSection')}</h3>
+          </div>
+          <p className="text-xs text-white/30">{t('settings.smtpHint')}</p>
         </div>
 
         <div className="grid grid-cols-2 gap-4 mb-4">

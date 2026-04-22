@@ -17,7 +17,7 @@ import { adminRoutes } from './routes/admin'
 import { authRoutes } from './routes/auth'
 import { userRoutes } from './routes/users'
 import { settingsRoutes } from './routes/settings'
-import { runScheduledCleanup, cleanupOrphanedChunks } from './lib/cleanup'
+import { runScheduledCleanup, cleanupExpiredTusUploads } from './lib/cleanup'
 import { UPLOAD_DIR } from './lib/config'
 
 const appVersion: string = (() => {
@@ -133,6 +133,11 @@ async function bootstrap() {
     limits: { fileSize: 10 * 1024 * 1024 * 1024 } // 10 GB
   })
 
+  // Content-type parser pour TUS (application/offset+octet-stream)
+  // Sans ce parser, Fastify rejetterait les PATCH TUS avec 415 Unsupported Media Type.
+  // On ne lit pas le body ici — c'est le TUS server qui le lit via req.raw.
+  app.addContentTypeParser('application/offset+octet-stream', (_request, _payload, done) => done(null))
+
   // Servir les fichiers statiques uploadés (logos…)
   await app.register(staticFiles, { root: UPLOAD_DIR, prefix: '/uploads/' })
 
@@ -197,25 +202,35 @@ async function bootstrap() {
   await app.listen({ port, host })
   app.log.info(`🚀 Filyo backend running on http://${host}:${port}`)
 
-  // ── Job de nettoyage automatique (toutes les heures) ──────────────────────────────────
+  // ── Job de nettoyage automatique ──────────────────────────────────────────────────────────
+  const CLEANUP_INTERVAL_MS = (() => {
+    const raw = (process.env.CLEANUP_INTERVAL || '').trim()
+    if (raw) {
+      const mMatch = raw.match(/^(\d+)m$/i)
+      const hMatch = raw.match(/^(\d+)h$/i)
+      if (mMatch) return parseInt(mMatch[1], 10) * 60 * 1000
+      if (hMatch) return parseInt(hMatch[1], 10) * 60 * 60 * 1000
+      console.warn(`[cleanup] CLEANUP_INTERVAL="${raw}" non reconnu (formats acceptés : <n>m, <n>h). Fallback : 1h.`)
+    }
+    return 60 * 60 * 1000 // 1h par défaut
+  })()
+
   async function cleanupJob() {
     try {
       const result = await runScheduledCleanup()
-      if (result.deletedFiles > 0 || result.deletedRequests > 0) {
-        app.log.info(result, '🧹 Auto-cleanup completed')
-      }
+      app.log.info(result, '🧹 Auto-cleanup completed')
     } catch (err) {
       app.log.error(err, 'Auto-cleanup failed')
     }
     try {
-      const deleted = await cleanupOrphanedChunks()
-      if (deleted > 0) app.log.info({ deleted }, '🧹 Orphaned chunks cleaned')
+      const deleted = await cleanupExpiredTusUploads()
+      app.log.info({ deleted }, '🧹 Expired TUS uploads cleaned')
     } catch (err) {
-      app.log.error(err, 'Orphaned chunks cleanup failed')
+      app.log.error(err, 'TUS cleanup failed')
     }
   }
-  // Premier passage 1 min après le démarrage, puis toutes les heures
-  setTimeout(() => { cleanupJob(); setInterval(cleanupJob, 60 * 60 * 1000) }, 60 * 1000)
+  // Premier passage 1 min après le démarrage, puis selon CLEANUP_INTERVAL (défaut 1h)
+  setTimeout(() => { cleanupJob(); setInterval(cleanupJob, CLEANUP_INTERVAL_MS) }, 60 * 1000)
 }
 
 bootstrap().catch(console.error)

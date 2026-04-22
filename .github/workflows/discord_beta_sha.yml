@@ -1,11 +1,15 @@
-name: 🧪 Beta Release (changes from main)
+name: 🧪 Beta Release (changes from previous SHA)
 
 on:
   workflow_dispatch:
     inputs:
       sha_tag:
-        description: "SHA de l'image (ex: sha-9878b78)"
+        description: "SHA de l'image actuelle (ex: sha-9878b78)"
         required: true
+        type: string
+      previous_sha:
+        description: "SHA de la beta précédente (ex: sha-abc1234) — laisser vide pour comparer depuis main"
+        required: false
         type: string
       branch:
         description: "Branche à analyser (ex: develop)"
@@ -16,6 +20,9 @@ on:
 jobs:
   notify:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      models: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -23,20 +30,39 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.inputs.branch }}
 
-      - name: Récupérer les commits depuis le dernier tag stable
+      - name: Fetch toutes les branches
+        run: git fetch --all
+
+      - name: Récupérer les commits depuis le SHA précédent
         id: commits
+        env:
+          PREV_INPUT: ${{ github.event.inputs.previous_sha }}
+          BRANCH_INPUT: ${{ github.event.inputs.branch }}
         run: |
-          LAST_TAG=$(git tag --sort=-creatordate | grep -v -E 'beta|alpha|rc' | head -n 1)
-          if [ -z "$LAST_TAG" ]; then
-            RAW=$(git log --oneline -10 --pretty=format:"%s")
-            LAST_TAG="début du projet"
+          PREV="$PREV_INPUT"
+
+          if [ -z "$PREV" ]; then
+            # Pas de SHA précédent → compare depuis main
+            RAW=$(git log "origin/$BRANCH_INPUT" --not origin/main --pretty=format:"%s")
+            BASE="main"
           else
-            RAW=$(git log ${LAST_TAG}..HEAD --pretty=format:"%s")
+            # Extrait le hash court depuis "sha-9878b78" → "9878b78"
+            PREV_HASH=$(echo "$PREV" | sed 's/sha-//')
+            RAW=$(git log "${PREV_HASH}..HEAD" --pretty=format:"%s")
+            BASE="$PREV"
           fi
-          echo "last_tag=$LAST_TAG" >> $GITHUB_OUTPUT
-          echo "raw<<EOF" >> $GITHUB_OUTPUT
+
+          if [ -z "$RAW" ]; then
+            RAW="Aucun nouveau commit depuis \`${BASE}\`."
+          fi
+
+          echo "base=$BASE" >> $GITHUB_OUTPUT
+          echo "=== COMMITS TROUVÉS ==="
+          echo "$RAW"
+          DELIM=$(openssl rand -hex 16)
+          echo "raw<<$DELIM" >> $GITHUB_OUTPUT
           echo "$RAW" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          echo "$DELIM" >> $GITHUB_OUTPUT
 
       - name: Résumer les commits avec l'IA
         id: summary
@@ -51,9 +77,10 @@ jobs:
             -H "Content-Type: application/json" \
             -d "$BODY")
           SUMMARY=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // "Résumé indisponible"')
-          echo "summary<<EOF" >> $GITHUB_OUTPUT
+          DELIM=$(openssl rand -hex 16)
+          echo "summary<<$DELIM" >> $GITHUB_OUTPUT
           echo "$SUMMARY" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          echo "$DELIM" >> $GITHUB_OUTPUT
 
       - name: Envoyer notif Discord
         uses: tsickert/discord-webhook@v6.0.0
@@ -64,7 +91,7 @@ jobs:
             **Image :** `ghcr.io/mouette03/filyo:${{ github.event.inputs.sha_tag }}`
             **Branche :** `${{ github.event.inputs.branch }}`
             **Déclenché par :** ${{ github.actor }}
-            **Changements depuis latest :**
+            **Changements depuis `${{ steps.commits.outputs.base }}` :**
 
             ${{ steps.summary.outputs.summary }}
           embed-color: 16753920

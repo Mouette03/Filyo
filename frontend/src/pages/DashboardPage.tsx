@@ -7,7 +7,7 @@ import {
   deleteUploadRequest, toggleUploadRequest, getStats,
   runCleanup, getReceivedFiles, getReceivedFileDlToken,
   sendShareByEmail, sendRequestByEmail, updateFileExpiry,
-  updateFileMaxDownloads, updateRequestExpiry
+  updateFileMaxDownloads, updateRequestExpiry, getMyQuota
 } from '../api/client'
 import { formatBytes, formatDate, getFileIcon, copyToClipboard, isValidEmail, formatCountdown, toLocalDatetimeValue } from '../lib/utils'
 import { useT } from '../i18n'
@@ -44,6 +44,7 @@ export default function DashboardPage() {
   const [files, setFiles] = useState<FileItem[]>([])
   const [requests, setRequests] = useState<UploadRequest[]>([])
   const [stats, setStats] = useState<Stats | null>(null)
+  const [quota, setQuota] = useState<{ storageQuotaBytes: string | null; storageUsedBytes: string } | null>(null)
   const [loading, setLoading] = useState(true)
   const [copiedToken, setCopiedToken] = useState<string | null>(null)
   const [expandedRequest, setExpandedRequest] = useState<string | null>(null)
@@ -136,6 +137,10 @@ export default function DashboardPage() {
   }
 
   useEffect(() => { load() }, [])
+
+  useEffect(() => {
+    getMyQuota().then(res => setQuota(res.data)).catch(() => {})
+  }, [])
 
   const handleDeleteFile = async (id: string) => {
     try {
@@ -326,7 +331,12 @@ export default function DashboardPage() {
     try {
       const expiresAt = (!clear && requestExpiryValue) ? new Date(requestExpiryValue).toISOString() : null
       await updateRequestExpiry(requestId, expiresAt)
-      setRequests(prev => prev.map(r => r.id === requestId ? { ...r, expiresAt } : r))
+      // Si on prolonge (date future ou suppression d'expiry), on réactive localement
+      const isReactivated = expiresAt === null || new Date(expiresAt) > new Date()
+      setRequests(prev => prev.map(r => r.id === requestId
+        ? { ...r, expiresAt, ...(isReactivated ? { active: true } : {}) }
+        : r
+      ))
       setRequestExpiryEditId(null)
       toast.success(expiresAt ? t('toast.expiryUpdated') : t('toast.expiryRemoved'))
     } catch { toast.error(t('toast.updateError')) }
@@ -359,18 +369,8 @@ export default function DashboardPage() {
   return (
     <div className="max-w-5xl mx-auto px-4 py-10">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-2">
+      <div className="mb-8">
         <h1 className="text-3xl sm:text-2xl font-bold text-center sm:text-left">{t('dash.title')}</h1>
-        <div className="flex flex-col sm:flex-row gap-2">
-          {isAdmin && (
-            <button onClick={handleCleanup} className="btn-secondary flex items-center justify-center gap-1.5 text-xs sm:text-sm px-2.5 py-2 sm:px-3 sm:py-2 w-full sm:w-auto">
-              <Trash2 size={13} /> {t('dash.cleanExpired')}
-            </button>
-          )}
-          <button onClick={load} className="btn-secondary flex items-center justify-center gap-1.5 text-xs sm:text-sm px-2.5 py-2 sm:px-3 sm:py-2 w-full sm:w-auto">
-            <RefreshCw size={13} /> {t('common.refresh')}
-          </button>
-        </div>
       </div>
 
       {/* Stats */}
@@ -430,22 +430,58 @@ export default function DashboardPage() {
               </div>
             )
           })()}
+
           {!stats.disk && <div className="mb-8" />}
         </>
       )}
 
-      {/* Tabs */}
-      <div className="flex gap-1 bg-white/5 rounded-xl p-1 mb-6 w-fit">
-        <button onClick={() => setTab('sent')}
-          className={`px-5 py-2 rounded-lg text-sm font-medium transition-all
-            ${tab === 'sent' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white'}`}>
-          {t('dash.tabSent')} ({displayItems.length})
-        </button>
-        <button onClick={() => setTab('requests')}
-          className={`px-5 py-2 rounded-lg text-sm font-medium transition-all
-            ${tab === 'requests' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white'}`}>
-          {t('dash.tabRequests')} ({requests.length})
-        </button>
+      {/* Quota de stockage (si un quota est défini pour cet utilisateur) */}
+      {quota?.storageQuotaBytes != null && (() => {
+        const qUsed = parseInt(quota.storageUsedBytes, 10) || 0
+        const qTotal = parseInt(quota.storageQuotaBytes!, 10) || 1
+        const qPct = Math.min(100, Math.round((qUsed / qTotal) * 100))
+        const qBar = qPct >= 90 ? 'bg-red-500' : qPct >= 70 ? 'bg-amber-500' : 'bg-brand-500'
+        const qText = qPct >= 90 ? 'text-red-400' : qPct >= 70 ? 'text-amber-400' : 'text-brand-400'
+        return (
+          <div className="card mb-6 py-3 px-4">
+            <div className="flex items-center gap-3 mb-2">
+              <HardDrive size={14} className="text-brand-400 flex-shrink-0" />
+              <p className="text-xs font-medium text-white/70 flex-1">{t('dash.storageQuota')}</p>
+              <span className={`text-xs font-semibold tabular-nums ${qText}`}>
+                {t('dash.storageUsedOf', { used: formatBytes(qUsed), total: formatBytes(qTotal) })} · {qPct}%
+              </span>
+            </div>
+            <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
+              <div className={`h-full rounded-full transition-all ${qBar}`} style={{ width: `${qPct}%` }} />
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* Tabs + Actions */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-6">
+        <div className="flex gap-1 bg-white/5 rounded-xl p-1 w-fit">
+          <button onClick={() => setTab('sent')}
+            className={`px-5 py-2 rounded-lg text-sm font-medium transition-all
+              ${tab === 'sent' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white'}`}>
+            {t('dash.tabSent')} ({displayItems.length})
+          </button>
+          <button onClick={() => setTab('requests')}
+            className={`px-5 py-2 rounded-lg text-sm font-medium transition-all
+              ${tab === 'requests' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white'}`}>
+            {t('dash.tabRequests')} ({requests.length})
+          </button>
+        </div>
+        <div className="flex gap-2 sm:ml-auto">
+          {isAdmin && tab === 'sent' && (
+            <button onClick={handleCleanup} className="btn-danger flex items-center justify-center gap-1.5 text-xs px-2.5 py-2 flex-1 sm:flex-none">
+              <Trash2 size={13} /> {t('dash.cleanExpired')}
+            </button>
+          )}
+          <button onClick={load} className="btn-success flex items-center justify-center gap-1.5 text-xs flex-1 sm:flex-none">
+            <RefreshCw size={13} /> {t('common.refresh')}
+          </button>
+        </div>
       </div>
 
       {loading && (
@@ -704,7 +740,7 @@ export default function DashboardPage() {
                           <span className="text-base flex-shrink-0">{getFileIcon(f.mimeType)}</span>
                           <p className="flex-1 min-w-0 text-sm truncate text-white/80">
                             {firstFile.hideFilenames
-                              ? `Fichier ${idx + 1}`
+                              ? t('share.hiddenFilename', { index: String(idx + 1) })
                               : f.originalName}
                           </p>
                           <span className="text-xs text-white/40 flex-shrink-0">{formatBytes(f.size)}</span>
@@ -958,16 +994,23 @@ export default function DashboardPage() {
             <div key={r.id} className="card space-y-0 overflow-hidden">
               {/* Ligne principale */}
               <div className="flex items-center gap-3">
+                {(() => { const isExpired = r.expiresAt && new Date(r.expiresAt) <= new Date(); const isActive = r.active && !isExpired; return (
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0
-                  ${r.active ? 'bg-brand-500/20' : 'bg-white/5'}`}>
-                  <Download size={18} className={r.active ? 'text-brand-400' : 'text-white/30'} />
+                  ${isActive ? 'bg-brand-500/20' : 'bg-white/5'}`}>
+                  <Download size={18} className={isActive ? 'text-brand-400' : 'text-white/30'} />
                 </div>
+                ); })()}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-medium truncate text-sm">{r.title}</p>
-                    <span className={`flex-shrink-0 ${r.active ? 'badge-green' : 'badge-red'}`}>
-                      {r.active ? t('common.active') : t('common.inactive')}
-                    </span>
+                    {(() => { const isExpired = !!(r.expiresAt && new Date(r.expiresAt) <= new Date()); return (
+                    <>
+                      <span className={`flex-shrink-0 ${isExpired ? 'badge-orange' : 'badge-green'}`}>
+                        {isExpired ? t('dash.expired') : t('common.active')}
+                      </span>
+                      {!r.active && <span className="flex-shrink-0 badge-red">{t('common.inactive')}</span>}
+                    </>
+                    ); })()}
                   </div>
                   <p className="text-xs text-white/40 mt-0.5 leading-relaxed">
                     {t('users.filesCount', { count: String(r.filesCount) })} · {formatDate(r.createdAt)}

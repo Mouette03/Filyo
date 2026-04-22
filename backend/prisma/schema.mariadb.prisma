@@ -24,7 +24,6 @@ model User {
   resetTokenExpiry   DateTime?
   files          File[]
   uploadRequests UploadRequest[]
-  fileChunkedUploads FileChunkedUpload[]
 }
 
 model AppSettings {
@@ -44,7 +43,7 @@ model AppSettings {
   allowRegistration Boolean  @default(false)
   cleanupAfterDays  Int?     // max autorisé : null=désactivé, 0=dès expiration, N=N jours max après expiration
   maxFileSizeBytes  BigInt?  // null=illimité
-  uploadChunkSizeMb Int?     // null=désactivé, sinon taille d'un chunk en Mo
+  proxyUploadEnabled   Boolean  @default(false)  // mode upload proxy-compatible
   updatedAt         DateTime @updatedAt
 }
 
@@ -62,6 +61,7 @@ model File {
   password         String?
   batchToken       String?
   hideFilenames    Boolean  @default(false)
+  tusUploadId      String?  @unique
   shares           Share[]
   userId           String?
   user             User?    @relation(fields: [userId], references: [id])
@@ -93,7 +93,6 @@ model UploadRequest {
   maxSizeBytes     BigInt?
   active           Boolean        @default(true)
   receivedFiles    ReceivedFile[]
-  chunkedUploads   ChunkedUpload[]
   userId           String?
   user             User?          @relation(fields: [userId], references: [id])
 }
@@ -113,39 +112,4 @@ model ReceivedFile {
   uploadedAt      DateTime      @default(now())
 }
 
-// Upload en morceaux (chunked resumable upload)
-model ChunkedUpload {
-  id              String        @id @default(cuid())
-  uploadRequestId String
-  uploadRequest   UploadRequest @relation(fields: [uploadRequestId], references: [id], onDelete: Cascade)
-  originalName    String
-  mimeType        String
-  totalSize       BigInt
-  totalChunks     Int
-  receivedChunks  Int           @default(0)
-  password        String?       // haché bcrypt, pour valider à chaque chunk
-  uploaderName    String?
-  uploaderEmail   String?
-  message         String?
-  createdAt       DateTime      @default(now())
-  lastChunkAt     DateTime?
-}
 
-// Upload chunked (admin — dépôt de fichiers perso)
-model FileChunkedUpload {
-  id             String   @id @default(cuid())
-  userId         String
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  originalName   String
-  mimeType       String
-  totalSize      BigInt
-  totalChunks    Int
-  receivedChunks Int      @default(0)
-  expiresIn      Int?
-  maxDownloads   Int?
-  password       String?
-  batchToken     String?
-  hideFilenames  Boolean  @default(false)
-  createdAt      DateTime @default(now())
-  lastChunkAt    DateTime?
-}

@@ -6,6 +6,7 @@ import sharp from 'sharp'
 import { prisma } from '../lib/prisma'
 import { UPLOAD_DIR } from '../lib/config'
 import { getAppSettings } from '../lib/appSettings'
+import { TUS_EXPIRY_MS } from '../lib/tus'
 import { encrypt, decrypt } from '../lib/crypto'
 
 const ENC_KEY = process.env.JWT_SECRET || null
@@ -21,7 +22,7 @@ const LOGO_DIR = path.join(UPLOAD_DIR, 'logos')
  * instance's authentication and admin-only hooks.
  *
  * Notes:
- * - The logo upload endpoint streams files to disk and enforces a 2 MB maximum size.
+ * - The logo upload endpoint streams files to disk and enforces a 3 MB maximum size.
  * - Settings are persisted to a singleton database record and read via the application's
  *   settings accessor.
  */
@@ -40,7 +41,9 @@ export async function settingsRoutes(app: FastifyInstance) {
       allowRegistration: s.allowRegistration ?? false,
       cleanupAfterDays: s.cleanupAfterDays ?? null,
       maxFileSizeBytes: s.maxFileSizeBytes ? s.maxFileSizeBytes.toString() : null,
-      uploadChunkSizeMb: s.uploadChunkSizeMb ?? null,
+      proxyUploadEnabled: s.proxyUploadEnabled ?? false,
+      proxyUploadChunkMb: parseInt(process.env.TUS_CHUNK_MB || '90', 10),
+      tusExpiryMs: TUS_EXPIRY_MS,
       updatedAt: s.updatedAt
     }
   })
@@ -250,8 +253,8 @@ export async function settingsRoutes(app: FastifyInstance) {
         return reply.code(400).send({ code: 'INVALID_FORMAT' })
       }
 
-      // Lire les chunks en mémoire (max 2 MB)
-      const MAX_BYTES = 2 * 1024 * 1024
+      // Lire les chunks en mémoire (max 3 MB)
+      const MAX_BYTES = 3 * 1024 * 1024
       const chunks: Buffer[] = []
       let received = 0
       for await (const chunk of data.file) {
@@ -265,23 +268,30 @@ export async function settingsRoutes(app: FastifyInstance) {
       }
       const inputBuffer = Buffer.concat(chunks)
 
-      // Convertir en PNG 180×180 — compatible favicon + apple-touch-icon
-      // Fallback : si sharp échoue (ex. SVG sans librsvg), sauvegarder tel quel
+      // SVG : sauvegarder tel quel pour préserver les animations
+      // Autres formats : convertir en PNG 180×180 via sharp
       let filename: string
       let filePath: string
-      try {
-        filename = `logo_${nanoid(8)}.png`
-        filePath = path.join(LOGO_DIR, filename)
-        await sharp(inputBuffer)
-          .resize(180, 180, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
-          .png()
-          .toFile(filePath)
-        req.log.debug({ filename }, 'Logo converted to PNG 180x180')
-      } catch (convErr) {
-        req.log.warn({ err: (convErr as Error).message }, 'sharp conversion failed, saving original file')
-        filename = `logo_${nanoid(8)}${ext}`
+      if (ext === '.svg') {
+        filename = `logo_${nanoid(8)}.svg`
         filePath = path.join(LOGO_DIR, filename)
         await fs.writeFile(filePath, inputBuffer)
+        req.log.debug({ filename }, 'SVG logo saved as-is')
+      } else {
+        try {
+          filename = `logo_${nanoid(8)}.png`
+          filePath = path.join(LOGO_DIR, filename)
+          await sharp(inputBuffer)
+            .resize(180, 180, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+            .png()
+            .toFile(filePath)
+          req.log.debug({ filename }, 'Logo converted to PNG 180x180')
+        } catch (convErr) {
+          req.log.warn({ err: (convErr as Error).message }, 'sharp conversion failed, saving original file')
+          filename = `logo_${nanoid(8)}${ext}`
+          filePath = path.join(LOGO_DIR, filename)
+          await fs.writeFile(filePath, inputBuffer)
+        }
       }
 
       const logoUrl = `/uploads/logos/${filename}`
@@ -319,22 +329,20 @@ export async function settingsRoutes(app: FastifyInstance) {
     }
   )
 
-  // PATCH /api/settings/chunk-size — taille des chunks pour upload resumable (admin)
-  app.patch<{ Body: { uploadChunkSizeMb: number | null } }>(
-    '/chunk-size',
+  // PATCH /api/settings/cf-bypass — activer/désactiver le mode bypass Cloudflare (TUS chunked)
+  app.patch<{ Body: { enabled: boolean } }>(
+    '/cf-bypass',
     { onRequest: [app.authenticate, app.adminOnly] },
     async (req, reply) => {
-      const { uploadChunkSizeMb } = req.body
-      if (uploadChunkSizeMb !== null && (typeof uploadChunkSizeMb !== 'number' || uploadChunkSizeMb < 1 || uploadChunkSizeMb > 100)) {
-        return reply.code(400).send({ code: 'INVALID_VALUE' })
-      }
+      const { enabled } = req.body
+      if (typeof enabled !== 'boolean') return reply.code(400).send({ code: 'INVALID_VALUE' })
       const s = await prisma.appSettings.upsert({
         where: { id: 'singleton' },
-        update: { uploadChunkSizeMb: uploadChunkSizeMb ?? null },
-        create: { id: 'singleton', appName: 'Filyo', uploadChunkSizeMb: uploadChunkSizeMb ?? null }
+        update: { proxyUploadEnabled: enabled },
+        create: { id: 'singleton', appName: 'Filyo', proxyUploadEnabled: enabled }
       })
-      req.log.info({ uploadChunkSizeMb }, 'Upload chunk size updated')
-      return { uploadChunkSizeMb: s.uploadChunkSizeMb }
+      req.log.info({ proxyUploadEnabled: enabled }, 'Proxy-safe upload mode updated')
+      return { proxyUploadEnabled: s.proxyUploadEnabled }
     }
   )
 }

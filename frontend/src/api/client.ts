@@ -1,4 +1,7 @@
 import axios from 'axios'
+import toast from 'react-hot-toast'
+import { fr, en } from '../i18n'
+import { useI18nStore } from '../stores/useI18nStore'
 import { useAuthStore } from '../stores/useAuthStore'
 
 const api = axios.create({
@@ -13,8 +16,13 @@ api.interceptors.response.use(
   err => {
     const code = err.response?.data?.code
     // Déconnecter si le token est invalide/expiré ou si l'utilisateur n'existe plus — pas sur un mauvais mot de passe applicatif
-    const SESSION_ENDING_CODES = ['INVALID_TOKEN', 'NOT_FOUND']
+    const SESSION_ENDING_CODES = ['INVALID_TOKEN', 'NOT_FOUND', 'ACCOUNT_DISABLED']
     if (err.response?.status === 401 && SESSION_ENDING_CODES.includes(code) && useAuthStore.getState().isAuthenticated) {
+      if (code === 'ACCOUNT_DISABLED') {
+        const lang = useI18nStore.getState().lang
+        const dict = lang === 'en' ? en : fr
+        toast.error(dict['toast.accountDisabled'])
+      }
       useAuthStore.getState().logout()
       window.location.href = '/login'
     }
@@ -58,23 +66,6 @@ export const uploadLogo = (formData: FormData) =>
 export const deleteLogo = () => api.delete('/settings/logo')
 
 // ---- Fichiers ----
-export const uploadFiles = (
-  formData: FormData,
-  onProgress?: (pct: number, speed: number) => void
-) => {
-  const startTime = Date.now()
-  return api.post('/files', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-    onUploadProgress: e => {
-      if (onProgress && e.total) {
-        const elapsed = (Date.now() - startTime) / 1000
-        const speed = elapsed > 0.5 ? e.loaded / elapsed : 0
-        onProgress(Math.round((e.loaded * 100) / e.total), speed)
-      }
-    }
-  })
-}
-
 export const listFiles = () => api.get('/files')
 export const deleteFile = (id: string) => api.delete(`/files/${id}`)
 
@@ -98,108 +89,11 @@ export const getUploadRequestInfo = (token: string) =>
   api.get(`/upload-requests/${token}/info`)
 export const getReceivedFiles = (id: string) => api.get(`/upload-requests/${id}/files`)
 
-export const submitToUploadRequest = (
-  token: string,
-  formData: FormData,
-  onProgress?: (pct: number, speed: number) => void,
-  password?: string
-) => {
-  const startTime = Date.now()
-  return api.post(`/upload-requests/${token}/upload`, formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-      ...(password ? { 'X-Upload-Password': btoa(unescape(encodeURIComponent(password))) } : {})
-    },
-    onUploadProgress: e => {
-      if (onProgress && e.total) {
-        const elapsed = (Date.now() - startTime) / 1000
-        const speed = elapsed > 0.5 ? e.loaded / elapsed : 0
-        onProgress(Math.round((e.loaded * 100) / e.total), speed)
-      }
-    }
-  })
-}
+export const updateProxyUpload = (enabled: boolean) =>
+  api.patch('/settings/cf-bypass', { enabled })
 
-export const initChunkedUpload = (
-  token: string,
-  data: { filename: string; mimeType: string; totalSize: number; totalChunks: number; uploaderName?: string; uploaderEmail?: string; message?: string; password?: string }
-) =>
-  api.post(`/upload-requests/${token}/upload-init`, data)
-
-export const getChunkUploadStatus = (token: string, uploadId: string) =>
-  api.get(`/upload-requests/${token}/upload-status/${uploadId}`)
-
-export const uploadChunk = (
-  token: string,
-  uploadId: string,
-  chunkIndex: number,
-  blob: Blob,
-  onProgress?: (pct: number, speed: number) => void
-) => {
-  let prevLoaded = 0
-  let prevTime = Date.now()
-  const form = new FormData()
-  form.append('uploadId', uploadId)
-  form.append('chunkIndex', String(chunkIndex))
-  form.append('chunk', blob)
-  return api.post(`/upload-requests/${token}/upload-chunk`, form, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-    onUploadProgress: e => {
-      if (onProgress && e.total) {
-        const now = Date.now()
-        const dt = (now - prevTime) / 1000
-        const speed = dt > 0.1 ? (e.loaded - prevLoaded) / dt : 0
-        if (dt > 0.1) { prevLoaded = e.loaded; prevTime = now }
-        onProgress(Math.round((e.loaded * 100) / e.total), speed)
-      }
-    }
-  })
-}
-
-export const finalizeChunkedUpload = (token: string, uploadId: string) =>
-  api.post(`/upload-requests/${token}/upload-finalize`, { uploadId })
-
-// ---- Chunked upload admin (dépôt de fichiers perso) ----
-export const initFileChunkedUpload = (data: {
-  filename: string; mimeType: string; totalSize: number; totalChunks: number
-  expiresIn?: string; maxDownloads?: string; password?: string
-  hideFilenames?: boolean; batchToken?: string
-}) => api.post('/files/upload-init', data)
-
-export const getFileChunkUploadStatus = (uploadId: string) =>
-  api.get(`/files/upload-status/${uploadId}`)
-
-export const uploadFileChunk = (
-  uploadId: string,
-  chunkIndex: number,
-  chunk: Blob,
-  onProgress?: (pct: number, speed: number) => void
-) => {
-  let prevLoaded = 0
-  let prevTime = Date.now()
-  const form = new FormData()
-  form.append('uploadId', uploadId)
-  form.append('chunkIndex', String(chunkIndex))
-  form.append('chunk', chunk)
-  return api.post('/files/upload-chunk', form, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-    onUploadProgress: e => {
-      if (onProgress && e.total) {
-        const now = Date.now()
-        const dt = (now - prevTime) / 1000
-        const speed = dt > 0.1 ? (e.loaded - prevLoaded) / dt : 0
-        if (dt > 0.1) { prevLoaded = e.loaded; prevTime = now }
-        onProgress(Math.round((e.loaded / e.total) * 100), speed)
-      }
-    }
-  })
-}
-
-export const finalizeFileChunkedUpload = (uploadId: string) =>
-  api.post('/files/upload-finalize', { uploadId })
-
-export const updateChunkSize = (mb: number | null) =>
-  api.patch('/settings/chunk-size', { uploadChunkSizeMb: mb })
+export const getTusFileResult = (uploadId: string) =>
+  api.get(`/files/tus-result/${uploadId}`)
 
 // ---- Tokens de téléchargement (streaming natif navigateur) ----
 export const getShareDlToken = (token: string, password?: string) =>

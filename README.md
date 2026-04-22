@@ -46,6 +46,8 @@
 | Feature | Description |
 |---|---|
 | **File upload** | Multi-file upload with progress bar and drag & drop |
+| **Resumable upload** | TUS protocol — interrupted uploads resume automatically |
+| **Proxy-safe upload mode** | Splits files into chunks to work around per-request size limits from proxies and CDNs (Cloudflare, Nginx, Vercel…); configurable from admin settings |
 | **Protection** | Optional password per file/link |
 | **Rate limiting** | Brute-force protection on login, password reset and file deposit |
 | **Expiration** | 1h / 24h / 7d / 30d / never |
@@ -80,10 +82,16 @@ docker compose up -d
 
 ```bash
 cp .env.example .env
-docker compose -f docker-compose.mariadb.yml up -d
+docker compose -f docker-compose-mariadb.yml up -d
 ```
 
 **http://localhost:3001** → Create your admin account on first launch.
+
+---
+
+## 📖 Full documentation
+
+→ [AIDE.md](AIDE.md) — Complete guide (EN + FR) covering all features, limits, TUS protocol, cleanup, quotas, security…
 
 ---
 
@@ -111,6 +119,10 @@ labels:
 | `LOG_LEVEL` | `info` | Minimum log level (Pino). The app emits `debug`, `info`, `warn`, `error`. Use `debug` for verbose output, `warn` for quiet, `silent` to disable all logs. |
 | `UPLOAD_TIMEOUT_MS` | `1800000` | Upload timeout in ms (default 30 min, min 1 min, max 2 h) |
 | `TRUST_PROXY` | `false` | Trust level for reverse proxy headers (`X-Forwarded-*`). Accepts `false`, `true`, an IP address, or a CIDR range (e.g. `127.0.0.1`). Enable only if Filyo is behind a trusted proxy. |
+| `TUS_CHUNK_MB` | `90` | Chunk size in MB used when the **proxy-safe upload mode** is enabled (admin toggle in Settings). Lower this value if your proxy or CDN rejects large chunks. Common limits: Cloudflare 100 MB (Free/Pro), Nginx default 1 MB (`client_max_body_size`), Vercel 4.5 MB. Has no effect when the mode is disabled. |
+| `TUS_EXPIRY` | `1h` | How long an interrupted TUS upload can be resumed after it stalls. Accepts `30m` or `2h` format. Once expired, the server rejects any resume attempt; the partial file is then physically deleted on the next `CLEANUP_INTERVAL` run. Default: 1 h. |
+| `CLEANUP_INTERVAL` | `1h` | Interval between scheduled cleanup runs (expired files + incomplete TUS uploads). Accepts `30m` or `2h` format. Default: 1 h. |
+| `REGISTER_DEFAULT_QUOTA` | `500MB` | Default storage quota assigned to users who self-register (open registration). Accepts `500MB` or `2GB` format. Set to `0` or leave empty to assign no quota by default. Has no effect on accounts created by an admin (quota set manually). |
 
 > [!NOTE]
 > Any SMTP password saved through the settings form is stored **encrypted** in the database (AES-256-GCM, key derived from `JWT_SECRET`).
@@ -134,6 +146,9 @@ If you run Filyo behind a reverse proxy (Traefik, Nginx, etc.), set `TRUST_PROXY
 | `true` | Trust all proxies (convenient but less secure) |
 | `127.0.0.1` | Trust only localhost proxy (recommended) |
 | `10.0.0.0/8` | Trust a specific IP range / CIDR |
+
+> [!NOTE]
+> For the TUS upload server, `@tus/server` only accepts a boolean for `respectForwardedHeaders`. Any IP or CIDR value will therefore behave like `true` (all forwarded headers trusted). Fastify itself still validates the IP/CIDR correctly for the rest of the API.
 
 ---
 
@@ -204,6 +219,7 @@ docker pull ghcr.io/mouette03/filyo:v1.0.3
 | [Fastify](https://github.com/fastify/fastify) | MIT | API Framework |
 | [Prisma](https://github.com/prisma/prisma) | Apache-2.0 | Database |
 | [bcryptjs](https://github.com/dcodeIO/bcrypt.js) | MIT | Authentication |
+| [@tus/server](https://github.com/tus/tus-node-server) | MIT | Resumable uploads |
 | **Frontend** | | |
 | [React](https://github.com/facebook/react) | MIT | UI |
 | [TailwindCSS](https://github.com/tailwindlabs/tailwindcss) | MIT | Design |
@@ -219,6 +235,7 @@ docker pull ghcr.io/mouette03/filyo:v1.0.3
 ### 🙏 Thanks to
 - **Fastify Team** — Blazing fast API ⚡
 - **Prisma Team** — Magic ORM ✨
+- **tus Team** — Resumable uploads protocol 🔄
 - **React Team** — Modern UI
 - **Tailwind Labs** — Glassmorphism design
 - **100+ open-source maintainers** !
@@ -257,6 +274,8 @@ Application de partage de fichiers **auto-hébergée**, sans stockage S3. Design
 | Fonctionnalité | Description |
 |---|---|
 | **Envoi de fichiers** | Upload multi-fichiers avec barre de progression et glisser-déposer |
+| **Upload repris automatiquement** | Protocole TUS — les uploads interrompus reprennent automatiquement |
+| **Mode upload proxy-compatible** | Découpe les fichiers en morceaux pour contourner les limites de taille des proxies et CDN (Cloudflare, Nginx, Vercel…) ; configurable dans les réglages admin |
 | **Protection** | Mot de passe optionnel par fichier/lien |
 | **Limitation de débit** | Protection brute-force sur login, reset mot de passe et dépôt de fichiers |
 | **Expiration** | 1h / 24h / 7j / 30j / jamais |
@@ -291,7 +310,7 @@ docker compose up -d
 
 ```bash
 cp .env.example .env
-docker compose -f docker-compose.mariadb.yml up -d
+docker compose -f docker-compose-mariadb.yml up -d
 ```
 
 **http://localhost:3001** → Crée ton compte admin au 1er lancement.
@@ -322,6 +341,10 @@ labels:
 | `LOG_LEVEL` | `info` | Seuil minimum de log (Pino). Le code émet `debug`, `info`, `warn`, `error`. Utiliser `debug` pour plus de verbosité, `warn` pour le silence relatif, `silent` pour tout désactiver. |
 | `UPLOAD_TIMEOUT_MS` | `1800000` | Délai d'attente des uploads (ms — défaut 30 min, min 1 min, max 2 h) |
 | `TRUST_PROXY` | `false` | Niveau de confiance pour les en-têtes reverse proxy (`X-Forwarded-*`). Accepte `false`, `true`, une adresse IP ou une plage CIDR (ex. `127.0.0.1`). À activer uniquement si Filyo est derrière un proxy de confiance. |
+| `TUS_CHUNK_MB` | `90` | Taille en Mo de chaque morceau lors de l'upload en **mode upload proxy-compatible** (toggle admin dans Réglages). Réduisez cette valeur si votre proxy ou CDN rejette les gros morceaux. Limites courantes : Cloudflare 100 Mo (Free/Pro), Nginx 1 Mo par défaut (`client_max_body_size`), Vercel 4,5 Mo. Sans effet lorsque le mode est désactivé. |
+| `TUS_EXPIRY` | `1h` | Durée pendant laquelle un upload TUS interrompu peut être repris. Accepte le format `30m` ou `2h`. Une fois expiré, le serveur refuse toute tentative de reprise ; le fichier partiel est ensuite supprimé physiquement au prochain passage de `CLEANUP_INTERVAL`. Défaut : 1 h. |
+| `CLEANUP_INTERVAL` | `1h` | Intervalle entre chaque passage du job de nettoyage (fichiers expirés + uploads TUS incomplets). Accepte le format `30m` ou `2h`. Défaut : 1 h. |
+| `REGISTER_DEFAULT_QUOTA` | `500MB` | Quota de stockage par défaut attribué aux utilisateurs qui s'auto-inscrivent (inscription libre). Accepte le format `500MB` ou `2GB`. Mettre `0` ou laisser vide pour n'attribuer aucun quota par défaut. Sans effet sur les comptes créés par un administrateur (quota défini manuellement). |
 
 > [!NOTE]
 > Tout mot de passe SMTP enregistré via le formulaire de réglages est stocké **chiffré** en base de données (AES-256-GCM, clé dérivée de `JWT_SECRET`).
@@ -343,6 +366,9 @@ Si vous exécutez Filyo derrière un reverse proxy (Traefik, Nginx, etc.), défi
 | `true` | Fait confiance à tous les proxies (pratique mais moins sécurisé) |
 | `127.0.0.1` | Fait confiance uniquement au proxy local (recommandé) |
 | `10.0.0.0/8` | Fait confiance à une plage IP / CIDR spécifique |
+
+> [!NOTE]
+> Pour le serveur TUS, `@tus/server` n'accepte qu'un booléen pour `respectForwardedHeaders`. Toute valeur IP ou CIDR sera donc traitée comme `true` (tous les headers forwarded sont acceptés). Fastify continue de valider l'IP/CIDR correctement pour le reste de l'API.
 
 ---
 
@@ -413,6 +439,7 @@ docker pull ghcr.io/mouette03/filyo:v1.0.3
 | [Fastify](https://github.com/fastify/fastify) | MIT | API Framework |
 | [Prisma](https://github.com/prisma/prisma) | Apache-2.0 | Base de données |
 | [bcryptjs](https://github.com/dcodeIO/bcrypt.js) | MIT | Authentification |
+| [@tus/server](https://github.com/tus/tus-node-server) | MIT | Uploads repris |
 | **Frontend** | | |
 | [React](https://github.com/facebook/react) | MIT | Interface |
 | [TailwindCSS](https://github.com/tailwindlabs/tailwindcss) | MIT | Design |
@@ -428,6 +455,7 @@ docker pull ghcr.io/mouette03/filyo:v1.0.3
 ### 🙏 Remerciements
 - **Fastify Team** — API ultra-performante ⚡
 - **Prisma Team** — ORM magique ✨
+- **tus Team** — Protocole d'upload repris 🔄
 - **React Team** — Interface moderne
 - **Tailwind Labs** — Design glassmorphism
 - **100+ mainteneurs** open source !

@@ -135,7 +135,16 @@ export async function authRoutes(app: FastifyInstance) {
     // Quota par défaut uniquement pour les auto-inscriptions (inscription libre sans admin)
     // isAdmin est déjà calculé dans le bloc count > 0 ci-dessus
     const isPublicRegistration = count > 0 && !isAdmin
-    const storageQuotaBytes = isPublicRegistration ? BigInt(500 * 1024 * 1024) : null
+    const _rawQuota = (process.env.REGISTER_DEFAULT_QUOTA ?? '500MB').trim()
+    const _gbMatch = _rawQuota.match(/^(\d+(?:\.\d+)?)\s*GB$/i)
+    const _mbMatch = _rawQuota.match(/^(\d+(?:\.\d+)?)\s*MB?$/i)
+    const _defaultQuotaMB = _gbMatch
+      ? parseFloat(_gbMatch[1]) * 1024
+      : _mbMatch ? parseFloat(_mbMatch[1]) : NaN
+    const defaultQuotaBytes = Number.isFinite(_defaultQuotaMB) && _defaultQuotaMB > 0
+      ? BigInt(Math.round(_defaultQuotaMB * 1024 * 1024))
+      : null
+    const storageQuotaBytes = isPublicRegistration ? defaultQuotaBytes : null
 
     const hashed = await bcrypt.hash(body.data.password, 12)
     const user = await prisma.user.create({

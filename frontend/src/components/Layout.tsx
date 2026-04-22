@@ -1,12 +1,11 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
-import { Upload, LayoutDashboard, ArrowDownUp, Plus, Settings, Users, LogOut, ChevronDown, User, Github, ArrowUpCircle } from 'lucide-react'
+import { Upload, LayoutDashboard, ArrowDownUp, Plus, Settings, Users, LogOut, ChevronDown, User, Github, ArrowUpCircle, BookOpen } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { useAuthStore } from '../stores/useAuthStore'
 import { useAppSettingsStore } from '../stores/useAppSettingsStore'
 import { getSettings, logoutApi } from '../api/client'
 import toast from 'react-hot-toast'
 import { useT } from '../i18n'
-import LanguageSwitcher from './LanguageSwitcher'
 
 declare const __APP_VERSION__: string
 
@@ -89,9 +88,8 @@ export default function Layout() {
             </NavLink>
           </nav>
 
-          {/* Droite : sélecteur de langue + menu utilisateur */}
+          {/* Droite : menu utilisateur */}
           <div className="flex items-center gap-1">
-            <LanguageSwitcher />
             <div className="relative" ref={menuRef}>
             <button
               onClick={() => setUserMenuOpen(!userMenuOpen)}
@@ -147,6 +145,15 @@ export default function Layout() {
                     </NavLink>
                   </>
                 )}
+                <a
+                  href="https://github.com/Mouette03/Filyo/blob/main/AIDE.md"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setUserMenuOpen(false)}
+                  className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors"
+                >
+                  <BookOpen size={14} /> {t('nav.help')}
+                </a>
                 <button
                   onClick={handleLogout}
                   className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
@@ -164,9 +171,9 @@ export default function Layout() {
         <Outlet />
       </main>
 
-      <footer className="border-t border-white/5 py-4 px-6 text-white/25 text-xs relative flex items-center justify-center">
-        {/* Version actuelle + alerte mise à jour */}
-        <div className="absolute left-6 flex items-center gap-2">
+      <footer className="border-t border-white/5 py-4 px-6 text-white/25 text-xs flex items-center justify-between gap-2">
+        {/* Gauche : version + alerte mise à jour */}
+        <div className="flex w-32 shrink-0 items-center gap-2">
           <span>v{currentVersion}</span>
           {hasUpdate && (
             <a
@@ -182,12 +189,17 @@ export default function Layout() {
           )}
         </div>
 
-        <span>{settings.appName} — {t('nav.footer')}</span>
+        {/* Centre : nom de l'app + slogan (slogan masqué sur mobile) */}
+        <span className="flex-1 min-w-0 truncate text-center">
+          {settings.appName}<span className="hidden sm:inline"> — {t('nav.footer')}</span>
+        </span>
+
+        {/* Droite : GitHub */}
         <a
           href="https://github.com/Mouette03/Filyo"
           target="_blank"
           rel="noopener noreferrer"
-          className="absolute right-6 flex items-center gap-1.5 hover:text-white/60 transition-colors"
+          className="flex w-32 shrink-0 items-center justify-end gap-1.5 hover:text-white/60 transition-colors"
           title="Voir sur GitHub"
         >
           <Github size={14} />

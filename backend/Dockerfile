@@ -1,5 +1,5 @@
 # ---- Build stage ----
-FROM node:20-alpine AS builder
+FROM node:24-alpine AS builder
 
 RUN npm install -g npm@latest --quiet
 
@@ -11,7 +11,7 @@ COPY . .
 RUN npm run build
 
 # ---- Production stage ----
-FROM node:20-alpine AS runner
+FROM node:24-alpine AS runner
 
 RUN apk add --no-cache dumb-init openssl su-exec \
     && npm install -g npm@latest --quiet

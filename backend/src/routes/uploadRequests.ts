@@ -1,8 +1,7 @@
-import { FastifyInstance, FastifyRequest } from 'fastify'
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import path from 'path'
 import fs from 'fs-extra'
 import { nanoid } from 'nanoid'
-import mime from 'mime-types'
 import { isValidEmail } from '../lib/utils'
 import bcrypt from 'bcryptjs'
 import { prisma } from '../lib/prisma'
@@ -11,6 +10,7 @@ import { getAppSettings } from '../lib/appSettings'
 import { createSmtpTransport } from '../lib/smtp'
 import { t, escapeHtml } from '../lib/i18n'
 import { createDlToken, consumeDlToken } from '../lib/dlTokens'
+import { createRequestsTusServer } from '../lib/tus'
 
 /**
  * Register HTTP routes under `/api/upload-requests` to create, manage and consume upload requests and their files.
@@ -29,6 +29,7 @@ import { createDlToken, consumeDlToken } from '../lib/dlTokens'
  */
 export async function uploadRequestRoutes(app: FastifyInstance) {
   const auth = { onRequest: [app.authenticate] }
+  const tusServer = createRequestsTusServer(app)
 
   /** Construit le filtre Prisma pour un upload request : admin voit tout, owner voit le sien. */
   function ownerWhere(req: FastifyRequest, id: string) {
@@ -115,198 +116,6 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
     }
   })
 
-  // POST /api/upload-requests/:token/upload - Deposer des fichiers (public)
-  app.post<{ Params: { token: string } }>('/:token/upload', {
-    config: { rateLimit: { max: 3, timeWindow: '1 minute', keyGenerator: (req) => `${req.ip}:${(req.params as any).token}` } }
-  }, async (req, reply) => {
-    // Drainer le stream brut pour éviter de corrompre la connexion sur les retours anticipés
-    const drainBody = () => new Promise<void>((resolve) => {
-      if (req.raw.readableEnded || req.raw.destroyed) return resolve()
-
-      const done = () => {
-        clearTimeout(timer)
-        req.raw.off('end', done)
-        req.raw.off('error', done)
-        req.raw.off('close', done)
-        resolve()
-      }
-
-      const timer = setTimeout(done, 5000)
-      req.raw.resume()
-      req.raw.once('end', done)
-      req.raw.once('error', done)
-      req.raw.once('close', done)
-    })
-
-    const request = await prisma.uploadRequest.findUnique({
-      where: { token: req.params.token },
-      include: { _count: { select: { receivedFiles: true } } }
-    })
-    if (!request || !request.active) {
-      await drainBody()
-      return reply.code(404).send({ code: 'REQUEST_NOT_FOUND' })
-    }
-    if (request.expiresAt && request.expiresAt < new Date()) {
-      await drainBody()
-      return reply.code(410).send({ code: 'REQUEST_EXPIRED' })
-    }
-    if (request.maxFiles && request._count.receivedFiles >= request.maxFiles) {
-      await drainBody()
-      return reply.code(429).send({ code: 'REQUEST_LIMIT_REACHED' })
-    }
-
-    // Vérification anticipée du mot de passe via header (avant toute écriture sur disque)
-    if (request.password) {
-      const rawHeader = (req.headers['x-upload-password'] as string) ?? ''
-      let provided = ''
-      try { provided = Buffer.from(rawHeader, 'base64').toString('utf8') } catch { provided = rawHeader }
-      const ok = await bcrypt.compare(provided, request.password)
-      if (!ok) {
-        await drainBody()
-        return reply.code(401).send({ code: 'WRONG_PASSWORD' })
-      }
-    }
-
-    const appSettings = await getAppSettings()
-    const globalMaxBytes = appSettings.maxFileSizeBytes ?? null
-    const perRequestMax = request.maxSizeBytes ?? null
-    // Limite effective = le plus restrictif des deux
-    const effectiveMaxBytes = perRequestMax !== null && globalMaxBytes !== null
-      ? (perRequestMax < globalMaxBytes ? perRequestMax : globalMaxBytes)
-      : (perRequestMax ?? globalMaxBytes)
-
-    // Quota du propriétaire de la demande
-    const ownerId = request.userId
-    const owner = ownerId ? await prisma.user.findUnique({
-      where: { id: ownerId },
-      select: { storageQuotaBytes: true }
-    }) : null
-    const quotaBytes = owner?.storageQuotaBytes ?? null
-    let ownerUsedBytes = BigInt(0)
-    if (quotaBytes !== null && ownerId) {
-      const filesAgg = await prisma.file.aggregate({ _sum: { size: true }, where: { userId: ownerId } })
-      const receivedAgg = await prisma.receivedFile.aggregate({
-        _sum: { size: true },
-        where: { uploadRequest: { userId: ownerId } }
-      })
-      ownerUsedBytes = (filesAgg._sum.size ?? BigInt(0)) + (receivedAgg._sum.size ?? BigInt(0))
-      if (ownerUsedBytes >= quotaBytes) {
-        await drainBody()
-        return reply.code(413).send({ code: 'QUOTA_EXCEEDED' })
-      }
-    }
-
-    // Rejet anticipé via Content-Length (avant toute écriture sur disque)
-    const contentLength = req.headers['content-length'] ? BigInt(req.headers['content-length']) : null
-    if (effectiveMaxBytes !== null && contentLength !== null && contentLength > effectiveMaxBytes) {
-      await drainBody()
-      return reply.code(413).send({ code: 'FILE_TOO_LARGE' })
-    }
-    if (quotaBytes !== null && contentLength !== null && ownerUsedBytes + contentLength > quotaBytes) {
-      await drainBody()
-      return reply.code(413).send({ code: 'QUOTA_EXCEEDED' })
-    }
-
-    const parts = req.parts()
-    const savedFiles: any[] = []
-    let uploaderName: string | undefined
-    let uploaderEmail: string | undefined
-    let message: string | undefined
-
-    for await (const part of parts) {
-      if (part.type === 'field') {
-        if (part.fieldname === 'uploaderName') uploaderName = part.value as string
-        if (part.fieldname === 'uploaderEmail') uploaderEmail = part.value as string
-        if (part.fieldname === 'message') message = part.value as string
-      } else {
-        // Vérifier le quota restant en tenant compte des fichiers déjà sauvés dans cette requête
-        if (request.maxFiles) {
-          const total = request._count.receivedFiles + savedFiles.length
-          if (total >= request.maxFiles) {
-            // Drainer le reste du stream avant de retourner pour éviter de corrompre la connexion
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            for await (const _ of part.file) { /* drain */ }
-            await Promise.all(savedFiles.map((f: any) => fs.remove(f.path).catch(() => {})))
-            return reply.code(429).send({ code: 'REQUEST_LIMIT_REACHED' })
-          }
-        }
-        const ext = path.extname(part.filename || '') || ''
-        const filename = `recv_${nanoid(12)}${ext}`
-        const destDir = path.join(UPLOAD_DIR, 'received', request.id)
-        await fs.ensureDir(destDir)
-        const filePath = path.join(destDir, filename)
-
-        const writeStream = fs.createWriteStream(filePath)
-        writeStream.on('error', () => {})
-        let size = 0n
-
-        try {
-          for await (const chunk of part.file) {
-            size += BigInt(chunk.length)
-            if (effectiveMaxBytes !== null && size > effectiveMaxBytes) {
-              writeStream.destroy()
-              await fs.remove(filePath).catch(() => {})
-              await Promise.all(savedFiles.map((f: any) => fs.remove(f.path).catch(() => {})))
-              return reply.code(413).send({ code: 'FILE_TOO_LARGE' })
-            }
-            if (quotaBytes !== null) {
-              const savedSize = savedFiles.reduce((acc: bigint, f: any) => acc + f.size, BigInt(0))
-              if (ownerUsedBytes + savedSize + size > quotaBytes) {
-                writeStream.destroy()
-                await fs.remove(filePath).catch(() => {})
-                await Promise.all(savedFiles.map((f: any) => fs.remove(f.path).catch(() => {})))
-                return reply.code(413).send({ code: 'QUOTA_EXCEEDED' })
-              }
-            }
-            if (!writeStream.write(chunk)) {
-              await new Promise<void>((resolve, reject) => {
-                const onDrain = () => { writeStream.off('error', onError); resolve() }
-                const onError = (err: Error) => { writeStream.off('drain', onDrain); reject(err) }
-                writeStream.once('drain', onDrain)
-                writeStream.once('error', onError)
-              })
-            }
-          }
-          await new Promise<void>((resolve, reject) => {
-            const onFinish = () => { writeStream.off('error', onError); resolve() }
-            const onError = (err: Error) => { writeStream.off('finish', onFinish); reject(err) }
-            writeStream.once('finish', onFinish)
-            writeStream.once('error', onError)
-            writeStream.end()
-          })
-        } catch (err) {
-          writeStream.destroy()
-          await fs.remove(filePath).catch(() => {})
-          throw err
-        }
-
-        savedFiles.push({
-          uploadRequestId: request.id,
-          filename,
-          originalName: part.filename || 'file',
-          mimeType: mime.lookup(part.filename || '') || 'application/octet-stream',
-          size: size,
-          path: filePath,
-          uploaderName: uploaderName || null,
-          uploaderEmail: uploaderEmail || null,
-          message: message || null
-        })
-      }
-    }
-
-    const created = await Promise.all(
-      savedFiles.map((f: any) => prisma.receivedFile.create({ data: f }))
-    )
-    req.log.info({ token: req.params.token, count: created.length, uploaderName }, 'Files received via upload request')
-    return reply.code(201).send(
-      created.map((f: any) => ({
-        id: f.id,
-        originalName: f.originalName,
-        size: f.size.toString()
-      }))
-    )
-  })
-
   // GET /api/upload-requests/dl/:dlToken — streaming direct (pas d'auth, token prouve l'autorisation)
   app.get<{ Params: { dlToken: string } }>('/dl/:dlToken', async (req, reply) => {
     const entry = consumeDlToken(req.params.dlToken)
@@ -388,9 +197,14 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
         expiresAt = new Date(req.body.expiresAt)
         if (isNaN(expiresAt.getTime())) return reply.code(400).send({ code: 'INVALID_DATE' })
       }
-      await prisma.uploadRequest.update({ where: { id: req.params.id }, data: { expiresAt } })
-      req.log.info({ id: req.params.id }, 'Upload request expiry updated')
-      return { expiresAt }
+      // Si on prolonge avec une date future, on réactive automatiquement
+      const shouldReactivate = expiresAt === null || expiresAt > new Date()
+      await prisma.uploadRequest.update({
+        where: { id: req.params.id },
+        data: { expiresAt, ...(shouldReactivate ? { active: true } : {}) }
+      })
+      req.log.info({ id: req.params.id, active: shouldReactivate || undefined }, 'Upload request expiry updated')
+      return { expiresAt, active: shouldReactivate ? true : request.active }
     }
   )
 
@@ -481,364 +295,43 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
     return { success: true }
   })
 
-  // ── Upload chunked (resumable) ────────────────────────────────────────────
-
-  /**
-   * POST /api/upload-requests/:token/upload-init
-   * Initialise un upload chunked. Retourne l'uploadId à conserver côté client.
-   * Body JSON : { filename, mimeType, totalSize, totalChunks, uploaderName?, uploaderEmail?, message?, password? }
-   */
-  app.post<{
-    Params: { token: string }
-    Body: {
-      filename: string
-      mimeType: string
-      totalSize: number
-      totalChunks: number
-      uploaderName?: string
-      uploaderEmail?: string
-      message?: string
-      password?: string
-    }
-  }>('/:token/upload-init', {
-    config: { rateLimit: { max: 10, timeWindow: '1 minute', keyGenerator: (req) => `${req.ip}:${(req.params as any).token}` } }
-  }, async (req, reply) => {
-    const { filename, mimeType, totalSize, totalChunks, uploaderName, uploaderEmail, message, password } = req.body
-
-    // Validation des champs numériques avant tout traitement
-    if (!Number.isInteger(totalSize) || totalSize <= 0) {
-      return reply.code(400).send({ code: 'INVALID_TOTAL_SIZE' })
-    }
-    if (!Number.isInteger(totalChunks) || totalChunks <= 0 || totalChunks > 10000) {
-      return reply.code(400).send({ code: 'INVALID_TOTAL_CHUNKS' })
-    }
-
-    const request = await prisma.uploadRequest.findUnique({
-      where: { token: req.params.token },
-      include: { _count: { select: { receivedFiles: true } } }
+  // ── Upload TUS (resumable, public) ────────────────────────────────────────
+  // Les requêtes TUS pour un upload request public sont transmises au serveur TUS.
+  // Le requestToken est passé dans les métadonnées TUS par le client.
+  const handleTus = async (req: FastifyRequest, reply: FastifyReply) => {
+    reply.hijack()
+    await new Promise<void>((resolve) => {
+      tusServer.handle(req.raw, reply.raw)
+      reply.raw.once('finish', resolve)
+      reply.raw.once('close', resolve)
     })
-    if (!request || !request.active) return reply.code(404).send({ code: 'REQUEST_NOT_FOUND' })
-    if (request.expiresAt && request.expiresAt < new Date()) return reply.code(410).send({ code: 'REQUEST_EXPIRED' })
-    if (request.maxFiles && request._count.receivedFiles >= request.maxFiles) return reply.code(429).send({ code: 'REQUEST_LIMIT_REACHED' })
+  }
 
-    // Vérification mot de passe
-    if (request.password) {
-      const ok = await bcrypt.compare(password ?? '', request.password)
-      if (!ok) return reply.code(401).send({ code: 'WRONG_PASSWORD' })
-    }
-
-    // Vérification taille
-    const appSettings = await getAppSettings()
-    const globalMaxBytes = appSettings.maxFileSizeBytes ?? null
-    const perRequestMax = request.maxSizeBytes ?? null
-    const effectiveMaxBytes = perRequestMax !== null && globalMaxBytes !== null
-      ? (perRequestMax < globalMaxBytes ? perRequestMax : globalMaxBytes)
-      : (perRequestMax ?? globalMaxBytes)
-    if (effectiveMaxBytes !== null && BigInt(totalSize) > effectiveMaxBytes) {
-      return reply.code(413).send({ code: 'FILE_TOO_LARGE' })
-    }
-
-    // Vérification quota propriétaire
-    const ownerId = request.userId
-    if (ownerId) {
-      const owner = await prisma.user.findUnique({ where: { id: ownerId }, select: { storageQuotaBytes: true } })
-      const quotaBytes = owner?.storageQuotaBytes ?? null
-      if (quotaBytes !== null) {
-        const filesAgg = await prisma.file.aggregate({ _sum: { size: true }, where: { userId: ownerId } })
-        const receivedAgg = await prisma.receivedFile.aggregate({ _sum: { size: true }, where: { uploadRequest: { userId: ownerId } } })
-        const used = (filesAgg._sum.size ?? BigInt(0)) + (receivedAgg._sum.size ?? BigInt(0))
-        if (used + BigInt(totalSize) > quotaBytes) return reply.code(413).send({ code: 'QUOTA_EXCEEDED' })
+  // Extrait le requestToken depuis Upload-Metadata (format TUS : "key base64val,key base64val,...")
+  const getRequestToken = (req: FastifyRequest): string | null => {
+    const meta = (req.headers['upload-metadata'] as string | undefined) ?? ''
+    for (const part of meta.split(',')) {
+      const [key, val] = part.trim().split(' ')
+      if (key === 'requestToken' && val) {
+        try { return Buffer.from(val, 'base64').toString('utf8') } catch { return null }
       }
     }
+    return null
+  }
 
-    // Stocker le mot de passe haché pour re-vérifier à chaque chunk
-    const hashedPassword = request.password ?? null
-
-    const chunked = await prisma.chunkedUpload.create({
-      data: {
-        uploadRequestId: request.id,
-        originalName: filename,
-        mimeType: mimeType || 'application/octet-stream',
-        totalSize: BigInt(totalSize),
-        totalChunks,
-        password: hashedPassword,
-        uploaderName: uploaderName || null,
-        uploaderEmail: uploaderEmail || null,
-        message: message || null
-      }
-    })
-
-    // Créer le dossier temporaire pour les chunks
-    const chunksDir = path.join(UPLOAD_DIR, 'chunks', chunked.id)
-    await fs.ensureDir(chunksDir)
-
-    req.log.info({ uploadId: chunked.id, filename, totalChunks }, 'Chunked upload initialized')
-    return reply.code(201).send({ uploadId: chunked.id, receivedChunks: 0 })
-  })
-
-  /**
-   * GET /api/upload-requests/:token/upload-status/:uploadId
-   * Retourne l'état d'un upload chunked en cours (pour reprise après coupure).
-   */
-  app.get<{ Params: { token: string; uploadId: string } }>(
-    '/:token/upload-status/:uploadId',
-    async (req, reply) => {
-      const request = await prisma.uploadRequest.findUnique({ where: { token: req.params.token } })
-      if (!request || !request.active) return reply.code(404).send({ code: 'REQUEST_NOT_FOUND' })
-      if (request.expiresAt && request.expiresAt < new Date()) return reply.code(410).send({ code: 'REQUEST_EXPIRED' })
-
-      const chunked = await prisma.chunkedUpload.findFirst({
-        where: { id: req.params.uploadId, uploadRequestId: request.id }
-      })
-      if (!chunked) return reply.code(404).send({ code: 'UPLOAD_NOT_FOUND' })
-
-      return {
-        uploadId: chunked.id,
-        receivedChunks: chunked.receivedChunks,
-        totalChunks: chunked.totalChunks
+  // POST /tus : 1 appel = 1 fichier initié. Clé = IP:requestToken → les uploaders
+  // vers des liens différents ne se bloquent pas mutuellement, même depuis le même NAT.
+  app.all('/tus', {
+    config: {
+      rateLimit: {
+        max: 60,
+        timeWindow: '1 minute',
+        keyGenerator: (req) => {
+          const token = getRequestToken(req)
+          return token ? `${req.ip}:${token}` : req.ip
+        }
       }
     }
-  )
-
-  /**
-   * POST /api/upload-requests/:token/upload-chunk
-   * Reçoit un seul chunk. Multipart : champs `uploadId`, `chunkIndex` + fichier binaire `chunk`.
-   */
-  app.post<{ Params: { token: string } }>('/:token/upload-chunk', {
-    config: { rateLimit: { max: 200, timeWindow: '1 minute', keyGenerator: (req) => `${req.ip}:${(req.params as any).token}` } }
-  }, async (req, reply) => {
-    const drainBody = () => new Promise<void>((resolve) => {
-      if (req.raw.readableEnded || req.raw.destroyed) return resolve()
-      const done = () => { clearTimeout(timer); req.raw.off('end', done); req.raw.off('error', done); req.raw.off('close', done); resolve() }
-      const timer = setTimeout(done, 5000)
-      req.raw.resume()
-      req.raw.once('end', done)
-      req.raw.once('error', done)
-      req.raw.once('close', done)
-    })
-
-    const request = await prisma.uploadRequest.findUnique({ where: { token: req.params.token } })
-    if (!request || !request.active) {
-      await drainBody()
-      return reply.code(404).send({ code: 'REQUEST_NOT_FOUND' })
-    }
-    if (request.expiresAt && request.expiresAt < new Date()) {
-      await drainBody()
-      return reply.code(410).send({ code: 'REQUEST_EXPIRED' })
-    }
-
-    let uploadId: string | undefined
-    let chunkIndex: number | undefined
-    let chunkSaved = false
-
-    const parts = req.parts()
-    for await (const part of parts) {
-      if (part.type === 'field') {
-        if (part.fieldname === 'uploadId') uploadId = part.value as string
-        if (part.fieldname === 'chunkIndex') chunkIndex = parseInt(part.value as string, 10)
-      } else if (part.type === 'file' && part.fieldname === 'chunk') {
-        if (uploadId === undefined || chunkIndex === undefined) {
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          for await (const _ of part.file) { /* drain */ }
-          return reply.code(400).send({ code: 'MISSING_FIELDS' })
-        }
-
-        const chunked = await prisma.chunkedUpload.findFirst({
-          where: { id: uploadId, uploadRequestId: request.id }
-        })
-        if (!chunked) {
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          for await (const _ of part.file) { /* drain */ }
-          return reply.code(404).send({ code: 'UPLOAD_NOT_FOUND' })
-        }
-
-        if (chunkIndex < 0 || chunkIndex >= chunked.totalChunks) {
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          for await (const _ of part.file) { /* drain */ }
-          return reply.code(400).send({ code: 'INVALID_CHUNK_INDEX' })
-        }
-        const chunksDir = path.join(UPLOAD_DIR, 'chunks', chunked.id)
-        const chunkPath = path.join(chunksDir, `chunk_${chunkIndex}`)
-        const chunkTmp  = path.join(chunksDir, `chunk_${chunkIndex}.tmp`)
-        await fs.ensureDir(chunksDir)
-
-        // Si le fichier final existe déjà, le chunk est durablement enregistré → idempotent
-        if (await fs.pathExists(chunkPath)) {
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          for await (const _ of part.file) { /* drain */ }
-          chunkSaved = true; continue
-        }
-
-        // Écriture dans un fichier temporaire (flag 'wx' : exclusif)
-        const writeStream = fs.createWriteStream(chunkTmp, { flags: 'wx' })
-        const openError = await new Promise<(Error & { code?: string }) | null>(resolve => {
-          writeStream.once('open', () => resolve(null))
-          writeStream.once('error', (err: Error & { code?: string }) => resolve(err))
-        })
-        if (openError) {
-          writeStream.destroy()
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          for await (const _ of part.file) { /* drain */ }
-          // Une autre requête écrit ce chunk en ce moment — pas encore commité
-          if (openError.code === 'EEXIST') continue
-          throw openError
-        }
-        writeStream.on('error', () => {})
-        try {
-          for await (const data of part.file) {
-            if (!writeStream.write(data)) {
-              await new Promise<void>((resolve, reject) => {
-                const onDrain = () => { writeStream.off('error', onError); resolve() }
-                const onError = (err: Error) => { writeStream.off('drain', onDrain); reject(err) }
-                writeStream.once('drain', onDrain)
-                writeStream.once('error', onError)
-              })
-            }
-          }
-          await new Promise<void>((resolve, reject) => {
-            const onFinish = () => { writeStream.off('error', onError); resolve() }
-            const onError = (err: Error) => { writeStream.off('finish', onFinish); reject(err) }
-            writeStream.once('finish', onFinish)
-            writeStream.once('error', onError)
-            writeStream.end()
-          })
-          // Rename atomique : le fichier final n'existe que si l'écriture est complète
-          await fs.rename(chunkTmp, chunkPath)
-        } catch (err) {
-          writeStream.destroy()
-          await fs.remove(chunkTmp).catch(() => {})
-          throw err
-        }
-
-        await prisma.chunkedUpload.update({
-          where: { id: chunked.id },
-          data: { receivedChunks: { increment: 1 }, lastChunkAt: new Date() }
-        })
-        chunkSaved = true
-      }
-    }
-
-    if (!chunkSaved) return reply.code(400).send({ code: 'NO_CHUNK_DATA' })
-
-    const updated = await prisma.chunkedUpload.findUnique({ where: { id: uploadId! } })
-    return { receivedChunks: updated?.receivedChunks ?? 0, totalChunks: updated?.totalChunks ?? 0 }
-  })
-
-  /**
-   * POST /api/upload-requests/:token/upload-finalize
-   * Fusionne tous les chunks, crée le ReceivedFile, nettoie les chunks temporaires.
-   * Body JSON : { uploadId }
-   */
-  app.post<{ Params: { token: string }; Body: { uploadId: string } }>(
-    '/:token/upload-finalize',
-    {
-      config: { rateLimit: { max: 20, timeWindow: '1 minute', keyGenerator: (req) => `${req.ip}:${(req.params as any).token}` } }
-    },
-    async (req, reply) => {
-      const { uploadId } = req.body
-      const request = await prisma.uploadRequest.findUnique({
-        where: { token: req.params.token },
-        include: { _count: { select: { receivedFiles: true } } }
-      })
-      if (!request || !request.active) return reply.code(404).send({ code: 'REQUEST_NOT_FOUND' })
-      if (request.expiresAt && request.expiresAt < new Date()) return reply.code(410).send({ code: 'REQUEST_EXPIRED' })
-
-      const chunked = await prisma.chunkedUpload.findFirst({
-        where: { id: uploadId, uploadRequestId: request.id }
-      })
-      if (!chunked) return reply.code(404).send({ code: 'UPLOAD_NOT_FOUND' })
-      if (chunked.receivedChunks < chunked.totalChunks) {
-        return reply.code(400).send({ code: 'INCOMPLETE_UPLOAD', receivedChunks: chunked.receivedChunks, totalChunks: chunked.totalChunks })
-      }
-
-      // Vérification quota à la finalisation
-      const appSettings = await getAppSettings()
-      const globalMaxBytes = appSettings.maxFileSizeBytes ?? null
-      const perRequestMax = request.maxSizeBytes ?? null
-      const effectiveMaxBytes = perRequestMax !== null && globalMaxBytes !== null
-        ? (perRequestMax < globalMaxBytes ? perRequestMax : globalMaxBytes)
-        : (perRequestMax ?? globalMaxBytes)
-      if (effectiveMaxBytes !== null && chunked.totalSize > effectiveMaxBytes) {
-        await fs.remove(path.join(UPLOAD_DIR, 'chunks', chunked.id)).catch(() => {})
-        await prisma.chunkedUpload.delete({ where: { id: chunked.id } })
-        return reply.code(413).send({ code: 'FILE_TOO_LARGE' })
-      }
-
-      // Vérification maxFiles
-      if (request.maxFiles && request._count.receivedFiles >= request.maxFiles) {
-        await fs.remove(path.join(UPLOAD_DIR, 'chunks', chunked.id)).catch(() => {})
-        await prisma.chunkedUpload.delete({ where: { id: chunked.id } })
-        return reply.code(429).send({ code: 'REQUEST_LIMIT_REACHED' })
-      }
-
-      // Fusionner les chunks dans le fichier final
-      const ext = path.extname(chunked.originalName) || ''
-      const filename = `recv_${nanoid(12)}${ext}`
-      const destDir = path.join(UPLOAD_DIR, 'received', request.id)
-      await fs.ensureDir(destDir)
-      const finalPath = path.join(destDir, filename)
-      const chunksDir = path.join(UPLOAD_DIR, 'chunks', chunked.id)
-
-      const writeStream = fs.createWriteStream(finalPath)
-      writeStream.on('error', () => {})
-      try {
-        for (let i = 0; i < chunked.totalChunks; i++) {
-          const chunkPath = path.join(chunksDir, `chunk_${i}`)
-          if (!(await fs.pathExists(chunkPath))) {
-            writeStream.destroy()
-            await fs.remove(finalPath).catch(() => {})
-            return reply.code(400).send({ code: 'CHUNK_MISSING', chunkIndex: i })
-          }
-          const readStream = fs.createReadStream(chunkPath)
-          for await (const data of readStream) {
-            if (!writeStream.write(data)) {
-              await new Promise<void>((resolve, reject) => {
-                const onDrain = () => { writeStream.off('error', onError); resolve() }
-                const onError = (err: Error) => { writeStream.off('drain', onDrain); reject(err) }
-                writeStream.once('drain', onDrain)
-                writeStream.once('error', onError)
-              })
-            }
-          }
-        }
-        await new Promise<void>((resolve, reject) => {
-          const onFinish = () => { writeStream.off('error', onError); resolve() }
-          const onError = (err: Error) => { writeStream.off('finish', onFinish); reject(err) }
-          writeStream.once('finish', onFinish)
-          writeStream.once('error', onError)
-          writeStream.end()
-        })
-      } catch (err) {
-        writeStream.destroy()
-        await fs.remove(finalPath).catch(() => {})
-        throw err
-      }
-
-      // Créer le ReceivedFile en base
-      const receivedFile = await prisma.receivedFile.create({
-        data: {
-          uploadRequestId: request.id,
-          filename,
-          originalName: chunked.originalName,
-          mimeType: chunked.mimeType,
-          size: chunked.totalSize,
-          path: finalPath,
-          uploaderName: chunked.uploaderName,
-          uploaderEmail: chunked.uploaderEmail,
-          message: chunked.message
-        }
-      }).catch(async (err: unknown) => {
-        await fs.remove(finalPath).catch(() => {})
-        await prisma.chunkedUpload.delete({ where: { id: chunked.id } }).catch(() => {})
-        throw err
-      })
-
-      // Nettoyer les chunks temporaires
-      await fs.remove(chunksDir).catch(() => {})
-      await prisma.chunkedUpload.delete({ where: { id: chunked.id } })
-
-      req.log.info({ uploadId, filename, size: chunked.totalSize.toString() }, 'Chunked upload finalized')
-      return reply.code(201).send({ id: receivedFile.id, originalName: receivedFile.originalName, size: receivedFile.size.toString() })
-    }
-  )
+  }, handleTus)
+  app.all('/tus/*', { config: { rateLimit: { max: 300, timeWindow: '1 minute', keyGenerator: (req) => req.ip } } }, handleTus)
 }
