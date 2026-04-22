@@ -111,10 +111,10 @@ These variables go in a `.env` file at the root, or directly in `docker-compose.
 | `DATA_PATH` | No | `./data` | Folder on the host machine where data is stored (SQLite database + uploaded files). |
 | `UPLOAD_DIR` | No | `/data/uploads` | Internal container path for files. Do not change unless necessary. |
 | `LOG_LEVEL` | No | `info` | Log level: `trace`, `debug`, `info`, `warn`, `error`. |
-| `TRUST_PROXY` | No | `false` | Set to `true` if Filyo is behind a reverse proxy (Nginx, Caddy, Cloudflare…). Enables real client IP detection. |
+| `TRUST_PROXY` | No | `false` | Trust level for reverse proxy headers (`X-Forwarded-*`). Accepts `false`, `true`, an IP address, or a CIDR range (e.g. `127.0.0.1`). Enable only if Filyo is behind a trusted proxy. |
 | `FRONTEND_URL` | No | `http://localhost:5173` | Frontend URL in development (for CORS). Ignored in production. |
 | `UPLOAD_TIMEOUT_MS` | No | `1800000` (30 min) | Maximum upload connection duration in milliseconds. Min: 60 000 (1 min), Max: 7 200 000 (2 h). |
-| `REGISTER_DEFAULT_QUOTA` | No | `500MB` | Storage quota automatically assigned to new self-registered users. Format: `500MB` or `2GB`. |
+| `REGISTER_DEFAULT_QUOTA` | No | `500MB` | Storage quota automatically assigned to new self-registered users. Format: `500MB` or `2GB`. Set to `0` or leave empty to assign no quota by default. Has no effect on accounts created by an admin. |
 | `TUS_EXPIRY` | No | `1h` | Lifetime of an incomplete TUS upload (resumable during this period). Format: `30m`, `2h`. |
 | `TUS_CHUNK_MB` | No | `90` | TUS chunk size in MB, used when **Proxy & CDN Optimization** is enabled. |
 | `CLEANUP_INTERVAL` | No | `1h` | Frequency of the automatic cleanup job. Format: `30m`, `2h`. |
@@ -558,10 +558,10 @@ Ces variables se mettent dans un fichier `.env` à la racine, ou directement dan
 | `DATA_PATH` | Non | `./data` | Dossier sur la machine hôte où sont stockées les données (base SQLite + fichiers uploadés). |
 | `UPLOAD_DIR` | Non | `/data/uploads` | Chemin interne au conteneur pour les fichiers. Ne pas changer sauf cas particulier. |
 | `LOG_LEVEL` | Non | `info` | Niveau de logs : `trace`, `debug`, `info`, `warn`, `error`. |
-| `TRUST_PROXY` | Non | `false` | Mettre `true` si Filyo est derrière un reverse proxy (Nginx, Caddy, Cloudflare…). Permet de récupérer la vraie IP du client. |
+| `TRUST_PROXY` | Non | `false` | Niveau de confiance pour les en-têtes reverse proxy (`X-Forwarded-*`). Accepte `false`, `true`, une adresse IP ou une plage CIDR (ex. `127.0.0.1`). À activer uniquement si Filyo est derrière un proxy de confiance. |
 | `FRONTEND_URL` | Non | `http://localhost:5173` | URL du frontend en développement (pour le CORS). Ignoré en production. |
 | `UPLOAD_TIMEOUT_MS` | Non | `1800000` (30 min) | Durée max d'une connexion d'upload en millisecondes. Min : 60 000 (1 min), Max : 7 200 000 (2 h). |
-| `REGISTER_DEFAULT_QUOTA` | Non | `500MB` | Quota de stockage attribué automatiquement aux nouveaux utilisateurs qui s'auto-inscrivent. Format : `500MB` ou `2GB`. |
+| `REGISTER_DEFAULT_QUOTA` | Non | `500MB` | Quota de stockage attribué automatiquement aux nouveaux utilisateurs qui s'auto-inscrivent. Format : `500MB` ou `2GB`. Mettre `0` ou laisser vide pour n'attribuer aucun quota par défaut. Sans effet sur les comptes créés par un administrateur. |
 | `TUS_EXPIRY` | Non | `1h` | Durée de vie d'un upload TUS incomplet (reprise possible pendant ce délai). Format : `30m`, `2h`. |
 | `TUS_CHUNK_MB` | Non | `90` | Taille des chunks TUS en Mo, utilisée quand l'option **Optimisation Proxies & CDN** est activée. |
 | `CLEANUP_INTERVAL` | Non | `1h` | Fréquence du job de nettoyage automatique. Format : `30m`, `2h`. |
