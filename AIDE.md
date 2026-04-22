@@ -231,6 +231,11 @@ Some proxies and CDNs (Cloudflare, Nginx, Vercel…) limit the maximum size of a
 ### Incomplete Upload Expiry
 An upload that started but never finished is kept for `TUS_EXPIRY` (default: 1 hour), then automatically deleted by the cleanup job.
 
+### Share link expiry on resume
+The share link expiry duration is sent to the server **at the time of the initial POST** (upload creation), embedded in the TUS metadata. This value is fixed for the lifetime of the upload slot — **changing the expiry field in the UI before resuming an interrupted upload has no effect**. The expiry chosen when the upload was first started will always be applied when the share link is created.
+
+> The share link's `expiresAt` is calculated from `Date.now()` at the moment the upload **completes** (not when it starts), using the duration provided at creation.
+
 ---
 
 ## 11. Automatic Cleanup
@@ -672,6 +677,11 @@ Certains proxies et CDN (Cloudflare, Nginx, Vercel…) limitent la taille maxima
 
 ### Expiration des uploads incomplets
 Un upload commencé mais jamais terminé est conservé pendant `TUS_EXPIRY` (défaut : 1 heure), puis supprimé automatiquement par le job de nettoyage.
+
+### Durée de vie du lien de partage en cas de reprise
+La durée d'expiration du lien de partage est envoyée au serveur **au moment du premier POST** (création du slot d'upload), intégrée dans les métadonnées TUS. Cette valeur est fixée pour toute la durée du slot — **modifier le champ d'expiration dans l'interface avant de reprendre un upload interrompu n'a aucun effet**. C'est toujours la durée choisie au lancement de l'upload initial qui sera appliquée à la création du lien.
+
+> La date `expiresAt` du lien est calculée à partir de `Date.now()` au moment où l'upload se **termine** (et non au démarrage), en ajoutant la durée transmise à la création.
 
 ---
 

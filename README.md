@@ -1,3 +1,7 @@
+🇬🇧 [English](#-english) &nbsp;|&nbsp; 🇫🇷 [Français](#-français)
+
+---
+
 # Filyo — Private & Local File Transfer / Transfert de fichiers local & privé
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPLv3-blue.svg)](LICENSE)
@@ -19,8 +23,7 @@
 ---
 
 
-<details open>
-<summary>🇬🇧 English</summary>
+<a id="-english"></a>
 
 > **Why Filyo?**
 > I created this application because I couldn't find a simple file-sharing tool that suited my needs. So, I decided to build my own, with the help of AI.
@@ -242,13 +245,10 @@ docker pull ghcr.io/mouette03/filyo:v1.0.3
 
 *licenses.csv auto-updated via GitHub Actions*
 
-</details>
-
 ---
 
 
-<details>
-<summary>🇫🇷 Français</summary>
+<a id="-français"></a>
 
 > **Pourquoi Filyo ?**
 > J'ai créé cette application car je n'ai pas trouvé d'outil de partage de fichiers simple qui me convenait. J'ai donc décidé de la développer moi-même, avec l'aide de l'IA.
@@ -461,5 +461,3 @@ docker pull ghcr.io/mouette03/filyo:v1.0.3
 - **100+ mainteneurs** open source !
 
 *licenses.csv auto-mis à jour via GitHub Actions*
-
-</details> 
