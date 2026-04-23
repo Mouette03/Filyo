@@ -95,6 +95,7 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
 
   // GET /api/upload-requests/:token/info - Info publique (pas d auth)
   app.get<{ Params: { token: string } }>('/:token/info', async (req, reply) => {
+    reply.header('Cache-Control', 'no-store')
     const request = await prisma.uploadRequest.findUnique({
       where: { token: req.params.token }
     })

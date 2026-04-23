@@ -28,6 +28,7 @@ export default function RequestUploadPage() {
   const [info, setInfo] = useState<RequestInfo | null>(null)
   const [status, setStatus] = useState<Status>('loading')
   const [error, setError] = useState('')
+  const [retryCount, setRetryCount] = useState(0)
   const [files, setFiles] = useState<File[]>([])
   const removeFile = (index: number) => setFiles(prev => prev.filter((_, i) => i !== index))
   const [uploaderName, setUploaderName] = useState('')
@@ -181,7 +182,7 @@ export default function RequestUploadPage() {
           setStatus('error')
         }
       })
-  }, [token])
+  }, [token, retryCount])
 
   // Bloquer navigation pendant upload en cours
   useEffect(() => {
@@ -399,6 +400,10 @@ export default function RequestUploadPage() {
             </div>
             <h2 className="text-xl font-bold mb-2">{status === 'expired' ? t('request.expired') : t('request.invalid')}</h2>
             <p className="[color:var(--text-50)] text-sm">{t(error)}</p>
+            <button
+              onClick={() => { setStatus('loading'); setRetryCount(c => c + 1) }}
+              className="mt-4 btn btn-secondary text-sm"
+            >{t('common.refresh')}</button>
           </div>
         )}
 

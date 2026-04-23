@@ -46,6 +46,7 @@ export default function SharePage() {
   const [info, setInfo] = useState<ShareInfo | null>(null)
   const [status, setStatus] = useState<Status>('loading')
   const [error, setError] = useState('')
+  const [retryCount, setRetryCount] = useState(0)
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
 
@@ -78,7 +79,7 @@ export default function SharePage() {
           setStatus('error')
         }
       })
-  }, [token])
+  }, [token, retryCount])
 
   // Téléchargement d'un fichier unique
   const handleDownloadSingle = async () => {
@@ -208,6 +209,10 @@ export default function SharePage() {
             </div>
             <h2 className="text-xl font-bold mb-2">{status === 'expired' ? t('share.expired') : t('share.invalid')}</h2>
             <p className="[color:var(--text-50)] text-sm">{t(error)}</p>
+            <button
+              onClick={() => { setStatus('loading'); setRetryCount(c => c + 1) }}
+              className="mt-4 btn btn-secondary text-sm"
+            >{t('common.refresh')}</button>
           </div>
         )}
 
