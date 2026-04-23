@@ -400,10 +400,12 @@ export default function RequestUploadPage() {
             </div>
             <h2 className="text-xl font-bold mb-2">{status === 'expired' ? t('request.expired') : t('request.invalid')}</h2>
             <p className="[color:var(--text-50)] text-sm">{t(error)}</p>
-            <button
-              onClick={() => { setStatus('loading'); setRetryCount(c => c + 1) }}
-              className="mt-4 btn btn-secondary text-sm"
-            >{t('common.refresh')}</button>
+            {status === 'expired' && (
+              <button
+                onClick={() => { setStatus('loading'); setRetryCount(c => c + 1) }}
+                className="mt-4 btn btn-secondary text-sm"
+              >{t('common.refresh')}</button>
+            )}
           </div>
         )}
 

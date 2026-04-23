@@ -194,7 +194,10 @@ export default function DashboardPage() {
         return { ...f, shares: f.shares.map(s => ({ ...s, active: newActive })) }
       }))
       toast.success(t('toast.shareToggled'))
-    } catch { toast.error(t('common.error')) }
+    } catch {
+      toast.error(t('common.error'))
+      await load()
+    }
   }
 
   const copyLink = async (prefix: 's' | 'r', token: string) => {
