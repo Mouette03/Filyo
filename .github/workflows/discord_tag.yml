@@ -19,34 +19,51 @@ jobs:
   notify:
     runs-on: ubuntu-latest
     steps:
-      - name: Envoyer notif Discord
-        env:
-          WEBHOOK_URL: ${{ secrets.DISCORD_TAG }}
-          TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || github.event.release.tag_name }}
-          BODY: ${{ github.event_name == 'workflow_dispatch' && inputs.release_body || github.event.release.body }}
-          RELEASE_URL: ${{ github.event_name == 'workflow_dispatch' && format('{0}/{1}/releases/tag/{2}', github.server_url, github.repository, inputs.tag_name) || github.event.release.html_url }}
-          REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+      - name: Préparer les variables
+        id: vars
         run: |
-          DESCRIPTION="${BODY}
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ inputs.tag_name }}" >> $GITHUB_OUTPUT
+            echo "release_url=${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ inputs.tag_name }}" >> $GITHUB_OUTPUT
+            # body sur une seule ligne pour éviter les problèmes multilignes
+            echo 'body=${{ inputs.release_body }}' >> $GITHUB_OUTPUT
+          else
+            echo "tag=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+            echo "release_url=${{ github.event.release.html_url }}" >> $GITHUB_OUTPUT
+            # Sauvegarde du body dans un fichier pour gérer le multilignes
+            cat << 'BODY_EOF' > /tmp/release_body.txt
+${{ github.event.release.body }}
+BODY_EOF
+          fi
 
-🏷️ **Tag :** [\`${TAG}\`](${REPO_URL}/releases/tag/${TAG})
-🐙 **Image Docker :** [Voir les versions du conteneur](https://github.com/Mouette03/Filyo/pkgs/container/filyo/versions)"
+      - name: Envoyer notif Discord
+        run: |
+          TAG="${{ steps.vars.outputs.tag }}"
+          RELEASE_URL="${{ steps.vars.outputs.release_url }}"
+          REPO_URL="${{ github.server_url }}/${{ github.repository }}"
 
-          curl -s -X POST "$WEBHOOK_URL" \
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            BODY="${{ inputs.release_body }}"
+          else
+            BODY=$(cat /tmp/release_body.txt)
+          fi
+
+          FOOTER="\n\n🏷️ **Tag :** [\`${TAG}\`](${REPO_URL}/releases/tag/${TAG})\n🐙 **Image Docker :** [Voir les versions du conteneur](https://github.com/Mouette03/Filyo/pkgs/container/filyo/versions)"
+
+          curl -s -X POST "${{ secrets.DISCORD_TAG }}" \
             -H "Content-Type: application/json" \
             -d "$(jq -n \
               --arg tag "$TAG" \
-              --arg desc "$DESCRIPTION" \
+              --arg body "$BODY" \
+              --arg footer "$FOOTER" \
               --arg url "$RELEASE_URL" \
               '{
                 username: "GitHub Release Bot",
                 embeds: [{
                   title: ("🚀 Release " + $tag),
-                  description: $desc,
+                  description: ($body + $footer),
                   url: $url,
                   color: 5814783,
-                  footer: {
-                    text: "Filyo • GitHub Release"
-                  }
+                  footer: { text: "Filyo • GitHub Release" }
                 }]
               }')"
