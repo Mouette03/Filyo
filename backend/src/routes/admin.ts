@@ -32,12 +32,13 @@ export async function adminRoutes(app: FastifyInstance) {
 
   // GET /api/admin/stats
   app.get('/stats', authHook, async () => {
-    const [filesCount, sharesCount, uploadRequestsCount, receivedFilesCount] = await Promise.all([
-      prisma.file.count(),
-      prisma.share.count(),
+    const [filesWithSharesRaw, uploadRequestsCount, receivedFilesCount, filesCount] = await Promise.all([
+      prisma.file.findMany({ where: { shares: { some: {} } }, select: { id: true, batchToken: true } }),
       prisma.uploadRequest.count(),
-      prisma.receivedFile.count()
+      prisma.receivedFile.count(),
+      prisma.file.count()
     ])
+    const sharesCount = new Set(filesWithSharesRaw.map((f: { id: string; batchToken: string | null }) => f.batchToken ?? f.id)).size
 
     const totalSize = await prisma.file.aggregate({ _sum: { size: true } })
     const totalReceivedSize = await prisma.receivedFile.aggregate({ _sum: { size: true } })

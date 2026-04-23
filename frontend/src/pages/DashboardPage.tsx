@@ -102,12 +102,13 @@ export default function DashboardPage() {
     // On vide le cache local puis on refetch pour les panels déjà ouverts
     setReceivedFiles({})
     try {
-      const [filesRes, reqRes, statsRes] = await Promise.all([
-        listFiles(), listUploadRequests(), ...(isAdmin ? [getStats()] : [Promise.resolve(null)])
+      const [filesRes, reqRes, statsRes, quotaRes] = await Promise.all([
+        listFiles(), listUploadRequests(), ...(isAdmin ? [getStats()] : [Promise.resolve(null)]), getMyQuota()
       ])
       setFiles(filesRes.data)
       setRequests(reqRes.data)
       if (statsRes) setStats((statsRes as any).data)
+      setQuota((quotaRes as any).data)
       // Refetch uniquement si la demande ouverte existe toujours
       const currentExpanded = expandedRequestRef.current
       const expandedStillExists =
@@ -138,9 +139,7 @@ export default function DashboardPage() {
 
   useEffect(() => { load() }, [])
 
-  useEffect(() => {
-    getMyQuota().then(res => setQuota(res.data)).catch(() => {})
-  }, [])
+
 
   const handleDeleteFile = async (id: string) => {
     try {
@@ -378,8 +377,8 @@ export default function DashboardPage() {
         <>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
             {[
-              { label: t('dash.statFilesSent'), value: stats.filesCount },
               { label: t('dash.statShares'), value: stats.sharesCount },
+              { label: t('dash.statFilesSent'), value: stats.filesCount },
               { label: t('dash.statRequests'), value: stats.uploadRequestsCount },
               { label: t('dash.statReceived'), value: stats.receivedFilesCount },
               { label: t('dash.statSizeSent'), value: formatBytes(stats.totalSize) },
