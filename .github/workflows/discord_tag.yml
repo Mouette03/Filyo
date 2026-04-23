@@ -27,18 +27,22 @@ jobs:
           RELEASE_URL: ${{ github.event_name == 'workflow_dispatch' && format('{0}/{1}/releases/tag/{2}', github.server_url, github.repository, inputs.tag_name) || github.event.release.html_url }}
           REPO_URL: ${{ github.server_url }}/${{ github.repository }}
         run: |
+          DESCRIPTION="${BODY}
+
+🏷️ **Tag :** [\`${TAG}\`](${REPO_URL}/releases/tag/${TAG})
+🐙 **Image Docker :** [Voir les versions du conteneur](https://github.com/Mouette03/Filyo/pkgs/container/filyo/versions)"
+
           curl -s -X POST "$WEBHOOK_URL" \
             -H "Content-Type: application/json" \
             -d "$(jq -n \
               --arg tag "$TAG" \
-              --arg body "$BODY" \
+              --arg desc "$DESCRIPTION" \
               --arg url "$RELEASE_URL" \
-              --arg repo "$REPO_URL" \
               '{
                 username: "GitHub Release Bot",
                 embeds: [{
                   title: ("🚀 Release " + $tag),
-                  description: ($body + "\n\n🏷️ **Tag :** [`" + $tag + "`](" + $repo + "/releases/tag/" + $tag + ")\n🐙 **Image Docker :** [Voir les versions du conteneur](https://github.com/Mouette03/Filyo/pkgs/container/filyo)"),
+                  description: $desc,
                   url: $url,
                   color: 5814783,
                   footer: {
