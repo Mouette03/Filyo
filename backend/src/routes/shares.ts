@@ -23,6 +23,7 @@ function getDisplayName(originalName: string, hideFilenames: boolean, lang = 'fr
 export async function shareRoutes(app: FastifyInstance) {
   // GET /api/shares/:token/info - Info publique (sans téléchargement)
   app.get<{ Params: { token: string } }>('/:token/info', async (req, reply) => {
+    reply.header('Cache-Control', 'no-store')
     const share = await prisma.share.findUnique({
       where: { token: req.params.token },
       include: { file: { include: { shares: true } } }
