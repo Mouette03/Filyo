@@ -455,7 +455,7 @@ export default function DashboardPage() {
             )
           })()}
 
-          {!stats.disk && <div className="mb-8" />}
+          {!stats.disk && <div className="mb-4" />}
         </>
       )}
 
@@ -467,7 +467,7 @@ export default function DashboardPage() {
         const qBar = qPct >= 90 ? 'bg-red-500' : qPct >= 70 ? 'bg-amber-500' : 'bg-brand-500'
         const qText = qPct >= 90 ? 'text-red-400' : qPct >= 70 ? 'text-amber-400' : 'text-brand-400'
         return (
-          <div className="card mb-4 py-3 px-4">
+          <div className="card mb-6 py-3 px-4">
             <div className="flex items-center gap-3 mb-2">
               <HardDrive size={14} className="text-brand-400 flex-shrink-0" />
               <p className="text-xs font-medium text-white/70 flex-1">{t('dash.storageQuota')}</p>
