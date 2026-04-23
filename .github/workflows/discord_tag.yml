@@ -2,68 +2,18 @@ name: 🚀 Notif Discord Release
 
 on:
   release:
-    types: [published]
-  workflow_dispatch:
-    inputs:
-      tag_name:
-        description: "Nom du tag (ex: v1.2.3)"
-        required: true
-        type: string
-      release_body:
-        description: "Description de la release"
-        required: false
-        default: "Déclenchement manuel de la notification."
-        type: string
+    types: [published]   # se déclenche à chaque nouvelle release/tag
 
 jobs:
   notify:
     runs-on: ubuntu-latest
     steps:
-      - name: Préparer les variables
-        id: vars
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "tag=${{ inputs.tag_name }}" >> $GITHUB_OUTPUT
-            echo "release_url=${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ inputs.tag_name }}" >> $GITHUB_OUTPUT
-            # body sur une seule ligne pour éviter les problèmes multilignes
-            echo 'body=${{ inputs.release_body }}' >> $GITHUB_OUTPUT
-          else
-            echo "tag=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
-            echo "release_url=${{ github.event.release.html_url }}" >> $GITHUB_OUTPUT
-            # Sauvegarde du body dans un fichier pour gérer le multilignes
-            cat << 'BODY_EOF' > /tmp/release_body.txt
-${{ github.event.release.body }}
-BODY_EOF
-          fi
-
       - name: Envoyer notif Discord
-        run: |
-          TAG="${{ steps.vars.outputs.tag }}"
-          RELEASE_URL="${{ steps.vars.outputs.release_url }}"
-          REPO_URL="${{ github.server_url }}/${{ github.repository }}"
-
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            BODY="${{ inputs.release_body }}"
-          else
-            BODY=$(cat /tmp/release_body.txt)
-          fi
-
-          FOOTER="\n\n🏷️ **Tag :** [\`${TAG}\`](${REPO_URL}/releases/tag/${TAG})\n🐙 **Image Docker :** [Voir les versions du conteneur](https://github.com/Mouette03/Filyo/pkgs/container/filyo/versions)"
-
-          curl -s -X POST "${{ secrets.DISCORD_TAG }}" \
-            -H "Content-Type: application/json" \
-            -d "$(jq -n \
-              --arg tag "$TAG" \
-              --arg body "$BODY" \
-              --arg footer "$FOOTER" \
-              --arg url "$RELEASE_URL" \
-              '{
-                username: "GitHub Release Bot",
-                embeds: [{
-                  title: ("🚀 Release " + $tag),
-                  description: ($body + $footer),
-                  url: $url,
-                  color: 5814783,
-                  footer: { text: "Filyo • GitHub Release" }
-                }]
-              }')"
+        uses: tsickert/discord-webhook@v6.0.0
+        with:
+          webhook-url: ${{ secrets.DISCORD_TAG }}
+          embed-title: "🚀 Release ${{ github.event.release.tag_name }}"
+          embed-description: ${{ github.event.release.body }}
+          embed-url: ${{ github.event.release.html_url }}
+          embed-color: 5814783
+          username: "GitHub Release Bot"
