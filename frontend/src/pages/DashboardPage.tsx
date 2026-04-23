@@ -554,9 +554,9 @@ export default function DashboardPage() {
                         {t('dash.batchGroupSize', { count: String(bf.length), size: formatBytes(String(totalSize)) })}
                         {' · '}{formatDate(firstFile.uploadedAt)}
                         {firstFile.expiresAt
-                          ? new Date(firstFile.expiresAt) <= new Date()
-                            ? <span className="text-red-400"> · {t('dash.expired')}</span>
-                            : ` · ${t('dash.expires')} ${formatDate(firstFile.expiresAt)}${formatCountdown(firstFile.expiresAt, lang) ? ` (${t('dash.expiresIn')} ${formatCountdown(firstFile.expiresAt, lang)})` : ''}`
+                          ? new Date(firstFile.expiresAt) > new Date()
+                            ? ` · ${t('dash.expires')} ${formatDate(firstFile.expiresAt)}${formatCountdown(firstFile.expiresAt, lang) ? ` (${t('dash.expiresIn')} ${formatCountdown(firstFile.expiresAt, lang)})` : ''}`
+                            : ''
                           : ` · ${t('dash.noExpiry')}`}
                       </p>
                     </div>
@@ -823,9 +823,9 @@ export default function DashboardPage() {
                         ? <span className={f.downloads >= f.maxDownloads ? 'text-red-400' : ''}>{f.downloads}/{f.maxDownloads} {t('dash.dl')}</span>
                         : <>{f.downloads} {t('dash.dl')}</>}
                       {f.expiresAt
-                        ? new Date(f.expiresAt) <= new Date()
-                          ? <span className="text-red-400"> · {t('dash.expired')}</span>
-                          : ` · ${t('dash.expires')} ${formatDate(f.expiresAt)}${formatCountdown(f.expiresAt, lang) ? ` (${t('dash.expiresIn')} ${formatCountdown(f.expiresAt, lang)})` : ''}`
+                        ? new Date(f.expiresAt) > new Date()
+                          ? ` · ${t('dash.expires')} ${formatDate(f.expiresAt)}${formatCountdown(f.expiresAt, lang) ? ` (${t('dash.expiresIn')} ${formatCountdown(f.expiresAt, lang)})` : ''}`
+                          : ''
                         : ` · ${t('dash.noExpiry')}`}
                     </p>
                   </div>
