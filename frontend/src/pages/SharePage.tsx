@@ -250,6 +250,7 @@ export default function SharePage() {
                     {info.expiresAt && (
                       <div className="[background:var(--surface-700)] rounded-xl px-3 py-2.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
                         <Clock size={13} className="[color:var(--text-40)] flex-shrink-0" />
+                        <span className="text-xs [color:var(--text-40)]">{t('share.expires')}</span>
                         <span className="text-sm font-medium">{formatDate(info.expiresAt)}</span>
                         {formatCountdown(info.expiresAt, lang) && (
                           <span className="text-xs [color:var(--text-40)]">· {t('share.expiresIn')} {formatCountdown(info.expiresAt, lang)}</span>
@@ -366,6 +367,7 @@ export default function SharePage() {
                     {info.expiresAt && (
                       <div className="[background:var(--surface-700)] rounded-xl px-3 py-2.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
                         <Clock size={13} className="[color:var(--text-40)] flex-shrink-0" />
+                        <span className="text-xs [color:var(--text-40)]">{t('share.expires')}</span>
                         <span className="text-sm font-medium">{formatDate(info.expiresAt)}</span>
                         {formatCountdown(info.expiresAt, lang) && (
                           <span className="text-xs [color:var(--text-40)]">· {t('share.expiresIn')} {formatCountdown(info.expiresAt, lang)}</span>
