@@ -38,21 +38,9 @@ jobs:
                 username: "GitHub Release Bot",
                 embeds: [{
                   title: ("🚀 Release " + $tag),
-                  description: $body,
+                  description: ($body + "\n\n🏷️ **Tag :** [`" + $tag + "`](" + $repo + "/releases/tag/" + $tag + ")\n🐙 **Image Docker :** [Voir les versions du conteneur](https://github.com/Mouette03/Filyo/pkgs/container/filyo/versions)"),
                   url: $url,
                   color: 5814783,
-                  fields: [
-                    {
-                      name: "🏷️ Tag",
-                      value: ("[`" + $tag + "`](" + $repo + "/releases/tag/" + $tag + ")"),
-                      inline: true
-                    },
-                    {
-                      name: "🐳 Image Docker",
-                      value: "[Voir les versions du conteneur](https://github.com/Mouette03/Filyo/pkgs/container/filyo/versions)",
-                      inline: true
-                    }
-                  ],
                   footer: {
                     text: "Filyo • GitHub Release"
                   }
