@@ -2,7 +2,7 @@ name: 🚀 Notif Discord Release
 
 on:
   release:
-    types: [published]   # se déclenche à chaque nouvelle release/tag
+    types: [published]
 
 jobs:
   notify:
@@ -13,7 +13,10 @@ jobs:
         with:
           webhook-url: ${{ secrets.DISCORD_TAG }}
           embed-title: "🚀 Release ${{ github.event.release.tag_name }}"
-          embed-description: ${{ github.event.release.body }}
+          embed-description: |
+            ${{ github.event.release.body }}
+
+            🐙 **Image Docker :** [ghcr.io/mouette03/filyo](https://github.com/Mouette03/Filyo/pkgs/container/filyo)
           embed-url: ${{ github.event.release.html_url }}
           embed-color: 5814783
           username: "GitHub Release Bot"
