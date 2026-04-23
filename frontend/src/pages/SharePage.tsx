@@ -70,6 +70,9 @@ export default function SharePage() {
         } else if (code === 'SHARE_LIMIT_REACHED') {
           setError('share.limitReachedDesc')
           setStatus('expired')
+        } else if (code === 'SHARE_INACTIVE') {
+          setError('share.inactiveDesc')
+          setStatus('expired')
         } else {
           setError('share.invalidDesc')
           setStatus('error')

@@ -513,10 +513,13 @@ export const fr = {
   'resetpwd.invalidToken': 'Ce lien est invalide ou a expiré. Refaites une demande.',
   'toast.passwordResetDone': 'Mot de passe réinitialisé avec succès',
 
-  'share.expiredDesc': 'Ce lien de partage a expiré.',
+  'share.expiredDesc': 'Ce lien est expiré ou a été désactivé.',
   'share.limitReachedDesc': 'La limite de téléchargements a été atteinte.',
+  'share.inactiveDesc': 'Ce lien a été désactivé par son propriétaire.',
   'share.invalidDesc': "Ce lien n'existe pas ou a été supprimé.",
-  'request.expiredDesc': 'Ce lien de dépôt a expiré.',
+  'request.expiredDesc': 'Ce lien de dépôt est expiré ou a été désactivé.',
   'request.limitReachedDesc': 'La limite de fichiers a été atteinte.',
+  'request.inactiveDesc': 'Ce lien de dépôt a été désactivé par son propriétaire.',
   'request.invalidDesc': "Ce lien n'existe pas ou a été désactivé.",
+  'toast.shareToggled': 'Partage mis à jour',
 }

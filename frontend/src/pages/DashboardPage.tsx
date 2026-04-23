@@ -4,7 +4,7 @@ import toast from 'react-hot-toast'
 import { useAuthStore } from '../stores/useAuthStore'
 import {
   listFiles, deleteFile, listUploadRequests,
-  deleteUploadRequest, toggleUploadRequest, getStats,
+  deleteUploadRequest, toggleUploadRequest, toggleShare, getStats,
   runCleanup, getReceivedFiles, getReceivedFileDlToken,
   sendShareByEmail, sendRequestByEmail, updateFileExpiry,
   updateFileMaxDownloads, updateRequestExpiry, getMyQuota
@@ -15,7 +15,7 @@ import { useT } from '../i18n'
 interface FileItem {
   id: string; originalName: string; mimeType: string; size: string
   uploadedAt: string; expiresAt: string | null; downloads: number; maxDownloads: number | null
-  shares: { token: string; downloads: number; maxDownloads: number | null }[]
+  shares: { token: string; downloads: number; maxDownloads: number | null; active: boolean }[]
   batchToken?: string | null
   hideFilenames?: boolean
 }
@@ -169,6 +169,31 @@ export default function DashboardPage() {
     try {
       const res = await toggleUploadRequest(id)
       setRequests(prev => prev.map(r => r.id === id ? { ...r, active: res.data.active } : r))
+    } catch { toast.error(t('common.error')) }
+  }
+
+  const handleToggleShare = async (token: string) => {
+    try {
+      const res = await toggleShare(token)
+      setFiles(prev => prev.map(f => ({
+        ...f,
+        shares: f.shares.map(s => s.token === token ? { ...s, active: res.data.active } : s)
+      })))
+      toast.success(t('toast.shareToggled'))
+    } catch { toast.error(t('common.error')) }
+  }
+
+  const handleToggleShareBatch = async (batchFiles: FileItem[]) => {
+    const firstShare = batchFiles[0]?.shares?.[0]
+    if (!firstShare) return
+    const newActive = !firstShare.active
+    try {
+      await Promise.all(batchFiles.map(f => f.shares[0] ? toggleShare(f.shares[0].token) : Promise.resolve()))
+      setFiles(prev => prev.map(f => {
+        if (!f.batchToken || f.batchToken !== batchFiles[0].batchToken) return f
+        return { ...f, shares: f.shares.map(s => ({ ...s, active: newActive })) }
+      }))
+      toast.success(t('toast.shareToggled'))
     } catch { toast.error(t('common.error')) }
   }
 
@@ -518,6 +543,12 @@ export default function DashboardPage() {
                             <EyeOff size={10} /> {t('dash.batchHideFilenames')}
                           </span>
                         )}
+                        {firstShare && (() => {
+                          const isExpired = !!(firstFile.expiresAt && new Date(firstFile.expiresAt) <= new Date())
+                          if (!firstShare.active) return <span className="flex-shrink-0 badge-red">{t('common.inactive')}</span>
+                          if (isExpired) return <span className="flex-shrink-0 badge-orange">{t('dash.expired')}</span>
+                          return <span className="flex-shrink-0 badge-green">{t('common.active')}</span>
+                        })()}
                       </div>
                       <p className="text-xs text-white/40 mt-0.5">
                         {t('dash.batchGroupSize', { count: String(bf.length), size: formatBytes(String(totalSize)) })}
@@ -558,6 +589,12 @@ export default function DashboardPage() {
                             className={`btn-icon ${maxDlEditId === batchToken ? '!bg-brand-500/20 !text-brand-400 !border-brand-500/30' : ''}`}
                             title={t('dash.maxDlEdit')}>
                             <Hash size={13} />
+                          </button>
+                          <button
+                            onClick={() => handleToggleShareBatch(bf)}
+                            className="btn-icon"
+                            title={firstShare.active ? t('dash.disable') : t('dash.enable')}>
+                            {firstShare.active ? <ToggleRight size={15} className="text-brand-400" /> : <ToggleLeft size={15} />}
                           </button>
                         </>
                       )}
@@ -620,6 +657,12 @@ export default function DashboardPage() {
                           }}
                           className={`btn-icon flex-shrink-0 ${maxDlEditId === batchToken ? '!bg-brand-500/20 !text-brand-400 !border-brand-500/30' : ''}`}>
                           <Hash size={13} />
+                        </button>
+                        <button
+                          onClick={() => handleToggleShareBatch(bf)}
+                          className="btn-icon flex-shrink-0"
+                          title={firstShare.active ? t('dash.disable') : t('dash.enable')}>
+                          {firstShare.active ? <ToggleRight size={15} className="text-brand-400" /> : <ToggleLeft size={15} />}
                         </button>
                         <button onClick={() => handleDeleteBatch(bf)} className="btn-icon-danger flex-shrink-0">
                           <Trash2 size={13} />
@@ -762,6 +805,12 @@ export default function DashboardPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 min-w-0">
                       <p className="font-medium truncate">{f.originalName}</p>
+                      {share && (() => {
+                        const isExpired = !!(f.expiresAt && new Date(f.expiresAt) <= new Date())
+                        if (!share.active) return <span className="flex-shrink-0 badge-red">{t('common.inactive')}</span>
+                        if (isExpired) return <span className="flex-shrink-0 badge-orange">{t('dash.expired')}</span>
+                        return <span className="flex-shrink-0 badge-green">{t('common.active')}</span>
+                      })()}
                       {f.maxDownloads !== null && f.downloads >= f.maxDownloads && (
                         <span className="flex-shrink-0 flex items-center gap-1 text-xs font-medium text-red-400 bg-red-500/15 px-2 py-0.5 rounded-full">
                           <AlertTriangle size={10} /> {t('dash.limitReached')}
@@ -811,6 +860,12 @@ export default function DashboardPage() {
                           className={`btn-icon ${maxDlEditId === f.id ? '!bg-brand-500/20 !text-brand-400 !border-brand-500/30' : ''}`}
                           title={t('dash.maxDlEdit')}>
                           <Hash size={13} />
+                        </button>
+                        <button
+                          onClick={() => handleToggleShare(share.token)}
+                          className="btn-icon"
+                          title={share.active ? t('dash.disable') : t('dash.enable')}>
+                          {share.active ? <ToggleRight size={15} className="text-brand-400" /> : <ToggleLeft size={15} />}
                         </button>
                       </>
                     )}
@@ -864,6 +919,12 @@ export default function DashboardPage() {
                         }}
                         className={`btn-icon flex-shrink-0 ${maxDlEditId === f.id ? '!bg-brand-500/20 !text-brand-400 !border-brand-500/30' : ''}`}>
                         <Hash size={13} />
+                      </button>
+                      <button
+                        onClick={() => handleToggleShare(share.token)}
+                        className="btn-icon flex-shrink-0"
+                        title={share.active ? t('dash.disable') : t('dash.enable')}>
+                        {share.active ? <ToggleRight size={15} className="text-brand-400" /> : <ToggleLeft size={15} />}
                       </button>
                     </>
                   )}

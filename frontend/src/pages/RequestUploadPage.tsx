@@ -173,6 +173,9 @@ export default function RequestUploadPage() {
         } else if (code === 'REQUEST_LIMIT_REACHED') {
           setError('request.limitReachedDesc')
           setStatus('expired')
+        } else if (code === 'REQUEST_INACTIVE') {
+          setError('request.inactiveDesc')
+          setStatus('expired')
         } else {
           setError('request.invalidDesc')
           setStatus('error')

@@ -78,6 +78,7 @@ model Share {
   maxDownloads Int?
   password  String?
   label     String?
+  active    Boolean  @default(true)
 }
 
 // Partage inversé : lien pour recevoir des fichiers d'un tiers

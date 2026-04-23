@@ -98,11 +98,20 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
     const request = await prisma.uploadRequest.findUnique({
       where: { token: req.params.token }
     })
-    if (!request || !request.active) {
+    if (!request) {
       return reply.code(404).send({ code: 'REQUEST_NOT_FOUND' })
+    }
+    if (!request.active) {
+      return reply.code(410).send({ code: 'REQUEST_INACTIVE' })
     }
     if (request.expiresAt && request.expiresAt < new Date()) {
       return reply.code(410).send({ code: 'REQUEST_EXPIRED' })
+    }
+    if (request.maxFiles) {
+      const receivedCount = await prisma.receivedFile.count({ where: { uploadRequestId: request.id } })
+      if (receivedCount >= request.maxFiles) {
+        return reply.code(410).send({ code: 'REQUEST_LIMIT_REACHED' })
+      }
     }
 
     return {
