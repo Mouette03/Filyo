@@ -430,7 +430,7 @@ export default function SettingsPage() {
               id="settings-max-file-size"
               name="maxFileSizeMb"
               type="number"
-              min="0"
+              min="0.01"
               step="0.01"
               value={maxFileSizeMb}
               onChange={e => setMaxFileSizeMb(e.target.value)}

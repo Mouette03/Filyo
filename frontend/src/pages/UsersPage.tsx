@@ -284,7 +284,7 @@ export default function UsersPage() {
                 <div className="sm:col-span-2">
                   <label className="text-xs text-white/50 mb-1.5 block uppercase tracking-wider">{t('users.quotaLabel')}</label>
                   <div className="flex gap-2">
-                    <input type="number" min="0" step="0.01" value={newQuotaMB} onChange={e => setNewQuotaMB(e.target.value)} placeholder={t('users.quotaPlaceholder')} className="input flex-1" />
+                    <input type="number" min="0.01" step="0.01" value={newQuotaMB} onChange={e => setNewQuotaMB(e.target.value)} placeholder={t('users.quotaPlaceholder')} className="input flex-1" />
                     <select value={newQuotaUnit} onChange={e => setNewQuotaUnit(e.target.value as 'MB' | 'GB')} className="input bg-surface-700 w-20">
                       <option value="MB">MB</option>
                       <option value="GB">GB</option>
@@ -346,7 +346,7 @@ export default function UsersPage() {
                         <div>
                           <label className="text-xs text-white/50 mb-1.5 block">{t('users.quotaLabel')}</label>
                           <div className="flex gap-2">
-                            <input type="number" min="0" step="0.01" value={editQuotaMB} onChange={e => setEditQuotaMB(e.target.value)} placeholder={t('users.quotaPlaceholder')} className="input text-sm py-2 flex-1 min-w-0" />
+                            <input type="number" min="0.01" step="0.01" value={editQuotaMB} onChange={e => setEditQuotaMB(e.target.value)} placeholder={t('users.quotaPlaceholder')} className="input text-sm py-2 flex-1 min-w-0" />
                             <select value={editQuotaUnit} onChange={e => setEditQuotaUnit(e.target.value as 'MB' | 'GB')} className="input bg-surface-700 text-sm py-2 w-20 flex-shrink-0">
                               <option value="MB">MB</option>
                               <option value="GB">GB</option>
@@ -388,7 +388,7 @@ export default function UsersPage() {
                         {(() => {
                           const usedBytes = parseInt(u.storageUsedBytes || '0')
                           const quotaBytes = u.storageQuotaBytes ? parseInt(u.storageQuotaBytes) : null
-                          if (quotaBytes === null) return (
+                          if (quotaBytes === null || quotaBytes === 0) return (
                             <p className="text-xs text-white/25 mt-0.5">{formatBytes(usedBytes)} · {t('users.quotaUnlimited')}</p>
                           )
                           const pct = Math.min(100, Math.round(usedBytes / quotaBytes * 100))
