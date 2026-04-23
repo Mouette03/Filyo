@@ -423,7 +423,7 @@ export default function DashboardPage() {
             const pct = Math.round((usedBytes / totalBytes) * 100)
             const barColor = pct >= 90 ? 'bg-red-500' : pct >= 70 ? 'bg-amber-500' : 'bg-brand-500'
             return (
-              <div className="card mb-8">
+              <div className="card mb-4">
                 <div className="flex items-center gap-3 sm:gap-5">
                   <div className="w-10 h-10 bg-brand-500/15 rounded-xl flex items-center justify-center flex-shrink-0">
                     <HardDrive size={18} className="text-brand-400" />
@@ -455,7 +455,7 @@ export default function DashboardPage() {
             )
           })()}
 
-          {!stats.disk && <div className="mb-4" />}
+          {!stats.disk && <div className="mb-8" />}
         </>
       )}
 
