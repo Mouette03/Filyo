@@ -238,24 +238,20 @@ export default function SharePage() {
 
                 {/* Meta expiration / téléchargements */}
                 {(info.expiresAt || info.maxDownloads) && (
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
                     {info.expiresAt && (
-                      <div className="[background:var(--surface-700)] rounded-xl px-3 py-2.5">
-                        <p className="text-xs [color:var(--text-40)] flex items-center gap-1 mb-0.5">
-                          <Clock size={10} /> {t('share.expires')}
-                        </p>
-                        <p className="text-sm font-medium">{formatDate(info.expiresAt)}</p>
+                      <div className="[background:var(--surface-700)] rounded-xl px-3 py-2.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                        <Clock size={13} className="[color:var(--text-40)] flex-shrink-0" />
+                        <span className="text-sm font-medium">{formatDate(info.expiresAt)}</span>
                         {formatCountdown(info.expiresAt, lang) && (
-                          <p className="text-xs [color:var(--text-40)] mt-0.5">{t('share.expiresIn')} {formatCountdown(info.expiresAt, lang)}</p>
+                          <span className="text-xs [color:var(--text-40)]">· {t('share.expiresIn')} {formatCountdown(info.expiresAt, lang)}</span>
                         )}
                       </div>
                     )}
                     {info.maxDownloads && (
-                      <div className="[background:var(--surface-700)] rounded-xl px-3 py-2.5">
-                        <p className="text-xs [color:var(--text-40)] flex items-center gap-1 mb-0.5">
-                          <Download size={10} /> {t('share.downloads')}
-                        </p>
-                        <p className="text-sm font-medium">{info.downloads} / {info.maxDownloads}</p>
+                      <div className="[background:var(--surface-700)] rounded-xl px-3 py-2.5 flex items-center gap-2">
+                        <Download size={13} className="[color:var(--text-40)] flex-shrink-0" />
+                        <span className="text-sm font-medium">{info.downloads} / {info.maxDownloads} {t('share.downloads')}</span>
                       </div>
                     )}
                   </div>
@@ -357,33 +353,31 @@ export default function SharePage() {
                 </div>
 
                 {/* Meta */}
-                <div className="grid grid-cols-2 gap-3">
-                  {info.expiresAt && (
-                    <div className="[background:var(--surface-700)] rounded-xl px-3 py-2.5">
-                      <p className="text-xs [color:var(--text-40)] flex items-center gap-1 mb-0.5">
-                        <Clock size={10} /> {t('share.expires')}
-                      </p>
-                      <p className="text-sm font-medium">{formatDate(info.expiresAt)}</p>
-                      {formatCountdown(info.expiresAt, lang) && (
-                        <p className="text-xs [color:var(--text-40)] mt-0.5">{t('share.expiresIn')} {formatCountdown(info.expiresAt, lang)}</p>
-                      )}
-                    </div>
-                  )}
-                  {info.maxDownloads && (
-                    <div className="[background:var(--surface-700)] rounded-xl px-3 py-2.5">
-                      <p className="text-xs [color:var(--text-40)] flex items-center gap-1 mb-0.5">
-                        <Download size={10} /> {t('share.downloads')}
-                      </p>
-                      <p className="text-sm font-medium">{info.downloads} / {info.maxDownloads}</p>
-                    </div>
-                  )}
-                  {info.hasPassword && (
-                    <div className="col-span-2 bg-orange-500/10 border border-orange-500/20 rounded-xl px-3 py-2.5 flex items-center gap-2">
-                      <Lock size={14} className="text-orange-400" />
-                      <p className="text-sm text-orange-300">{t('share.passwordProtected')}</p>
-                    </div>
-                  )}
-                </div>
+                {(info.expiresAt || info.maxDownloads || info.hasPassword) && (
+                  <div className="space-y-2">
+                    {info.expiresAt && (
+                      <div className="[background:var(--surface-700)] rounded-xl px-3 py-2.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                        <Clock size={13} className="[color:var(--text-40)] flex-shrink-0" />
+                        <span className="text-sm font-medium">{formatDate(info.expiresAt)}</span>
+                        {formatCountdown(info.expiresAt, lang) && (
+                          <span className="text-xs [color:var(--text-40)]">· {t('share.expiresIn')} {formatCountdown(info.expiresAt, lang)}</span>
+                        )}
+                      </div>
+                    )}
+                    {info.maxDownloads && (
+                      <div className="[background:var(--surface-700)] rounded-xl px-3 py-2.5 flex items-center gap-2">
+                        <Download size={13} className="[color:var(--text-40)] flex-shrink-0" />
+                        <span className="text-sm font-medium">{info.downloads} / {info.maxDownloads} {t('share.downloads')}</span>
+                      </div>
+                    )}
+                    {info.hasPassword && (
+                      <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl px-3 py-2.5 flex items-center gap-2">
+                        <Lock size={14} className="text-orange-400 flex-shrink-0" />
+                        <p className="text-sm text-orange-300">{t('share.passwordProtected')}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Password input */}
                 {showPassword && (
