@@ -2,18 +2,48 @@ name: 🚀 Notif Discord Release
 
 on:
   release:
-    types: [published]   # se déclenche à chaque nouvelle release/tag
+    types: [published]
 
 jobs:
   notify:
     runs-on: ubuntu-latest
     steps:
       - name: Envoyer notif Discord
-        uses: tsickert/discord-webhook@v6.0.0
-        with:
-          webhook-url: ${{ secrets.DISCORD_TAG }}
-          embed-title: "🚀 Release ${{ github.event.release.tag_name }}"
-          embed-description: ${{ github.event.release.body }}
-          embed-url: ${{ github.event.release.html_url }}
-          embed-color: 5814783
-          username: "GitHub Release Bot"
+        env:
+          WEBHOOK_URL: ${{ secrets.DISCORD_TAG }}
+          TAG: ${{ github.event.release.tag_name }}
+          BODY: ${{ github.event.release.body }}
+          RELEASE_URL: ${{ github.event.release.html_url }}
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+        run: |
+          curl -s -X POST "$WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n \
+              --arg tag "$TAG" \
+              --arg body "$BODY" \
+              --arg url "$RELEASE_URL" \
+              --arg repo "$REPO_URL" \
+              '{
+                username: "GitHub Release Bot",
+                embeds: [{
+                  title: ("🚀 Release " + $tag),
+                  description: $body,
+                  url: $url,
+                  color: 5814783,
+                  fields: [
+                    {
+                      name: "🏷️ Tag",
+                      value: ("[`" + $tag + "`](" + $repo + "/releases/tag/" + $tag + ")"),
+                      inline: true
+                    },
+                    {
+                      name: "🐳 Image Docker",
+                      value: "[Voir les versions du conteneur](https://github.com/Mouette03/Filyo/pkgs/container/filyo/versions)",
+                      inline: true
+                    }
+                  ],
+                  footer: {
+                    text: "Filyo • GitHub Release"
+                  }
+                }]
+              }')"
