@@ -60,12 +60,27 @@ export default function SettingsPage() {
   useEffect(() => { setCleanupAfterDays(settings.cleanupAfterDays) }, [settings.cleanupAfterDays])
 
   // Taille max fichier
-  const [maxFileSizeMb, setMaxFileSizeMb] = useState(
-    settings.maxFileSizeBytes ? String(Math.round(parseInt(settings.maxFileSizeBytes) / (1024 * 1024))) : ''
-  )
+  const [maxFileSizeUnit, setMaxFileSizeUnit] = useState<'MB' | 'GB'>(() => {
+    if (!settings.maxFileSizeBytes) return 'MB'
+    return parseInt(settings.maxFileSizeBytes) >= 1024 * 1024 * 1024 ? 'GB' : 'MB'
+  })
+  const [maxFileSizeMb, setMaxFileSizeMb] = useState(() => {
+    if (!settings.maxFileSizeBytes) return ''
+    const bytes = parseInt(settings.maxFileSizeBytes)
+    if (bytes >= 1024 * 1024 * 1024) return String(parseFloat((bytes / (1024 * 1024 * 1024)).toFixed(2)))
+    return String(parseFloat((bytes / (1024 * 1024)).toFixed(2)))
+  })
   const [savingMaxFileSize, setSavingMaxFileSize] = useState(false)
   useEffect(() => {
-    setMaxFileSizeMb(settings.maxFileSizeBytes ? String(Math.round(parseInt(settings.maxFileSizeBytes) / (1024 * 1024))) : '')
+    if (!settings.maxFileSizeBytes) { setMaxFileSizeMb(''); setMaxFileSizeUnit('MB'); return }
+    const bytes = parseInt(settings.maxFileSizeBytes)
+    if (bytes >= 1024 * 1024 * 1024) {
+      setMaxFileSizeUnit('GB')
+      setMaxFileSizeMb(String(parseFloat((bytes / (1024 * 1024 * 1024)).toFixed(2))))
+    } else {
+      setMaxFileSizeUnit('MB')
+      setMaxFileSizeMb(String(parseFloat((bytes / (1024 * 1024)).toFixed(2))))
+    }
   }, [settings.maxFileSizeBytes])
 
   // Mode upload proxy-compatible
@@ -415,20 +430,29 @@ export default function SettingsPage() {
               id="settings-max-file-size"
               name="maxFileSizeMb"
               type="number"
-              min="1"
+              min="0"
+              step="0.01"
               value={maxFileSizeMb}
               onChange={e => setMaxFileSizeMb(e.target.value)}
               placeholder={t('settings.maxFileSizePlaceholder')}
               className="input flex-1"
             />
-            <span className="text-sm text-white/50 flex-shrink-0">MB</span>
+            <select
+              value={maxFileSizeUnit}
+              onChange={e => setMaxFileSizeUnit(e.target.value as 'MB' | 'GB')}
+              className="input bg-surface-700 w-20"
+            >
+              <option value="MB">MB</option>
+              <option value="GB">GB</option>
+            </select>
           </div>
           <div className="flex gap-3">
             <button
               onClick={async () => {
                 setSavingMaxFileSize(true)
                 try {
-                  const bytes = maxFileSizeMb ? Math.round(parseFloat(maxFileSizeMb) * 1024 * 1024) : null
+                  const multiplier = maxFileSizeUnit === 'GB' ? 1024 * 1024 * 1024 : 1024 * 1024
+                  const bytes = maxFileSizeMb ? Math.round(parseFloat(maxFileSizeMb) * multiplier) : null
                   await updateMaxFileSize(bytes)
                   setSettings({ maxFileSizeBytes: bytes ? String(bytes) : null })
                   toast.success(t('settings.maxFileSizeSaved'))
