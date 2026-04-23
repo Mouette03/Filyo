@@ -515,10 +515,13 @@ export const en = {
   'resetpwd.invalidToken': 'This link is invalid or has expired. Please make a new request.',
   'toast.passwordResetDone': 'Password successfully reset',
 
-  'share.expiredDesc': 'This share link has expired.',
+  'share.expiredDesc': 'This share link has expired or has been disabled.',
   'share.limitReachedDesc': 'The download limit has been reached.',
+  'share.inactiveDesc': 'This link has been disabled by its owner.',
   'share.invalidDesc': 'This link does not exist or has been deleted.',
-  'request.expiredDesc': 'This upload link has expired.',
+  'request.expiredDesc': 'This upload link has expired or has been disabled.',
   'request.limitReachedDesc': 'The file limit has been reached.',
+  'request.inactiveDesc': 'This upload link has been disabled by its owner.',
   'request.invalidDesc': 'This link does not exist or has been deactivated.',
+  'toast.shareToggled': 'Share updated',
 }

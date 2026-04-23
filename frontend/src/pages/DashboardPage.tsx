@@ -4,7 +4,7 @@ import toast from 'react-hot-toast'
 import { useAuthStore } from '../stores/useAuthStore'
 import {
   listFiles, deleteFile, listUploadRequests,
-  deleteUploadRequest, toggleUploadRequest, getStats,
+  deleteUploadRequest, toggleUploadRequest, toggleShare, getStats,
   runCleanup, getReceivedFiles, getReceivedFileDlToken,
   sendShareByEmail, sendRequestByEmail, updateFileExpiry,
   updateFileMaxDownloads, updateRequestExpiry, getMyQuota
@@ -15,7 +15,7 @@ import { useT } from '../i18n'
 interface FileItem {
   id: string; originalName: string; mimeType: string; size: string
   uploadedAt: string; expiresAt: string | null; downloads: number; maxDownloads: number | null
-  shares: { token: string; downloads: number; maxDownloads: number | null }[]
+  shares: { token: string; downloads: number; maxDownloads: number | null; active: boolean }[]
   batchToken?: string | null
   hideFilenames?: boolean
 }
@@ -102,12 +102,13 @@ export default function DashboardPage() {
     // On vide le cache local puis on refetch pour les panels déjà ouverts
     setReceivedFiles({})
     try {
-      const [filesRes, reqRes, statsRes] = await Promise.all([
-        listFiles(), listUploadRequests(), ...(isAdmin ? [getStats()] : [Promise.resolve(null)])
+      const [filesRes, reqRes, statsRes, quotaRes] = await Promise.all([
+        listFiles(), listUploadRequests(), ...(isAdmin ? [getStats()] : [Promise.resolve(null)]), getMyQuota()
       ])
       setFiles(filesRes.data)
       setRequests(reqRes.data)
       if (statsRes) setStats((statsRes as any).data)
+      setQuota((quotaRes as any).data)
       // Refetch uniquement si la demande ouverte existe toujours
       const currentExpanded = expandedRequestRef.current
       const expandedStillExists =
@@ -138,9 +139,7 @@ export default function DashboardPage() {
 
   useEffect(() => { load() }, [])
 
-  useEffect(() => {
-    getMyQuota().then(res => setQuota(res.data)).catch(() => {})
-  }, [])
+
 
   const handleDeleteFile = async (id: string) => {
     try {
@@ -171,6 +170,34 @@ export default function DashboardPage() {
       const res = await toggleUploadRequest(id)
       setRequests(prev => prev.map(r => r.id === id ? { ...r, active: res.data.active } : r))
     } catch { toast.error(t('common.error')) }
+  }
+
+  const handleToggleShare = async (token: string) => {
+    try {
+      const res = await toggleShare(token)
+      setFiles(prev => prev.map(f => ({
+        ...f,
+        shares: f.shares.map(s => s.token === token ? { ...s, active: res.data.active } : s)
+      })))
+      toast.success(t('toast.shareToggled'))
+    } catch { toast.error(t('common.error')) }
+  }
+
+  const handleToggleShareBatch = async (batchFiles: FileItem[]) => {
+    const firstShare = batchFiles[0]?.shares?.[0]
+    if (!firstShare) return
+    const newActive = !firstShare.active
+    try {
+      await Promise.all(batchFiles.map(f => f.shares[0] ? toggleShare(f.shares[0].token) : Promise.resolve()))
+      setFiles(prev => prev.map(f => {
+        if (!f.batchToken || f.batchToken !== batchFiles[0].batchToken) return f
+        return { ...f, shares: f.shares.map(s => ({ ...s, active: newActive })) }
+      }))
+      toast.success(t('toast.shareToggled'))
+    } catch {
+      toast.error(t('common.error'))
+      await load()
+    }
   }
 
   const copyLink = async (prefix: 's' | 'r', token: string) => {
@@ -378,8 +405,8 @@ export default function DashboardPage() {
         <>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
             {[
-              { label: t('dash.statFilesSent'), value: stats.filesCount },
               { label: t('dash.statShares'), value: stats.sharesCount },
+              { label: t('dash.statFilesSent'), value: stats.filesCount },
               { label: t('dash.statRequests'), value: stats.uploadRequestsCount },
               { label: t('dash.statReceived'), value: stats.receivedFilesCount },
               { label: t('dash.statSizeSent'), value: formatBytes(stats.totalSize) },
@@ -399,7 +426,7 @@ export default function DashboardPage() {
             const pct = Math.round((usedBytes / totalBytes) * 100)
             const barColor = pct >= 90 ? 'bg-red-500' : pct >= 70 ? 'bg-amber-500' : 'bg-brand-500'
             return (
-              <div className="card mb-8">
+              <div className="card mb-4">
                 <div className="flex items-center gap-3 sm:gap-5">
                   <div className="w-10 h-10 bg-brand-500/15 rounded-xl flex items-center justify-center flex-shrink-0">
                     <HardDrive size={18} className="text-brand-400" />
@@ -519,14 +546,20 @@ export default function DashboardPage() {
                             <EyeOff size={10} /> {t('dash.batchHideFilenames')}
                           </span>
                         )}
+                        {firstShare && (() => {
+                          const isExpired = !!(firstFile.expiresAt && new Date(firstFile.expiresAt) <= new Date())
+                          if (!firstShare.active) return <span className="flex-shrink-0 badge-red">{t('common.inactive')}</span>
+                          if (isExpired) return <span className="flex-shrink-0 badge-orange">{t('dash.expired')}</span>
+                          return <span className="flex-shrink-0 badge-green">{t('common.active')}</span>
+                        })()}
                       </div>
                       <p className="text-xs text-white/40 mt-0.5">
                         {t('dash.batchGroupSize', { count: String(bf.length), size: formatBytes(String(totalSize)) })}
                         {' · '}{formatDate(firstFile.uploadedAt)}
                         {firstFile.expiresAt
-                          ? new Date(firstFile.expiresAt) <= new Date()
-                            ? <span className="text-red-400"> · {t('dash.expired')}</span>
-                            : ` · ${t('dash.expires')} ${formatDate(firstFile.expiresAt)}${formatCountdown(firstFile.expiresAt, lang) ? ` (${t('dash.expiresIn')} ${formatCountdown(firstFile.expiresAt, lang)})` : ''}`
+                          ? new Date(firstFile.expiresAt) > new Date()
+                            ? ` · ${t('dash.expires')} ${formatDate(firstFile.expiresAt)}${formatCountdown(firstFile.expiresAt, lang) ? ` (${t('dash.expiresIn')} ${formatCountdown(firstFile.expiresAt, lang)})` : ''}`
+                            : ''
                           : ` · ${t('dash.noExpiry')}`}
                       </p>
                     </div>
@@ -559,6 +592,12 @@ export default function DashboardPage() {
                             className={`btn-icon ${maxDlEditId === batchToken ? '!bg-brand-500/20 !text-brand-400 !border-brand-500/30' : ''}`}
                             title={t('dash.maxDlEdit')}>
                             <Hash size={13} />
+                          </button>
+                          <button
+                            onClick={() => handleToggleShareBatch(bf)}
+                            className="btn-icon"
+                            title={firstShare.active ? t('dash.disable') : t('dash.enable')}>
+                            {firstShare.active ? <ToggleRight size={15} className="text-brand-400" /> : <ToggleLeft size={15} />}
                           </button>
                         </>
                       )}
@@ -621,6 +660,12 @@ export default function DashboardPage() {
                           }}
                           className={`btn-icon flex-shrink-0 ${maxDlEditId === batchToken ? '!bg-brand-500/20 !text-brand-400 !border-brand-500/30' : ''}`}>
                           <Hash size={13} />
+                        </button>
+                        <button
+                          onClick={() => handleToggleShareBatch(bf)}
+                          className="btn-icon flex-shrink-0"
+                          title={firstShare.active ? t('dash.disable') : t('dash.enable')}>
+                          {firstShare.active ? <ToggleRight size={15} className="text-brand-400" /> : <ToggleLeft size={15} />}
                         </button>
                         <button onClick={() => handleDeleteBatch(bf)} className="btn-icon-danger flex-shrink-0">
                           <Trash2 size={13} />
@@ -763,6 +808,12 @@ export default function DashboardPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 min-w-0">
                       <p className="font-medium truncate">{f.originalName}</p>
+                      {share && (() => {
+                        const isExpired = !!(f.expiresAt && new Date(f.expiresAt) <= new Date())
+                        if (!share.active) return <span className="flex-shrink-0 badge-red">{t('common.inactive')}</span>
+                        if (isExpired) return <span className="flex-shrink-0 badge-orange">{t('dash.expired')}</span>
+                        return <span className="flex-shrink-0 badge-green">{t('common.active')}</span>
+                      })()}
                       {f.maxDownloads !== null && f.downloads >= f.maxDownloads && (
                         <span className="flex-shrink-0 flex items-center gap-1 text-xs font-medium text-red-400 bg-red-500/15 px-2 py-0.5 rounded-full">
                           <AlertTriangle size={10} /> {t('dash.limitReached')}
@@ -775,9 +826,9 @@ export default function DashboardPage() {
                         ? <span className={f.downloads >= f.maxDownloads ? 'text-red-400' : ''}>{f.downloads}/{f.maxDownloads} {t('dash.dl')}</span>
                         : <>{f.downloads} {t('dash.dl')}</>}
                       {f.expiresAt
-                        ? new Date(f.expiresAt) <= new Date()
-                          ? <span className="text-red-400"> · {t('dash.expired')}</span>
-                          : ` · ${t('dash.expires')} ${formatDate(f.expiresAt)}${formatCountdown(f.expiresAt, lang) ? ` (${t('dash.expiresIn')} ${formatCountdown(f.expiresAt, lang)})` : ''}`
+                        ? new Date(f.expiresAt) > new Date()
+                          ? ` · ${t('dash.expires')} ${formatDate(f.expiresAt)}${formatCountdown(f.expiresAt, lang) ? ` (${t('dash.expiresIn')} ${formatCountdown(f.expiresAt, lang)})` : ''}`
+                          : ''
                         : ` · ${t('dash.noExpiry')}`}
                     </p>
                   </div>
@@ -812,6 +863,12 @@ export default function DashboardPage() {
                           className={`btn-icon ${maxDlEditId === f.id ? '!bg-brand-500/20 !text-brand-400 !border-brand-500/30' : ''}`}
                           title={t('dash.maxDlEdit')}>
                           <Hash size={13} />
+                        </button>
+                        <button
+                          onClick={() => handleToggleShare(share.token)}
+                          className="btn-icon"
+                          title={share.active ? t('dash.disable') : t('dash.enable')}>
+                          {share.active ? <ToggleRight size={15} className="text-brand-400" /> : <ToggleLeft size={15} />}
                         </button>
                       </>
                     )}
@@ -865,6 +922,12 @@ export default function DashboardPage() {
                         }}
                         className={`btn-icon flex-shrink-0 ${maxDlEditId === f.id ? '!bg-brand-500/20 !text-brand-400 !border-brand-500/30' : ''}`}>
                         <Hash size={13} />
+                      </button>
+                      <button
+                        onClick={() => handleToggleShare(share.token)}
+                        className="btn-icon flex-shrink-0"
+                        title={share.active ? t('dash.disable') : t('dash.enable')}>
+                        {share.active ? <ToggleRight size={15} className="text-brand-400" /> : <ToggleLeft size={15} />}
                       </button>
                     </>
                   )}

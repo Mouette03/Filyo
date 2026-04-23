@@ -23,11 +23,13 @@ function getDisplayName(originalName: string, hideFilenames: boolean, lang = 'fr
 export async function shareRoutes(app: FastifyInstance) {
   // GET /api/shares/:token/info - Info publique (sans téléchargement)
   app.get<{ Params: { token: string } }>('/:token/info', async (req, reply) => {
+    reply.header('Cache-Control', 'no-store')
     const share = await prisma.share.findUnique({
       where: { token: req.params.token },
       include: { file: { include: { shares: true } } }
     })
     if (!share) return reply.code(404).send({ code: 'SHARE_NOT_FOUND' })
+    if (!share.active) return reply.code(410).send({ code: 'SHARE_INACTIVE' })
 
     if (share.expiresAt && share.expiresAt < new Date()) {
       return reply.code(410).send({ code: 'SHARE_EXPIRED' })
@@ -98,6 +100,7 @@ export async function shareRoutes(app: FastifyInstance) {
       include: { file: true }
     })
     if (!share) return reply.code(404).send({ code: 'SHARE_NOT_FOUND' })
+    if (!share.active) return reply.code(410).send({ code: 'SHARE_INACTIVE' })
     if (share.expiresAt && share.expiresAt < new Date()) return reply.code(410).send({ code: 'SHARE_EXPIRED' })
     if (share.maxDownloads && share.downloads >= share.maxDownloads) return reply.code(410).send({ code: 'SHARE_LIMIT_REACHED' })
 
@@ -130,6 +133,24 @@ export async function shareRoutes(app: FastifyInstance) {
     })
 
     return { dlToken }
+  })
+
+  // PATCH /api/shares/:token/toggle — Activer/désactiver un partage (authentifié, propriétaire ou admin)
+  app.patch<{ Params: { token: string } }>('/:token/toggle', { onRequest: [app.authenticate] }, async (req, reply) => {
+    const share = await prisma.share.findUnique({
+      where: { token: req.params.token },
+      include: { file: true }
+    })
+    if (!share) return reply.code(404).send({ code: 'SHARE_NOT_FOUND' })
+    if (share.file.userId !== req.user.id && req.user.role !== 'ADMIN') {
+      return reply.code(403).send({ code: 'FORBIDDEN' })
+    }
+    const updated = await prisma.share.update({
+      where: { token: req.params.token },
+      data: { active: !share.active }
+    })
+    req.log.debug({ token: req.params.token, active: updated.active }, 'Share toggled')
+    return { active: updated.active }
   })
 
   // GET /api/shares/dl/:dlToken — streaming direct via navigateur (pas d'auth, token prouve l'autorisation)

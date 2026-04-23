@@ -71,6 +71,7 @@ export const deleteFile = (id: string) => api.delete(`/files/${id}`)
 
 // ---- Partages (téléchargement) ----
 export const getShareInfo = (token: string) => api.get(`/shares/${token}/info`)
+export const toggleShare = (token: string) => api.patch(`/shares/${token}/toggle`)
 
 // ---- Partage inversé (Upload Request) ----
 export const createUploadRequest = (data: {

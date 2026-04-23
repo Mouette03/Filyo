@@ -71,6 +71,7 @@ CREATE TABLE "Share" (
     "maxDownloads" INTEGER,
     "password" TEXT,
     "label" TEXT,
+    "active" BOOLEAN NOT NULL DEFAULT true,
     CONSTRAINT "Share_fileId_fkey" FOREIGN KEY ("fileId") REFERENCES "File" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
