@@ -261,7 +261,7 @@ export const en = {
   'settings.bg.plum': 'Plum',
   'settings.bg.mahogany': 'Mahogany',
   'settings.bg.carbon': 'Carbon',
-  'settings.bg.mist': 'Mist',
+  'settings.bg.mist': 'Rose',
   'settings.bg.pearl': 'Pearl',
   'settings.bg.mint': 'Mint',
   'settings.bg.lavender': 'Lavender',

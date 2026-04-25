@@ -64,7 +64,7 @@ export const BG_PRESETS: Record<string, { label: string; theme: 'dark' | 'light'
   plum:     { label: 'Prune',      theme: 'dark',  s900: '#1a0c1a', s800: '#26112e', s700: '#311840' },
   mahogany: { label: 'Acajou',     theme: 'dark',  s900: '#1a0f0a', s800: '#2a1608', s700: '#3a1e0a' },
   carbon:   { label: 'Carbone',    theme: 'dark',  s900: '#111827', s800: '#1f2937', s700: '#2d3748' },
-  mist:     { label: 'Brume',      theme: 'light', s900: '#eef0f8', s800: '#ffffff', s700: '#e4e8f4' },
+  mist:     { label: 'Rose',       theme: 'light', s900: '#fdf2f8', s800: '#ffffff', s700: '#fce7f3' },
   pearl:    { label: 'Gris perle', theme: 'light', s900: '#f1f5f9', s800: '#ffffff', s700: '#e2e8f0' },
   mint:     { label: 'Menthe',     theme: 'light', s900: '#f0fdf4', s800: '#ffffff', s700: '#dcfce7' },
   lavender: { label: 'Lavande',    theme: 'light', s900: '#faf5ff', s800: '#ffffff', s700: '#f3e8ff' },

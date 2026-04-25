@@ -620,7 +620,7 @@ export default function DashboardPage() {
                       <>
                         <button
                           onClick={() => window.open(`${window.location.origin}/s/${firstShare.token}`, '_blank')}
-                          className="btn-secondary flex items-center gap-1.5 text-xs px-2.5 h-8 flex-shrink-0">
+                          className="btn-secondary flex items-center gap-1.5 text-xs px-2.5 h-8 flex-1 justify-center">
                           <ExternalLink size={12} /> {t('common.view')}
                         </button>
                         <button
@@ -867,7 +867,7 @@ export default function DashboardPage() {
                     <>
                       <button
                         onClick={() => window.open(`${window.location.origin}/s/${share.token}`, '_blank')}
-                        className="btn-secondary flex items-center gap-1.5 text-xs px-2.5 h-8 flex-shrink-0">
+                        className="btn-secondary flex items-center gap-1.5 text-xs px-2.5 h-8 flex-1 justify-center">
                         <ExternalLink size={12} /> {t('common.view')}
                       </button>
                       <button

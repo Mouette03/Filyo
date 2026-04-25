@@ -260,7 +260,7 @@ export const fr = {
   'settings.bg.plum': 'Prune',
   'settings.bg.mahogany': 'Acajou',
   'settings.bg.carbon': 'Carbone',
-  'settings.bg.mist': 'Brume',
+  'settings.bg.mist': 'Rose',
   'settings.bg.pearl': 'Gris perle',
   'settings.bg.mint': 'Menthe',
   'settings.bg.lavender': 'Lavande',
