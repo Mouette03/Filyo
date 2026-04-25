@@ -414,7 +414,7 @@ export default function ProfilePage() {
             >
               {!bgColorKey && <Check size={14} className="text-white" />}
             </button>
-            {(Object.entries(BG_PRESETS) as [BgColorKey, typeof BG_PRESETS[BgColorKey]][]).filter(([, p]) => p.theme === (isDark ? 'dark' : 'light')).map(([key, preset]) => {
+            {(Object.entries(BG_PRESETS) as [BgColorKey, typeof BG_PRESETS[BgColorKey]][]).map(([key, preset]) => {
               const active = bgColorKey === key
               return (
                 <button
@@ -425,7 +425,7 @@ export default function ProfilePage() {
                   className={`w-9 h-9 rounded-xl transition-all ${
                     active ? 'scale-110 ring-2 ring-offset-2 ring-offset-surface-800' : 'hover:scale-105 opacity-80 hover:opacity-100'
                   }`}
-                  style={{ background: preset.s900, border: '2px solid', borderColor: active ? 'white' : 'transparent' }}
+                  style={{ background: isDark ? preset.dark.s900 : preset.light.s900, border: '2px solid', borderColor: active ? 'white' : 'transparent' }}
                 >
                   {active && (
                     <span className="flex items-center justify-center w-full h-full">

@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { useEffect } from 'react'
-import { usePreferencesStore, applyTheme, applyAccent, applyBgColor, resetBgColor, BG_PRESETS } from './stores/usePreferencesStore'
+import { usePreferencesStore, applyTheme, applyAccent, applyBgColor, resetBgColor } from './stores/usePreferencesStore'
 import { useAppSettingsStore } from './stores/useAppSettingsStore'
 import HomePage from './pages/HomePage'
 import SharePage from './pages/SharePage'
@@ -36,22 +36,14 @@ export default function App() {
 
   useEffect(() => {
     applyAccent(accentColor)
-    applyTheme(theme)
-    if (bgColorKey) applyBgColor(bgColorKey)
+    const isDark = applyTheme(theme)
+    if (bgColorKey) applyBgColor(bgColorKey, isDark)
     if (theme === 'auto') {
       const mq = window.matchMedia('(prefers-color-scheme: dark)')
       const handler = () => {
-        applyTheme('auto')
+        const nowDark = applyTheme('auto')
         const { bgColorKey } = usePreferencesStore.getState()
-        if (bgColorKey) {
-          const preset = BG_PRESETS[bgColorKey]
-          const nowDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-          if (preset && preset.theme === (nowDark ? 'dark' : 'light')) {
-            applyBgColor(bgColorKey)
-          } else {
-            resetBgColor()
-          }
-        }
+        if (bgColorKey) applyBgColor(bgColorKey, nowDark); else resetBgColor()
       }
       mq.addEventListener('change', handler)
       return () => mq.removeEventListener('change', handler)
