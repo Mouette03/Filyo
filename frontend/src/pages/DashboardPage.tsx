@@ -57,7 +57,6 @@ export default function DashboardPage() {
   const [expiryEditId, setExpiryEditId] = useState<string | null>(null)
   const [expiryValue, setExpiryValue] = useState('')
   const [savingExpiryId, setSavingExpiryId] = useState<string | null>(null)
-  const [expiringNowId, setExpiringNowId] = useState<string | null>(null)
   const [expandedBatches, setExpandedBatches] = useState<Set<string>>(new Set())
   const [downloadingReceived, setDownloadingReceived] = useState<Record<string, boolean>>({})
   const [maxDlEditId, setMaxDlEditId] = useState<string | null>(null)
@@ -265,29 +264,7 @@ export default function DashboardPage() {
     setEmailSendingToken(null)
   }
 
-  const handleExpireNow = async (fileId: string) => {
-    setExpiringNowId(fileId)
-    try {
-      const expiresAt = new Date().toISOString()
-      await updateFileExpiry(fileId, expiresAt)
-      setFiles(prev => prev.map(f => f.id === fileId ? { ...f, expiresAt } : f))
-      toast.success(t('toast.expiredNow'))
-    } catch { toast.error(t('toast.deleteError')) }
-    setExpiringNowId(null)
-  }
 
-  const handleExpireNowBatch = async (batchFiles: FileItem[]) => {
-    const key = batchFiles[0]?.batchToken || batchFiles[0]?.id
-    setExpiringNowId(key)
-    try {
-      const expiresAt = new Date().toISOString()
-      await Promise.all(batchFiles.map(f => updateFileExpiry(f.id, expiresAt)))
-      const ids = new Set(batchFiles.map(f => f.id))
-      setFiles(prev => prev.map(f => ids.has(f.id) ? { ...f, expiresAt } : f))
-      toast.success(t('toast.expiredNow'))
-    } catch { toast.error(t('toast.deleteError')) }
-    setExpiringNowId(null)
-  }
 
   const handleSaveExpiry = async (fileId: string, clear = false) => {
     setSavingExpiryId(fileId)
