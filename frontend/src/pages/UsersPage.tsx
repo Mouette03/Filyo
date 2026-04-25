@@ -5,6 +5,7 @@ import { listUsers, createUser, updateUser, deleteUser, getAllFilesAdmin, getAll
 import { formatDate, formatBytes, getFileIcon } from '../lib/utils'
 import { useAuthStore } from '../stores/useAuthStore'
 import { useT } from '../i18n'
+import ConfirmDialog from '../components/ConfirmDialog'
 
 interface UserItem {
   id: string; name: string; email: string; role: string
@@ -65,6 +66,7 @@ export default function UsersPage() {
   const [allDeposits, setAllDeposits] = useState<AdminUploadRequest[]>([])
   const [depositsLoading, setDepositsLoading] = useState(false)
   const [depositsLoaded, setDepositsLoaded] = useState(false)
+  const [confirmDialog, setConfirmDialog] = useState<{ title: string; message?: string; onConfirm: () => void } | null>(null)
 
   const load = async () => {
     try {
@@ -188,6 +190,14 @@ export default function UsersPage() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-10">
+      {confirmDialog && (
+        <ConfirmDialog
+          title={confirmDialog.title}
+          message={confirmDialog.message}
+          onConfirm={() => { confirmDialog.onConfirm(); setConfirmDialog(null) }}
+          onCancel={() => setConfirmDialog(null)}
+        />
+      )}
       <div className="flex items-center gap-3 mb-8">
         <div className="w-10 h-10 bg-brand-500/20 rounded-xl flex items-center justify-center">
           <ShieldCheck size={20} className="text-brand-400" />
@@ -407,7 +417,7 @@ export default function UsersPage() {
                           <Pencil size={12} /><span className="hidden sm:inline">{t('common.edit')}</span>
                         </button>
                         {u.id !== me?.id && (
-                          <button onClick={() => handleDelete(u.id)} className="btn-danger flex items-center gap-1 text-xs px-2.5 py-2">
+                          <button onClick={() => setConfirmDialog({ title: t('confirm.deleteUser'), message: t('confirm.irreversible'), onConfirm: () => handleDelete(u.id) })} className="btn-danger flex items-center gap-1 text-xs px-2.5 py-2">
                             <Trash2 size={12} />
                           </button>
                         )}
@@ -475,7 +485,7 @@ export default function UsersPage() {
                       <td className="px-4 py-3 text-white/50 text-xs">{formatDate(f.uploadedAt)}</td>
                       <td className="px-4 py-3 text-white/50 text-xs">{f.downloads}</td>
                       <td className="px-4 py-3">
-                        <button onClick={() => handleDeleteFile(f.id)} className="btn-danger flex items-center gap-1 text-xs px-2.5 py-1.5">
+                        <button onClick={() => setConfirmDialog({ title: t('confirm.deleteAdminFile'), message: t('confirm.irreversible'), onConfirm: () => handleDeleteFile(f.id) })} className="btn-danger flex items-center gap-1 text-xs px-2.5 py-1.5">
                           <Trash2 size={11} />
                         </button>
                       </td>
@@ -543,7 +553,7 @@ export default function UsersPage() {
                       <td className="px-4 py-3 text-white/50 text-xs">{t('users.filesCount', { count: String(d.filesCount) })}</td>
                       <td className="px-4 py-3 text-white/50 text-xs">{formatDate(d.createdAt)}</td>
                       <td className="px-4 py-3">
-                        <button onClick={() => handleDeleteDeposit(d.id)} className="btn-danger flex items-center gap-1 text-xs px-2.5 py-1.5">
+                        <button onClick={() => setConfirmDialog({ title: t('confirm.deleteDeposit'), message: t('confirm.irreversible'), onConfirm: () => handleDeleteDeposit(d.id) })} className="btn-danger flex items-center gap-1 text-xs px-2.5 py-1.5">
                           <Trash2 size={11} />
                         </button>
                       </td>

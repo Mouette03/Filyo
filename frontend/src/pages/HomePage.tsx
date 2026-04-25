@@ -367,7 +367,17 @@ export default function HomePage() {
     setEmailSending(false)
   }
 
-  const closeModal = () => { setShowShareModal(false); setResults([]); setEmailTo(''); setEmailSent(false) }
+  const closeModal = () => {
+    setShowShareModal(false)
+    setResults([])
+    setEmailTo('')
+    setEmailSent(false)
+    setFiles([])
+    setPassword('')
+    setExpiresIn('86400')
+    setMaxDownloads('')
+    setHideFilenames(false)
+  }
 
   const copyLink = async (token: string) => {
     const url = `${window.location.origin}/s/${token}`
@@ -500,15 +510,10 @@ export default function HomePage() {
             </div>
 
             {/* Actions */}
-            <div className="flex gap-3">
+            <div className="flex">
               <button
                 onClick={closeModal}
-                className="btn-secondary flex items-center justify-center gap-2 flex-1 py-2.5">
-                <Plus size={15} /> {t('home.modal.newUpload')}
-              </button>
-              <button
-                onClick={closeModal}
-                className="btn-primary flex items-center justify-center gap-2 flex-1 py-2.5">
+                className="btn-primary flex items-center justify-center gap-2 w-full py-2.5">
                 <Check size={15} /> {t('home.modal.done')}
               </button>
             </div>

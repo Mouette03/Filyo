@@ -39,6 +39,16 @@ export const en = {
   'common.error': 'Error',
   'common.newUpload': 'New upload',
 
+  // ── Confirmations ────────────────────────────────────────────
+  'confirm.irreversible': 'This action is irreversible.',
+  'confirm.deleteFile': 'Delete this file?',
+  'confirm.deleteBatch': 'Delete this batch of files?',
+  'confirm.deleteRequest': 'Delete this reverse share?',
+  'confirm.cleanupExpired': 'Delete all expired files?',
+  'confirm.deleteUser': 'Delete this user?',
+  'confirm.deleteAdminFile': 'Delete this file?',
+  'confirm.deleteDeposit': 'Delete this deposit?',
+
   // ── Time ─────────────────────────────────────────────────────
   'time.1h': '1 hour',
   'time.24h': '24 hours',
@@ -86,7 +96,7 @@ export const en = {
   'home.modal.linkSingle': '1 share link available',
   'home.modal.linksMultiple': '{{count}} share links available',
   'home.modal.emailLabel': 'Send by email',
-  'home.modal.emailPlaceholder': 'recipient@example.com, other@example.com',
+  'home.modal.emailPlaceholder': 'recipient@example.com',
   'home.modal.emailHint': 'The share link will be sent to these addresses. Multiple addresses can be separated by commas.',
   'home.modal.newUpload': 'New upload',
   'home.modal.done': 'Done',
@@ -245,7 +255,7 @@ export const en = {
   'settings.accent.rose': 'Pink',
   'settings.accent.cyan': 'Cyan',
   'settings.accent.amber': 'Amber',
-  'settings.bg.night': 'Night',
+  'settings.bg.night': 'Teal',
   'settings.bg.slate': 'Slate',
   'settings.bg.forest': 'Forest',
   'settings.bg.plum': 'Plum',

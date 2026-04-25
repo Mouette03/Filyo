@@ -39,6 +39,16 @@ export const fr = {
   'common.error': 'Erreur',
   'common.newUpload': 'Nouvel envoi',
 
+  // ── Confirmations ───────────────────────────────────────────
+  'confirm.irreversible': 'Cette action est irréversible.',
+  'confirm.deleteFile': 'Supprimer ce fichier ?',
+  'confirm.deleteBatch': 'Supprimer ce lot de fichiers ?',
+  'confirm.deleteRequest': 'Supprimer ce partage inversé ?',
+  'confirm.cleanupExpired': 'Supprimer tous les fichiers expirés ?',
+  'confirm.deleteUser': 'Supprimer cet utilisateur ?',
+  'confirm.deleteAdminFile': 'Supprimer ce fichier ?',
+  'confirm.deleteDeposit': 'Supprimer ce dépôt ?',
+
   // ── Durées ──────────────────────────────────────────────────
   'time.1h': '1 heure',
   'time.24h': '24 heures',
@@ -87,7 +97,7 @@ export const fr = {
   'home.modal.linksMultiple': '{{count}} liens de partage disponibles',
   'home.modal.linksBatch': '{{count}} fichiers — 1 lien groupé',
   'home.modal.emailLabel': 'Envoyer par email',
-  'home.modal.emailPlaceholder': 'destinataire@exemple.fr, autre@exemple.fr',
+  'home.modal.emailPlaceholder': 'destinataire@exemple.fr',
   'home.modal.emailHint': 'Le lien de partage sera envoyé à ces adresses. Plusieurs adresses possibles en les séparant par des virgules.',
   'home.modal.newUpload': 'Nouvel envoi',
   'home.modal.done': 'Terminé',
@@ -244,7 +254,7 @@ export const fr = {
   'settings.accent.rose': 'Rose',
   'settings.accent.cyan': 'Cyan',
   'settings.accent.amber': 'Ambre',
-  'settings.bg.night': 'Nuit',
+  'settings.bg.night': 'Pétrole',
   'settings.bg.slate': 'Ardoise',
   'settings.bg.forest': 'Forêt',
   'settings.bg.plum': 'Prune',

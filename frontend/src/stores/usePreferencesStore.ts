@@ -58,7 +58,7 @@ export function applyTheme(mode: ThemeMode) {
 
 // ---- Couleurs de fond ----
 export const BG_PRESETS: Record<string, { label: string; theme: 'dark' | 'light'; s900: string; s800: string; s700: string }> = {
-  night:    { label: 'Nuit',       theme: 'dark',  s900: '#0d0e1a', s800: '#13152a', s700: '#1c1f3a' },
+  night:    { label: 'Pétrole',    theme: 'dark',  s900: '#061b1f', s800: '#0d2b31', s700: '#123640' },
   slate:    { label: 'Ardoise',    theme: 'dark',  s900: '#0f172a', s800: '#1e293b', s700: '#273548' },
   forest:   { label: 'For\u00eat',     theme: 'dark',  s900: '#0c1a12', s800: '#122010', s700: '#1a2e1d' },
   plum:     { label: 'Prune',      theme: 'dark',  s900: '#1a0c1a', s800: '#26112e', s700: '#311840' },
