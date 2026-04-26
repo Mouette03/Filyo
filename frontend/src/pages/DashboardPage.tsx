@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Trash2, Download, RefreshCw, Copy, Check, Eye, ToggleLeft, ToggleRight, HardDrive, Clock, Mail, Send, ExternalLink, User, TimerOff, AlertTriangle, MessageSquare, Package, EyeOff, ChevronDown, ChevronUp, Hash } from 'lucide-react'
+import { Trash2, Download, RefreshCw, Copy, Check, Eye, ToggleLeft, ToggleRight, HardDrive, Clock, Mail, Send, ExternalLink, User, AlertTriangle, MessageSquare, Package, EyeOff, ChevronDown, ChevronUp, Hash } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '../stores/useAuthStore'
 import {
@@ -11,6 +11,7 @@ import {
 } from '../api/client'
 import { formatBytes, formatDate, getFileIcon, copyToClipboard, isValidEmail, formatCountdown, toLocalDatetimeValue } from '../lib/utils'
 import { useT } from '../i18n'
+import ConfirmDialog from '../components/ConfirmDialog'
 
 interface FileItem {
   id: string; originalName: string; mimeType: string; size: string
@@ -56,7 +57,6 @@ export default function DashboardPage() {
   const [expiryEditId, setExpiryEditId] = useState<string | null>(null)
   const [expiryValue, setExpiryValue] = useState('')
   const [savingExpiryId, setSavingExpiryId] = useState<string | null>(null)
-  const [expiringNowId, setExpiringNowId] = useState<string | null>(null)
   const [expandedBatches, setExpandedBatches] = useState<Set<string>>(new Set())
   const [downloadingReceived, setDownloadingReceived] = useState<Record<string, boolean>>({})
   const [maxDlEditId, setMaxDlEditId] = useState<string | null>(null)
@@ -68,6 +68,7 @@ export default function DashboardPage() {
   const [emailingRequestId, setEmailingRequestId] = useState<string | null>(null)
   const [emailToRequest, setEmailToRequest] = useState('')
   const [emailSendingRequestId, setEmailSendingRequestId] = useState<string | null>(null)
+  const [confirmDialog, setConfirmDialog] = useState<{ title: string; message?: string; onConfirm: () => void } | null>(null)
 
   // Grouper les fichiers par batchToken pour l'affichage
   type DisplayItem =
@@ -263,29 +264,7 @@ export default function DashboardPage() {
     setEmailSendingToken(null)
   }
 
-  const handleExpireNow = async (fileId: string) => {
-    setExpiringNowId(fileId)
-    try {
-      const expiresAt = new Date().toISOString()
-      await updateFileExpiry(fileId, expiresAt)
-      setFiles(prev => prev.map(f => f.id === fileId ? { ...f, expiresAt } : f))
-      toast.success(t('toast.expiredNow'))
-    } catch { toast.error(t('toast.deleteError')) }
-    setExpiringNowId(null)
-  }
 
-  const handleExpireNowBatch = async (batchFiles: FileItem[]) => {
-    const key = batchFiles[0]?.batchToken || batchFiles[0]?.id
-    setExpiringNowId(key)
-    try {
-      const expiresAt = new Date().toISOString()
-      await Promise.all(batchFiles.map(f => updateFileExpiry(f.id, expiresAt)))
-      const ids = new Set(batchFiles.map(f => f.id))
-      setFiles(prev => prev.map(f => ids.has(f.id) ? { ...f, expiresAt } : f))
-      toast.success(t('toast.expiredNow'))
-    } catch { toast.error(t('toast.deleteError')) }
-    setExpiringNowId(null)
-  }
 
   const handleSaveExpiry = async (fileId: string, clear = false) => {
     setSavingExpiryId(fileId)
@@ -395,6 +374,14 @@ export default function DashboardPage() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-10">
+      {confirmDialog && (
+        <ConfirmDialog
+          title={confirmDialog.title}
+          message={confirmDialog.message}
+          onConfirm={() => { confirmDialog.onConfirm(); setConfirmDialog(null) }}
+          onCancel={() => setConfirmDialog(null)}
+        />
+      )}
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl sm:text-2xl font-bold text-center sm:text-left">{t('dash.title')}</h1>
@@ -501,7 +488,7 @@ export default function DashboardPage() {
         </div>
         <div className="flex gap-2 sm:ml-auto">
           {isAdmin && tab === 'sent' && (
-            <button onClick={handleCleanup} className="btn-danger flex items-center justify-center gap-1.5 text-xs px-2.5 py-2 flex-1 sm:flex-none">
+            <button onClick={() => setConfirmDialog({ title: t('confirm.cleanupExpired'), message: t('confirm.irreversible'), onConfirm: handleCleanup })} className="btn-danger flex items-center justify-center gap-1.5 text-xs px-2.5 py-2 flex-1 sm:flex-none">
               <Trash2 size={13} /> {t('dash.cleanExpired')}
             </button>
           )}
@@ -593,12 +580,6 @@ export default function DashboardPage() {
                             title={t('dash.maxDlEdit')}>
                             <Hash size={13} />
                           </button>
-                          <button
-                            onClick={() => handleToggleShareBatch(bf)}
-                            className="btn-icon"
-                            title={firstShare.active ? t('dash.disable') : t('dash.enable')}>
-                            {firstShare.active ? <ToggleRight size={15} className="text-brand-400" /> : <ToggleLeft size={15} />}
-                          </button>
                         </>
                       )}
                       <button
@@ -610,16 +591,15 @@ export default function DashboardPage() {
                         title={t('dash.expiryEdit')}>
                         <Clock size={13} />
                       </button>
-                      <button
-                        onClick={() => handleExpireNowBatch(bf)}
-                        disabled={expiringNowId === batchToken}
-                        className="btn-icon"
-                        title={t('dash.expiresNow')}>
-                        {expiringNowId === batchToken
-                          ? <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" />
-                          : <TimerOff size={13} />}
-                      </button>
-                      <button onClick={() => handleDeleteBatch(bf)} className="btn-icon-danger" title={t('common.delete')}>
+                      {firstShare && (
+                        <button
+                          onClick={() => handleToggleShareBatch(bf)}
+                          className="btn-icon"
+                          title={firstShare.active ? t('dash.disable') : t('dash.enable')}>
+                          {firstShare.active ? <ToggleRight size={15} className="text-brand-400" /> : <ToggleLeft size={15} />}
+                        </button>
+                      )}
+                      <button onClick={() => setConfirmDialog({ title: t('confirm.deleteBatch'), message: t('confirm.irreversible'), onConfirm: () => handleDeleteBatch(bf) })} className="btn-icon-danger" title={t('common.delete')}>
                         <Trash2 size={13} />
                       </button>
                     </div>
@@ -640,7 +620,7 @@ export default function DashboardPage() {
                       <>
                         <button
                           onClick={() => window.open(`${window.location.origin}/s/${firstShare.token}`, '_blank')}
-                          className="btn-secondary flex items-center gap-1.5 text-xs px-2.5 h-8 flex-shrink-0">
+                          className="btn-secondary flex items-center gap-1.5 text-xs px-2.5 h-8 flex-1 justify-center">
                           <ExternalLink size={12} /> {t('common.view')}
                         </button>
                         <button
@@ -667,7 +647,7 @@ export default function DashboardPage() {
                           title={firstShare.active ? t('dash.disable') : t('dash.enable')}>
                           {firstShare.active ? <ToggleRight size={15} className="text-brand-400" /> : <ToggleLeft size={15} />}
                         </button>
-                        <button onClick={() => handleDeleteBatch(bf)} className="btn-icon-danger flex-shrink-0">
+                        <button onClick={() => setConfirmDialog({ title: t('confirm.deleteBatch'), message: t('confirm.irreversible'), onConfirm: () => handleDeleteBatch(bf) })} className="btn-icon-danger flex-shrink-0">
                           <Trash2 size={13} />
                         </button>
                       </>
@@ -679,14 +659,6 @@ export default function DashboardPage() {
                       }}
                       className={`btn-icon flex-shrink-0 ${expiryEditId === batchToken ? '!bg-brand-500/20 !text-brand-400 !border-brand-500/30' : ''}`}>
                       <Clock size={13} />
-                    </button>
-                    <button
-                      onClick={() => handleExpireNowBatch(bf)}
-                      disabled={expiringNowId === batchToken}
-                      className="btn-icon flex-shrink-0">
-                      {expiringNowId === batchToken
-                        ? <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" />
-                        : <TimerOff size={13} />}
                     </button>
                   </div>
                   {/* Expiration inline lot */}
@@ -864,12 +836,6 @@ export default function DashboardPage() {
                           title={t('dash.maxDlEdit')}>
                           <Hash size={13} />
                         </button>
-                        <button
-                          onClick={() => handleToggleShare(share.token)}
-                          className="btn-icon"
-                          title={share.active ? t('dash.disable') : t('dash.enable')}>
-                          {share.active ? <ToggleRight size={15} className="text-brand-400" /> : <ToggleLeft size={15} />}
-                        </button>
                       </>
                     )}
                     <button
@@ -881,16 +847,15 @@ export default function DashboardPage() {
                       title="Modifier l'expiration">
                       <Clock size={13} />
                     </button>
-                    <button
-                      onClick={() => handleExpireNow(f.id)}
-                      disabled={expiringNowId === f.id}
-                      className="btn-icon"
-                      title="Faire expirer maintenant">
-                      {expiringNowId === f.id
-                        ? <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" />
-                        : <TimerOff size={13} />}
-                    </button>
-                    <button onClick={() => handleDeleteFile(f.id)} className="btn-icon-danger" title="Supprimer">
+                    {share && (
+                      <button
+                        onClick={() => handleToggleShare(share.token)}
+                        className="btn-icon"
+                        title={share.active ? t('dash.disable') : t('dash.enable')}>
+                        {share.active ? <ToggleRight size={15} className="text-brand-400" /> : <ToggleLeft size={15} />}
+                      </button>
+                    )}
+                    <button onClick={() => setConfirmDialog({ title: t('confirm.deleteFile'), message: t('confirm.irreversible'), onConfirm: () => handleDeleteFile(f.id) })} className="btn-icon-danger" title={t('common.delete')}>
                       <Trash2 size={13} />
                     </button>
                   </div>
@@ -902,7 +867,7 @@ export default function DashboardPage() {
                     <>
                       <button
                         onClick={() => window.open(`${window.location.origin}/s/${share.token}`, '_blank')}
-                        className="btn-secondary flex items-center gap-1.5 text-xs px-2.5 h-8 flex-shrink-0">
+                        className="btn-secondary flex items-center gap-1.5 text-xs px-2.5 h-8 flex-1 justify-center">
                         <ExternalLink size={12} /> {t('common.view')}
                       </button>
                       <button
@@ -923,12 +888,6 @@ export default function DashboardPage() {
                         className={`btn-icon flex-shrink-0 ${maxDlEditId === f.id ? '!bg-brand-500/20 !text-brand-400 !border-brand-500/30' : ''}`}>
                         <Hash size={13} />
                       </button>
-                      <button
-                        onClick={() => handleToggleShare(share.token)}
-                        className="btn-icon flex-shrink-0"
-                        title={share.active ? t('dash.disable') : t('dash.enable')}>
-                        {share.active ? <ToggleRight size={15} className="text-brand-400" /> : <ToggleLeft size={15} />}
-                      </button>
                     </>
                   )}
                   <button
@@ -939,15 +898,15 @@ export default function DashboardPage() {
                     className={`btn-icon flex-shrink-0 ${expiryEditId === f.id ? '!bg-brand-500/20 !text-brand-400 !border-brand-500/30' : ''}`}>
                     <Clock size={13} />
                   </button>
-                  <button
-                    onClick={() => handleExpireNow(f.id)}
-                    disabled={expiringNowId === f.id}
-                    className="btn-icon flex-shrink-0">
-                    {expiringNowId === f.id
-                      ? <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" />
-                      : <TimerOff size={13} />}
-                  </button>
-                  <button onClick={() => handleDeleteFile(f.id)} className="btn-icon-danger flex-shrink-0">
+                  {share && (
+                    <button
+                      onClick={() => handleToggleShare(share.token)}
+                      className="btn-icon flex-shrink-0"
+                      title={share.active ? t('dash.disable') : t('dash.enable')}>
+                      {share.active ? <ToggleRight size={15} className="text-brand-400" /> : <ToggleLeft size={15} />}
+                    </button>
+                  )}
+                  <button onClick={() => setConfirmDialog({ title: t('confirm.deleteFile'), message: t('confirm.irreversible'), onConfirm: () => handleDeleteFile(f.id) })} className="btn-icon-danger flex-shrink-0">
                     <Trash2 size={13} />
                   </button>
                 </div>
@@ -1098,18 +1057,18 @@ export default function DashboardPage() {
                     title={t('dash.sendEmail')}>
                     <Mail size={13} />
                   </button>
-                  <button onClick={() => handleToggleRequest(r.id)}
-                    className="btn-icon"
-                    title={r.active ? t('dash.disable') : t('dash.enable')}>
-                    {r.active ? <ToggleRight size={15} className="text-brand-400" /> : <ToggleLeft size={15} />}
-                  </button>
                   <button
                     onClick={() => { setRequestExpiryEditId(requestExpiryEditId === r.id ? null : r.id); setRequestExpiryValue(r.expiresAt ? toLocalDatetimeValue(r.expiresAt) : '') }}
                     className={`btn-icon ${requestExpiryEditId === r.id ? '!bg-brand-500/20 !text-brand-400 !border-brand-500/30' : ''}`}
                     title={t('dash.expiryEdit')}>
                     <Clock size={13} />
                   </button>
-                  <button onClick={() => handleDeleteRequest(r.id)} className="btn-icon-danger" title={t('common.delete')}>
+                  <button onClick={() => handleToggleRequest(r.id)}
+                    className="btn-icon"
+                    title={r.active ? t('dash.disable') : t('dash.enable')}>
+                    {r.active ? <ToggleRight size={15} className="text-brand-400" /> : <ToggleLeft size={15} />}
+                  </button>
+                  <button onClick={() => setConfirmDialog({ title: t('confirm.deleteRequest'), message: t('confirm.irreversible'), onConfirm: () => handleDeleteRequest(r.id) })} className="btn-icon-danger" title={t('common.delete')}>
                     <Trash2 size={13} />
                   </button>
                 </div>
@@ -1130,17 +1089,17 @@ export default function DashboardPage() {
                   className={`btn-icon flex-shrink-0 ${emailingRequestId === r.id ? '!bg-brand-500/20 !text-brand-400 !border-brand-500/30' : ''}`}>
                   <Mail size={13} />
                 </button>
-                <button onClick={() => handleToggleRequest(r.id)}
-                  className="btn-icon flex-shrink-0"
-                  title={r.active ? t('dash.disable') : t('dash.enable')}>
-                  {r.active ? <ToggleRight size={15} className="text-brand-400" /> : <ToggleLeft size={15} />}
-                </button>
                 <button
                   onClick={() => { setRequestExpiryEditId(requestExpiryEditId === r.id ? null : r.id); setRequestExpiryValue(r.expiresAt ? toLocalDatetimeValue(r.expiresAt) : '') }}
                   className={`btn-icon flex-shrink-0 ${requestExpiryEditId === r.id ? '!bg-brand-500/20 !text-brand-400 !border-brand-500/30' : ''}`}>
                   <Clock size={13} />
                 </button>
-                <button onClick={() => handleDeleteRequest(r.id)} className="btn-icon-danger flex-shrink-0" title={t('common.delete')}>
+                <button onClick={() => handleToggleRequest(r.id)}
+                  className="btn-icon flex-shrink-0"
+                  title={r.active ? t('dash.disable') : t('dash.enable')}>
+                  {r.active ? <ToggleRight size={15} className="text-brand-400" /> : <ToggleLeft size={15} />}
+                </button>
+                <button onClick={() => setConfirmDialog({ title: t('confirm.deleteRequest'), message: t('confirm.irreversible'), onConfirm: () => handleDeleteRequest(r.id) })} className="btn-icon-danger flex-shrink-0" title={t('common.delete')}>
                   <Trash2 size={13} />
                 </button>
               </div>

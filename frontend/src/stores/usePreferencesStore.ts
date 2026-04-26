@@ -48,39 +48,41 @@ export function applyAccent(key: AccentKey) {
   })
 }
 
-export function applyTheme(mode: ThemeMode) {
-  const root = document.documentElement
-  const isDark =
-    mode === 'dark' ||
-    (mode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)
-  root.setAttribute('data-theme', isDark ? 'dark' : 'light')
+export function isDarkMode(mode: ThemeMode): boolean {
+  return mode === 'dark' || (mode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)
 }
 
-// ---- Couleurs de fond ----
-export const BG_PRESETS: Record<string, { label: string; theme: 'dark' | 'light'; s900: string; s800: string; s700: string }> = {
-  night:    { label: 'Nuit',       theme: 'dark',  s900: '#0d0e1a', s800: '#13152a', s700: '#1c1f3a' },
-  slate:    { label: 'Ardoise',    theme: 'dark',  s900: '#0f172a', s800: '#1e293b', s700: '#273548' },
-  forest:   { label: 'For\u00eat',     theme: 'dark',  s900: '#0c1a12', s800: '#122010', s700: '#1a2e1d' },
-  plum:     { label: 'Prune',      theme: 'dark',  s900: '#1a0c1a', s800: '#26112e', s700: '#311840' },
-  mahogany: { label: 'Acajou',     theme: 'dark',  s900: '#1a0f0a', s800: '#2a1608', s700: '#3a1e0a' },
-  carbon:   { label: 'Carbone',    theme: 'dark',  s900: '#111827', s800: '#1f2937', s700: '#2d3748' },
-  mist:     { label: 'Brume',      theme: 'light', s900: '#eef0f8', s800: '#ffffff', s700: '#e4e8f4' },
-  pearl:    { label: 'Gris perle', theme: 'light', s900: '#f1f5f9', s800: '#ffffff', s700: '#e2e8f0' },
-  mint:     { label: 'Menthe',     theme: 'light', s900: '#f0fdf4', s800: '#ffffff', s700: '#dcfce7' },
-  lavender: { label: 'Lavande',    theme: 'light', s900: '#faf5ff', s800: '#ffffff', s700: '#f3e8ff' },
-  peach:    { label: 'P\u00eache',      theme: 'light', s900: '#fff7ed', s800: '#ffffff', s700: '#ffedd5' },
-  sand:     { label: 'Sable',      theme: 'light', s900: '#fefce8', s800: '#ffffff', s700: '#fef9c3' },
+export function applyTheme(mode: ThemeMode): boolean {
+  const root = document.documentElement
+  const dark = isDarkMode(mode)
+  root.setAttribute('data-theme', dark ? 'dark' : 'light')
+  return dark
+}
+
+// ---- Couleurs de fond (paires dark + light) ----
+export const BG_PRESETS: Record<string, {
+  label: string
+  dark:  { s900: string; s800: string; s700: string }
+  light: { s900: string; s800: string; s700: string }
+}> = {
+  ocean:  { label: 'Oc\u00e9an',   dark: { s900: '#061b1f', s800: '#0d2b31', s700: '#123640' }, light: { s900: '#ecfeff', s800: '#ffffff', s700: '#cffafe' } },
+  slate:  { label: 'Ardoise', dark: { s900: '#0f172a', s800: '#1e293b', s700: '#273548' }, light: { s900: '#f0f9ff', s800: '#ffffff', s700: '#e0f2fe' } },
+  forest: { label: 'For\u00eat',   dark: { s900: '#0c1a12', s800: '#122010', s700: '#1a2e1d' }, light: { s900: '#f0fdf4', s800: '#ffffff', s700: '#dcfce7' } },
+  plum:   { label: 'Prune',   dark: { s900: '#1a0c1a', s800: '#26112e', s700: '#311840' }, light: { s900: '#faf5ff', s800: '#ffffff', s700: '#f3e8ff' } },
+  warm:   { label: 'Chaleur', dark: { s900: '#1a0f0a', s800: '#2a1608', s700: '#3a1e0a' }, light: { s900: '#fff7ed', s800: '#ffffff', s700: '#ffedd5' } },
+  rose:   { label: 'Rose',    dark: { s900: '#1a0a10', s800: '#2a1020', s700: '#3a1830' }, light: { s900: '#fdf2f8', s800: '#ffffff', s700: '#fce7f3' } },
+  carbon: { label: 'Carbone', dark: { s900: '#111827', s800: '#1f2937', s700: '#2d3748' }, light: { s900: '#f8fafc', s800: '#ffffff', s700: '#f1f5f9' } },
 }
 export type BgColorKey = keyof typeof BG_PRESETS
 
-export function applyBgColor(key: BgColorKey) {
+export function applyBgColor(key: BgColorKey, isDark: boolean) {
   const preset = BG_PRESETS[key]
   if (!preset) return
-  // Applique sur :root pour que les deux thèmes soient couverts
+  const v = isDark ? preset.dark : preset.light
   const root = document.documentElement
-  root.style.setProperty('--surface-900', preset.s900)
-  root.style.setProperty('--surface-800', preset.s800)
-  root.style.setProperty('--surface-700', preset.s700)
+  root.style.setProperty('--surface-900', v.s900)
+  root.style.setProperty('--surface-800', v.s800)
+  root.style.setProperty('--surface-700', v.s700)
 }
 
 export function resetBgColor() {
@@ -104,13 +106,23 @@ interface PreferencesStore {
 
 export const usePreferencesStore = create<PreferencesStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       theme: 'dark',
       accentColor: 'indigo',
       bgColorKey: null,
-      setTheme: (theme) => { set({ theme, bgColorKey: null }); resetBgColor(); applyTheme(theme) },
+      setTheme: (theme) => {
+        set({ theme })
+        const isDark = applyTheme(theme)
+        const { bgColorKey } = get()
+        if (bgColorKey) applyBgColor(bgColorKey, isDark); else resetBgColor()
+      },
       setAccentColor: (accentColor) => { set({ accentColor }); applyAccent(accentColor) },
-      setBgColor: (bgColorKey) => { set({ bgColorKey }); if (bgColorKey) applyBgColor(bgColorKey); else resetBgColor() }
+      setBgColor: (bgColorKey) => {
+        set({ bgColorKey })
+        const { theme } = get()
+        const isDark = isDarkMode(theme)
+        if (bgColorKey) applyBgColor(bgColorKey, isDark); else resetBgColor()
+      }
     }),
     { name: 'filyo-preferences' }
   )

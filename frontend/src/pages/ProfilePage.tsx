@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { User, Camera, Trash2, Lock, RefreshCw, Check, Pencil, Eraser, Palette, Moon, Sun, Monitor, Globe } from 'lucide-react'
-import { usePreferencesStore, ACCENT_PRESETS, BG_PRESETS, type ThemeMode, type AccentKey, type BgColorKey } from '../stores/usePreferencesStore'
+import { usePreferencesStore, ACCENT_PRESETS, BG_PRESETS, isDarkMode, type ThemeMode, type AccentKey, type BgColorKey } from '../stores/usePreferencesStore'
 import { LANGUAGES } from '../components/LanguageSwitcher'
 import toast from 'react-hot-toast'
 import { uploadAvatar, deleteAvatar, changePassword, updateProfile, updateCleanupPreference, getSettings } from '../api/client'
@@ -20,7 +20,14 @@ export default function ProfilePage() {
   const { t } = useT()
   const { theme, accentColor, bgColorKey, setTheme, setAccentColor, setBgColor } = usePreferencesStore()
   const { lang, setLang } = useT()
-  const isDark = theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+  const [isDark, setIsDark] = useState(isDarkMode(theme))
+  useEffect(() => {
+    const update = () => setIsDark(isDarkMode(theme))
+    update()
+    const mq = window.matchMedia('(prefers-color-scheme: dark)')
+    mq.addEventListener('change', update)
+    return () => mq.removeEventListener('change', update)
+  }, [theme])
   const THEME_OPTIONS: { value: ThemeMode; label: string; icon: typeof Moon }[] = [
     { value: 'dark',  label: t('settings.themeDark'),  icon: Moon },
     { value: 'light', label: t('settings.themeLight'), icon: Sun },
@@ -414,7 +421,7 @@ export default function ProfilePage() {
             >
               {!bgColorKey && <Check size={14} className="text-white" />}
             </button>
-            {(Object.entries(BG_PRESETS) as [BgColorKey, typeof BG_PRESETS[BgColorKey]][]).filter(([, p]) => p.theme === (isDark ? 'dark' : 'light')).map(([key, preset]) => {
+            {(Object.entries(BG_PRESETS) as [BgColorKey, typeof BG_PRESETS[BgColorKey]][]).map(([key, preset]) => {
               const active = bgColorKey === key
               return (
                 <button
@@ -425,7 +432,7 @@ export default function ProfilePage() {
                   className={`w-9 h-9 rounded-xl transition-all ${
                     active ? 'scale-110 ring-2 ring-offset-2 ring-offset-surface-800' : 'hover:scale-105 opacity-80 hover:opacity-100'
                   }`}
-                  style={{ background: preset.s900, border: '2px solid', borderColor: active ? 'white' : 'transparent' }}
+                  style={{ background: isDark ? preset.dark.s900 : preset.light.s900, border: '2px solid', borderColor: active ? 'white' : 'transparent' }}
                 >
                   {active && (
                     <span className="flex items-center justify-center w-full h-full">

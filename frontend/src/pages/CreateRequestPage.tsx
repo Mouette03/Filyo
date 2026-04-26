@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Copy, Check, Plus, ArrowDownUp, Clock, FileUp, Lock, Hash, Mail, Send } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { createUploadRequest, sendRequestByEmail } from '../api/client'
@@ -27,6 +28,7 @@ export default function CreateRequestPage() {
   const [emailSending, setEmailSending] = useState(false)
   const [emailSent, setEmailSent] = useState(false)
   const { t, lang } = useT()
+  const navigate = useNavigate()
   const { settings } = useAppSettingsStore()
 
   const globalMaxMb = settings.maxFileSizeBytes
@@ -272,9 +274,14 @@ export default function CreateRequestPage() {
             <p className="text-xs text-white/30 mt-2">{t('create.emailHint')}</p>
           </div>
 
-          <button onClick={() => { setResult(null); setTitle(''); setMessage(''); setEmailTo(''); setEmailSent(false) }}
+          <button onClick={() => { setResult(null); setTitle(''); setMessage(''); setPassword(''); setExpiresIn('604800'); setMaxFiles(''); setMaxSizeMb(''); setEmailTo(''); setEmailSent(false) }}
             className="btn-secondary w-full flex items-center justify-center gap-2">
             <Plus size={16} /> {t('create.anotherLink')}
+          </button>
+
+          <button onClick={() => navigate('/')}
+            className="btn-primary w-full flex items-center justify-center gap-2">
+            <Check size={16} /> {t('home.modal.done')}
           </button>
         </div>
       )}
