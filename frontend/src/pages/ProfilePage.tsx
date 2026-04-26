@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { User, Camera, Trash2, Lock, RefreshCw, Check, Pencil, Eraser, Palette, Moon, Sun, Monitor, Globe } from 'lucide-react'
-import { usePreferencesStore, ACCENT_PRESETS, BG_PRESETS, type ThemeMode, type AccentKey, type BgColorKey } from '../stores/usePreferencesStore'
+import { usePreferencesStore, ACCENT_PRESETS, BG_PRESETS, isDarkMode, type ThemeMode, type AccentKey, type BgColorKey } from '../stores/usePreferencesStore'
 import { LANGUAGES } from '../components/LanguageSwitcher'
 import toast from 'react-hot-toast'
 import { uploadAvatar, deleteAvatar, changePassword, updateProfile, updateCleanupPreference, getSettings } from '../api/client'
@@ -20,13 +20,9 @@ export default function ProfilePage() {
   const { t } = useT()
   const { theme, accentColor, bgColorKey, setTheme, setAccentColor, setBgColor } = usePreferencesStore()
   const { lang, setLang } = useT()
-  const [isDark, setIsDark] = useState(
-    theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)
-  )
+  const [isDark, setIsDark] = useState(isDarkMode(theme))
   useEffect(() => {
-    const update = () => setIsDark(
-      theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)
-    )
+    const update = () => setIsDark(isDarkMode(theme))
     update()
     const mq = window.matchMedia('(prefers-color-scheme: dark)')
     mq.addEventListener('change', update)

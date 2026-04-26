@@ -48,13 +48,15 @@ export function applyAccent(key: AccentKey) {
   })
 }
 
+export function isDarkMode(mode: ThemeMode): boolean {
+  return mode === 'dark' || (mode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+}
+
 export function applyTheme(mode: ThemeMode): boolean {
   const root = document.documentElement
-  const isDark =
-    mode === 'dark' ||
-    (mode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)
-  root.setAttribute('data-theme', isDark ? 'dark' : 'light')
-  return isDark
+  const dark = isDarkMode(mode)
+  root.setAttribute('data-theme', dark ? 'dark' : 'light')
+  return dark
 }
 
 // ---- Couleurs de fond (paires dark + light) ----
@@ -118,7 +120,7 @@ export const usePreferencesStore = create<PreferencesStore>()(
       setBgColor: (bgColorKey) => {
         set({ bgColorKey })
         const { theme } = get()
-        const isDark = theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+        const isDark = isDarkMode(theme)
         if (bgColorKey) applyBgColor(bgColorKey, isDark); else resetBgColor()
       }
     }),
