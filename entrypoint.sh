@@ -4,7 +4,7 @@ set -e
 # Reconstruction DATABASE_URL selon le mode
 if [ -z "$DATABASE_URL" ]; then
   if [ -n "$DB_HOST" ]; then
-    export DATABASE_URL="mysql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT:-3306}/${DB_NAME}?connection_limit=10&connect_timeout=10"
+    export DATABASE_URL="mysql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT:-3306}/${DB_NAME}?connection_limit=10&connect_timeout=10&pool_timeout=20&socket_timeout=60"
   else
     export DATABASE_URL="file:/data/filyo.db"
   fi
