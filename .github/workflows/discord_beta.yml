@@ -8,9 +8,9 @@ on:
         required: true
         type: string
       branch:
-        description: "Branche à analyser (ex: develop)"
+        description: "Branche à analyser (ex: main)"
         required: true
-        default: "develop"
+        default: "main"
         type: string
 
 jobs:
