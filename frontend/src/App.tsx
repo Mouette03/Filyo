@@ -37,7 +37,7 @@ export default function App() {
   useEffect(() => {
     applyAccent(accentColor)
     const isDark = applyTheme(theme)
-    if (bgColorKey) applyBgColor(bgColorKey, isDark)
+    if (bgColorKey) applyBgColor(bgColorKey, isDark); else resetBgColor()
     if (theme === 'auto') {
       const mq = window.matchMedia('(prefers-color-scheme: dark)')
       const handler = () => {

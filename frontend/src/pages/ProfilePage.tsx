@@ -20,7 +20,18 @@ export default function ProfilePage() {
   const { t } = useT()
   const { theme, accentColor, bgColorKey, setTheme, setAccentColor, setBgColor } = usePreferencesStore()
   const { lang, setLang } = useT()
-  const isDark = theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+  const [isDark, setIsDark] = useState(
+    theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+  )
+  useEffect(() => {
+    const update = () => setIsDark(
+      theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+    )
+    update()
+    const mq = window.matchMedia('(prefers-color-scheme: dark)')
+    mq.addEventListener('change', update)
+    return () => mq.removeEventListener('change', update)
+  }, [theme])
   const THEME_OPTIONS: { value: ThemeMode; label: string; icon: typeof Moon }[] = [
     { value: 'dark',  label: t('settings.themeDark'),  icon: Moon },
     { value: 'light', label: t('settings.themeLight'), icon: Sun },
