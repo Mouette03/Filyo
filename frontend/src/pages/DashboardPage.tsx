@@ -308,7 +308,9 @@ export default function DashboardPage() {
         toast.error(t('common.error')); setSavingMaxDlId(null); return
       }
       await updateFileMaxDownloads(fileId, maxDownloads)
-      setFiles(prev => prev.map(f => f.id === fileId ? { ...f, maxDownloads } : f))
+      setFiles(prev => prev.map(f => f.id === fileId
+        ? { ...f, maxDownloads, shares: f.shares.map(s => ({ ...s, maxDownloads })) }
+        : f))
       setMaxDlEditId(null)
       toast.success(maxDownloads !== null ? t('toast.maxDlUpdated') : t('toast.maxDlRemoved'))
     } catch { toast.error(t('toast.updateError')) }
@@ -325,7 +327,9 @@ export default function DashboardPage() {
       }
       await Promise.all(batchFiles.map(f => updateFileMaxDownloads(f.id, maxDownloads)))
       const ids = new Set(batchFiles.map(f => f.id))
-      setFiles(prev => prev.map(f => ids.has(f.id) ? { ...f, maxDownloads } : f))
+      setFiles(prev => prev.map(f => ids.has(f.id)
+        ? { ...f, maxDownloads, shares: f.shares.map(s => ({ ...s, maxDownloads })) }
+        : f))
       setMaxDlEditId(null)
       toast.success(maxDownloads !== null ? t('toast.maxDlUpdated') : t('toast.maxDlRemoved'))
     } catch { toast.error(t('toast.updateError')) }

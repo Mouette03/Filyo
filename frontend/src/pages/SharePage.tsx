@@ -81,6 +81,15 @@ export default function SharePage() {
       })
   }, [token, retryCount])
 
+  // Rafraîchit silencieusement les compteurs après un téléchargement
+  // sans jamais modifier le status (évite le flash "Lien invalide")
+  const refreshInfo = () => {
+    if (!token) return
+    getShareInfo(token)
+      .then(r => setInfo(r.data))
+      .catch(() => {})
+  }
+
   // Téléchargement d'un fichier unique
   const handleDownloadSingle = async () => {
     if (!token || !info) return
@@ -93,7 +102,7 @@ export default function SharePage() {
       a.click()
       setDownloaded(p => ({ ...p, [token]: true }))
       toast.success(t('toast.downloadStarted'))
-      setRetryCount(c => c + 1)
+      refreshInfo()
     } catch (err: any) {
       if (err.response?.status === 429) {
         toast.error(t('toast.tooManyRequests'))
@@ -119,7 +128,7 @@ export default function SharePage() {
       a.click()
       setDownloaded(p => ({ ...p, [shareToken]: true }))
       toast.success(t('toast.downloadStarted'))
-      setRetryCount(c => c + 1)
+      refreshInfo()
     } catch (err: any) {
       if (err.response?.status === 429) {
         toast.error(t('toast.tooManyRequests'))
@@ -170,7 +179,7 @@ export default function SharePage() {
     }
     setDownloadingAll(false)
     if (failures === 0) toast.success(t('toast.downloadStarted'))
-    setRetryCount(c => c + 1)
+    refreshInfo()
   }
 
   const isBatch = info?.batchFiles && info.batchFiles.filter(bf => bf.shareToken).length > 1
