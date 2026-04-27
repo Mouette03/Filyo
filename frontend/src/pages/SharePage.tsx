@@ -101,6 +101,7 @@ export default function SharePage() {
       a.download = info.filename
       a.click()
       setDownloaded(p => ({ ...p, [token]: true }))
+      setInfo(prev => prev ? { ...prev, downloads: prev.downloads + 1 } : prev)
       toast.success(t('toast.downloadStarted'))
       refreshInfo()
     } catch (err: any) {
@@ -127,6 +128,12 @@ export default function SharePage() {
       a.download = filename
       a.click()
       setDownloaded(p => ({ ...p, [shareToken]: true }))
+      setInfo(prev => prev ? {
+        ...prev,
+        batchFiles: prev.batchFiles?.map(bf =>
+          bf.shareToken === shareToken ? { ...bf, downloads: bf.downloads + 1 } : bf
+        ) ?? null
+      } : prev)
       toast.success(t('toast.downloadStarted'))
       refreshInfo()
     } catch (err: any) {
@@ -160,6 +167,12 @@ export default function SharePage() {
         a.download = info.hideFilenames ? `fichier-${i + 1}` : bf.filename
         a.click()
         setDownloaded(p => ({ ...p, [bf.shareToken]: true }))
+        setInfo(prev => prev ? {
+          ...prev,
+          batchFiles: prev.batchFiles?.map(b =>
+            b.shareToken === bf.shareToken ? { ...b, downloads: b.downloads + 1 } : b
+          ) ?? null
+        } : prev)
       } catch (err: any) {
         if (err.response?.status === 429) {
           toast.error(t('toast.tooManyRequests'))
