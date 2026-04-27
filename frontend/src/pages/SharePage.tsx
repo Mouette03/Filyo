@@ -93,6 +93,7 @@ export default function SharePage() {
       a.click()
       setDownloaded(p => ({ ...p, [token]: true }))
       toast.success(t('toast.downloadStarted'))
+      setRetryCount(c => c + 1)
     } catch (err: any) {
       if (err.response?.status === 429) {
         toast.error(t('toast.tooManyRequests'))
@@ -118,6 +119,7 @@ export default function SharePage() {
       a.click()
       setDownloaded(p => ({ ...p, [shareToken]: true }))
       toast.success(t('toast.downloadStarted'))
+      setRetryCount(c => c + 1)
     } catch (err: any) {
       if (err.response?.status === 429) {
         toast.error(t('toast.tooManyRequests'))
@@ -168,6 +170,7 @@ export default function SharePage() {
     }
     setDownloadingAll(false)
     if (failures === 0) toast.success(t('toast.downloadStarted'))
+    setRetryCount(c => c + 1)
   }
 
   const isBatch = info?.batchFiles && info.batchFiles.filter(bf => bf.shareToken).length > 1
