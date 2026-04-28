@@ -38,6 +38,7 @@ services:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpass}
     volumes:
       - ${DATA_PATH:-./data}/db:/var/lib/mysql
+    command: --wait_timeout=28800 --interactive_timeout=28800 --log_warnings=1  
     healthcheck:
       test: ["CMD-SHELL", "mariadb-admin ping -h 127.0.0.1 -u\"$${MYSQL_USER}\" -p\"$${MYSQL_PASSWORD}\" --silent"]
       interval: '10s'
