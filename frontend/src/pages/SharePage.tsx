@@ -372,6 +372,8 @@ export default function SharePage() {
                         </div>
                         {downloaded[bf.shareToken] ? (
                           <span className="text-xs text-emerald-400 flex-shrink-0">✓</span>
+                        ) : bf.maxDownloads !== null && bf.downloads >= bf.maxDownloads ? (
+                          <span className="text-xs text-red-400 flex-shrink-0">{t('dash.limitReached')}</span>
                         ) : (
                           <button
                             onClick={() => handleDownloadBatch(bf.shareToken, bf.filename)}
