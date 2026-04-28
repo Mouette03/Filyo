@@ -34,8 +34,8 @@ export async function shareRoutes(app: FastifyInstance) {
     if (share.expiresAt && share.expiresAt < new Date()) {
       return reply.code(410).send({ code: 'SHARE_EXPIRED' })
     }
-    // Pour un lot, on laisse la page charger même si ce fichier précis a atteint sa limite —
-    // le frontend affiche le statut par fichier via batchFiles.
+    // Pour un lot, on laisse la page charger si au moins un fichier est encore téléchargeable.
+    // On retourne 410 seulement si tous les fichiers du lot ont atteint leur limite individuelle.
     if (share.maxDownloads && share.downloads >= share.maxDownloads && !share.file.batchToken) {
       return reply.code(410).send({ code: 'SHARE_LIMIT_REACHED' })
     }
@@ -67,6 +67,14 @@ export async function shareRoutes(app: FastifyInstance) {
             maxDownloads: sh.maxDownloads
           }
         })
+
+      // Tous les fichiers du lot ont atteint leur limite → page expirée
+      const allLimited = batchFiles.length > 0 && batchFiles.every(
+        (bf: any) => bf.maxDownloads !== null && bf.downloads >= bf.maxDownloads
+      )
+      if (allLimited) {
+        return reply.code(410).send({ code: 'SHARE_LIMIT_REACHED' })
+      }
     }
 
     const displayName = getDisplayName(share.file.originalName, share.file.hideFilenames)

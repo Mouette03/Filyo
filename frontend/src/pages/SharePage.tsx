@@ -172,6 +172,7 @@ export default function SharePage() {
     for (let i = 0; i < files.length; i++) {
       const bf = files[i]
       if (downloaded[bf.shareToken]) continue
+      if (bf.maxDownloads !== null && bf.downloads >= bf.maxDownloads) continue
       setDownloading(p => ({ ...p, [bf.shareToken]: true }))
       try {
         const res = await getShareDlToken(bf.shareToken, password || undefined)
