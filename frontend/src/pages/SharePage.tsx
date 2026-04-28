@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { Download, Lock, AlertTriangle, ArrowDownUp, Clock, Shield, EyeOff, Package } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -83,10 +83,12 @@ export default function SharePage() {
 
   // Rafraîchit silencieusement les compteurs après un téléchargement
   // sans jamais modifier le status (évite le flash "Lien invalide")
+  const refreshCounter = useRef(0)
   const refreshInfo = () => {
     if (!token) return
+    const id = ++refreshCounter.current
     getShareInfo(token)
-      .then(r => setInfo(r.data))
+      .then(r => { if (id === refreshCounter.current) setInfo(r.data) })
       .catch(() => {})
   }
 
