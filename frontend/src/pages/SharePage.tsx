@@ -194,6 +194,7 @@ export default function SharePage() {
           ) ?? null
         } : prev)
       } catch (err: any) {
+        const code = err.response?.data?.code
         if (err.response?.status === 429) {
           toast.error(t('toast.tooManyRequests'))
           setDownloading(p => ({ ...p, [bf.shareToken]: false }))
@@ -206,9 +207,20 @@ export default function SharePage() {
           setDownloadingAll(false)
           refreshInfo()
           return
+        } else if (code === 'SHARE_LIMIT_REACHED') {
+          toast.error(t('share.limitReachedDesc'))
+          refreshInfo()
+        } else if (code === 'SHARE_EXPIRED') {
+          toast.error(t('share.expiredDesc'))
+        } else if (code === 'SHARE_INACTIVE') {
+          toast.error(t('share.inactiveDesc'))
+        } else if (code === 'FILE_MISSING') {
+          toast.error(t('error.fileMissing'))
+          failures++
+        } else {
+          failures++
+          toast.error(t('common.error'))
         }
-        failures++
-        toast.error(t('common.error'))
       }
       setDownloading(p => ({ ...p, [bf.shareToken]: false }))
     }
