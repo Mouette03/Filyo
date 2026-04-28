@@ -114,9 +114,11 @@ export default function SharePage() {
       } else if (code === 'FILE_MISSING') {
         toast.error(t('error.fileMissing'))
       } else if (code === 'SHARE_LIMIT_REACHED') {
-        toast.error(t('share.limitReachedDesc'))
+        setError('share.limitReachedDesc')
+        setStatus('expired')
       } else if (code === 'SHARE_EXPIRED' || code === 'SHARE_INACTIVE') {
-        toast.error(t('share.expiredDesc'))
+        setError('share.expiredDesc')
+        setStatus('expired')
       } else {
         toast.error(t('common.error'))
       }
