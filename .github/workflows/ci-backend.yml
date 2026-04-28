@@ -12,6 +12,9 @@ on:
       - 'backend/**'
       - '.github/workflows/ci.yml'
 
+permissions:
+  contents: read
+
 jobs:
   install:
     name: 📦 Install dependencies

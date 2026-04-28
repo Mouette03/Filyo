@@ -12,6 +12,9 @@ on:
       - 'frontend/**'
       - '.github/workflows/ci-frontend.yml'
 
+permissions:
+  contents: read
+
 jobs:
   install:
     name: 📦 Install dependencies
