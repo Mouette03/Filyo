@@ -34,7 +34,9 @@ export async function shareRoutes(app: FastifyInstance) {
     if (share.expiresAt && share.expiresAt < new Date()) {
       return reply.code(410).send({ code: 'SHARE_EXPIRED' })
     }
-    if (share.maxDownloads && share.downloads >= share.maxDownloads) {
+    // Pour un lot, on laisse la page charger même si ce fichier précis a atteint sa limite —
+    // le frontend affiche le statut par fichier via batchFiles.
+    if (share.maxDownloads && share.downloads >= share.maxDownloads && !share.file.batchToken) {
       return reply.code(410).send({ code: 'SHARE_LIMIT_REACHED' })
     }
 

@@ -543,6 +543,11 @@ export default function DashboardPage() {
                           if (isExpired) return <span className="flex-shrink-0 badge-orange">{t('dash.expired')}</span>
                           return <span className="flex-shrink-0 badge-green">{t('common.active')}</span>
                         })()}
+                        {bf.every(f => f.maxDownloads !== null && f.downloads >= f.maxDownloads) && (
+                          <span className="flex-shrink-0 flex items-center gap-1 text-xs font-medium text-red-400 bg-red-500/15 px-2 py-0.5 rounded-full">
+                            <AlertTriangle size={10} /> {t('dash.limitReached')}
+                          </span>
+                        )}
                       </div>
                       <p className="text-xs text-white/40 mt-0.5">
                         {t('dash.batchGroupSize', { count: String(bf.length), size: formatBytes(String(totalSize)) })}
@@ -766,6 +771,13 @@ export default function DashboardPage() {
                               : f.originalName}
                           </p>
                           <span className="text-xs text-white/40 flex-shrink-0">{formatBytes(f.size)}</span>
+                          {f.maxDownloads !== null ? (
+                            <span className={`text-xs flex-shrink-0 ${f.downloads >= f.maxDownloads ? 'text-red-400' : 'text-white/40'}`}>
+                              {f.downloads}/{f.maxDownloads} {t('dash.dl')}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-white/40 flex-shrink-0">{f.downloads} {t('dash.dl')}</span>
+                          )}
                         </div>
                       ))}
                     </div>

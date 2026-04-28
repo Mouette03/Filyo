@@ -143,6 +143,7 @@ export default function SharePage() {
         ) ?? null
       } : prev)
       toast.success(t('toast.downloadStarted'))
+      refreshInfo()
     } catch (err: any) {
       const code = err.response?.data?.code
       if (err.response?.status === 429) {
