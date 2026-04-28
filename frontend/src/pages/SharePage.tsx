@@ -178,11 +178,13 @@ export default function SharePage() {
           toast.error(t('toast.tooManyRequests'))
           setDownloading(p => ({ ...p, [bf.shareToken]: false }))
           setDownloadingAll(false)
+          refreshInfo()
           return
         } else if (err.response?.status === 401) {
           toast.error(t('toast.passwordWrong'))
           setDownloading(p => ({ ...p, [bf.shareToken]: false }))
           setDownloadingAll(false)
+          refreshInfo()
           return
         }
         failures++

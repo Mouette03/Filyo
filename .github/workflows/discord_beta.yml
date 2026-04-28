@@ -41,7 +41,7 @@ jobs:
             RAW=$(git log --oneline -10 --pretty=format:"%s")
             LAST_TAG="début du projet"
           else
-            RAW=$(git log ${LAST_TAG}..HEAD --pretty=format:"%s")
+            RAW=$(git log "${LAST_TAG}"..HEAD --pretty=format:"%s")
           fi
 
           # Fallback si toujours vide
