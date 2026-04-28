@@ -116,8 +116,11 @@ export default function SharePage() {
       } else if (code === 'SHARE_LIMIT_REACHED') {
         setError('share.limitReachedDesc')
         setStatus('expired')
-      } else if (code === 'SHARE_EXPIRED' || code === 'SHARE_INACTIVE') {
+      } else if (code === 'SHARE_EXPIRED') {
         setError('share.expiredDesc')
+        setStatus('expired')
+      } else if (code === 'SHARE_INACTIVE') {
+        setError('share.inactiveDesc')
         setStatus('expired')
       } else {
         toast.error(t('common.error'))
@@ -154,8 +157,11 @@ export default function SharePage() {
         toast.error(t('error.fileMissing'))
       } else if (code === 'SHARE_LIMIT_REACHED') {
         toast.error(t('share.limitReachedDesc'))
-      } else if (code === 'SHARE_EXPIRED' || code === 'SHARE_INACTIVE') {
+        refreshInfo()
+      } else if (code === 'SHARE_EXPIRED') {
         toast.error(t('share.expiredDesc'))
+      } else if (code === 'SHARE_INACTIVE') {
+        toast.error(t('share.inactiveDesc'))
       } else {
         toast.error(t('common.error'))
       }

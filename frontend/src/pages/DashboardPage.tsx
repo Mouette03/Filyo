@@ -771,13 +771,18 @@ export default function DashboardPage() {
                               : f.originalName}
                           </p>
                           <span className="text-xs text-white/40 flex-shrink-0">{formatBytes(f.size)}</span>
-                          {f.maxDownloads !== null ? (
-                            <span className={`text-xs flex-shrink-0 ${f.downloads >= f.maxDownloads ? 'text-red-400' : 'text-white/40'}`}>
-                              {f.downloads}/{f.maxDownloads} {t('dash.dl')}
-                            </span>
-                          ) : (
-                            <span className="text-xs text-white/40 flex-shrink-0">{f.downloads} {t('dash.dl')}</span>
-                          )}
+                          {(() => {
+                            const sh = f.shares[0]
+                            const dl = sh?.downloads ?? f.downloads
+                            const max = sh?.maxDownloads ?? f.maxDownloads
+                            return max !== null ? (
+                              <span className={`text-xs flex-shrink-0 ${dl >= max ? 'text-red-400' : 'text-white/40'}`}>
+                                {dl}/{max} {t('dash.dl')}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-white/40 flex-shrink-0">{dl} {t('dash.dl')}</span>
+                            )
+                          })()}
                         </div>
                       ))}
                     </div>
