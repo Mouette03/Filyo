@@ -665,37 +665,34 @@ export default function DashboardPage() {
                       <Clock size={13} />
                     </button>
                   </div>
-                  {/* Expiration inline lot */}
-                  {expiryEditId === batchToken && (
-                    <div className="mt-3 pt-3 border-t border-white/10 flex flex-wrap gap-2 items-center">
-                      <Clock size={13} className="text-white/30 flex-shrink-0" />
+                  {/* Email inline lot */}
+                  {emailingFileId === batchToken && firstShare && (
+                    <div className="mt-3 pt-3 border-t border-white/10 flex gap-2 items-center">
+                      <Mail size={13} className="text-white/30 flex-shrink-0" />
                       <input
-                        type="datetime-local"
-                        id="dash-expiry-date"
-                        name="expiresAt"
-                        value={expiryValue}
-                        onChange={e => setExpiryValue(e.target.value)}
-                        min={new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().substring(0, 16)}
-                        className="input text-sm py-1.5 flex-1 min-w-36"
+                        type="email"
+                        id="dash-batch-email"
+                        name="emailTo"
+                        value={emailToFile}
+                        onChange={e => setEmailToFile(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && handleSendFileEmail(firstShare.token)}
+                        placeholder={t('dash.emailPlaceholder')}
+                        className="input text-sm py-1.5 flex-1"
+                        autoFocus
                       />
                       <button
-                        onClick={() => handleSaveBatchExpiry(bf)}
-                        disabled={savingExpiryId === batchToken || !expiryValue}
+                        onClick={() => handleSendFileEmail(firstShare.token)}
+                        disabled={emailSendingToken === firstShare.token || !emailToFile.trim()}
                         className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1.5 disabled:opacity-40">
-                        {savingExpiryId === batchToken
+                        {emailSendingToken === firstShare.token
                           ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          : <Check size={12} />}
-                        {t('common.save')}
+                          : <Send size={12} />}
+                        {t('common.send')}
                       </button>
-                      <button
-                        onClick={() => handleSaveBatchExpiry(bf, true)}
-                        disabled={savingExpiryId === batchToken}
-                        className="btn-secondary text-xs px-2.5 py-1.5 disabled:opacity-40">
-                        {t('dash.noExpiry')}
-                      </button>
-                      <button onClick={() => setExpiryEditId(null)} className="btn-secondary text-xs px-2.5 py-1.5">✕</button>
+                      <button onClick={() => setEmailingFileId(null)} className="btn-secondary text-xs px-2.5 py-1.5">✕</button>
                     </div>
                   )}
+                  {/* MaxDl inline lot */}
                   {maxDlEditId === batchToken && (
                     <div className="mt-3 pt-3 border-t border-white/10 flex flex-wrap gap-2 items-center">
                       <Hash size={13} className="text-white/30 flex-shrink-0" />
@@ -726,31 +723,35 @@ export default function DashboardPage() {
                       <button onClick={() => setMaxDlEditId(null)} className="btn-secondary text-xs px-2.5 py-1.5">✕</button>
                     </div>
                   )}
-                  {/* Email inline lot */}
-                  {emailingFileId === batchToken && firstShare && (
-                    <div className="mt-3 pt-3 border-t border-white/10 flex gap-2 items-center">
-                      <Mail size={13} className="text-white/30 flex-shrink-0" />
+                  {/* Expiration inline lot */}
+                  {expiryEditId === batchToken && (
+                    <div className="mt-3 pt-3 border-t border-white/10 flex flex-wrap gap-2 items-center">
+                      <Clock size={13} className="text-white/30 flex-shrink-0" />
                       <input
-                        type="email"
-                        id="dash-batch-email"
-                        name="emailTo"
-                        value={emailToFile}
-                        onChange={e => setEmailToFile(e.target.value)}
-                        onKeyDown={e => e.key === 'Enter' && handleSendFileEmail(firstShare.token)}
-                        placeholder={t('dash.emailPlaceholder')}
-                        className="input text-sm py-1.5 flex-1"
-                        autoFocus
+                        type="datetime-local"
+                        id="dash-expiry-date"
+                        name="expiresAt"
+                        value={expiryValue}
+                        onChange={e => setExpiryValue(e.target.value)}
+                        min={new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().substring(0, 16)}
+                        className="input text-sm py-1.5 flex-1 min-w-36"
                       />
                       <button
-                        onClick={() => handleSendFileEmail(firstShare.token)}
-                        disabled={emailSendingToken === firstShare.token || !emailToFile.trim()}
+                        onClick={() => handleSaveBatchExpiry(bf)}
+                        disabled={savingExpiryId === batchToken || !expiryValue}
                         className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1.5 disabled:opacity-40">
-                        {emailSendingToken === firstShare.token
+                        {savingExpiryId === batchToken
                           ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          : <Send size={12} />}
-                        {t('common.send')}
+                          : <Check size={12} />}
+                        {t('common.save')}
                       </button>
-                      <button onClick={() => setEmailingFileId(null)} className="btn-secondary text-xs px-2.5 py-1.5">✕</button>
+                      <button
+                        onClick={() => handleSaveBatchExpiry(bf, true)}
+                        disabled={savingExpiryId === batchToken}
+                        className="btn-secondary text-xs px-2.5 py-1.5 disabled:opacity-40">
+                        {t('dash.noExpiry')}
+                      </button>
+                      <button onClick={() => setExpiryEditId(null)} className="btn-secondary text-xs px-2.5 py-1.5">✕</button>
                     </div>
                   )}
                   {/* Liste des fichiers du lot */}
@@ -943,6 +944,37 @@ export default function DashboardPage() {
                   </div>
                 )}
 
+                {/* Inline : modifier max téléchargements */}
+                {maxDlEditId === f.id && (
+                  <div className="mt-3 pt-3 border-t border-white/10 flex flex-wrap gap-2 items-center">
+                    <Hash size={13} className="text-white/30 flex-shrink-0" />
+                    <input
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={maxDlValue}
+                      onChange={e => setMaxDlValue(e.target.value)}
+                      placeholder={t('common.unlimited')}
+                      className="input text-sm py-1.5 flex-1 min-w-24"
+                    />
+                    <button
+                      onClick={() => handleSaveMaxDl(f.id)}
+                      disabled={savingMaxDlId === f.id || !maxDlValue}
+                      className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1.5 disabled:opacity-40">
+                      {savingMaxDlId === f.id
+                        ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        : <Check size={12} />}
+                      {t('common.save')}
+                    </button>
+                    <button
+                      onClick={() => handleSaveMaxDl(f.id, true)}
+                      disabled={savingMaxDlId === f.id}
+                      className="btn-secondary text-xs px-2.5 py-1.5 disabled:opacity-40">
+                      {t('common.unlimited')}
+                    </button>
+                    <button onClick={() => setMaxDlEditId(null)} className="btn-secondary text-xs px-2.5 py-1.5">✕</button>
+                  </div>
+                )}
                 {/* Inline : modifier expiration */}
                 {expiryEditId === f.id && (
                   <div className="mt-3 pt-3 border-t border-white/10 flex flex-wrap gap-2 items-center">
@@ -972,36 +1004,6 @@ export default function DashboardPage() {
                       {t('dash.noExpiry')}
                     </button>
                     <button onClick={() => setExpiryEditId(null)} className="btn-secondary text-xs px-2.5 py-1.5">✕</button>
-                  </div>
-                )}
-                {maxDlEditId === f.id && (
-                  <div className="mt-3 pt-3 border-t border-white/10 flex flex-wrap gap-2 items-center">
-                    <Hash size={13} className="text-white/30 flex-shrink-0" />
-                    <input
-                      type="number"
-                      min="1"
-                      step="1"
-                      value={maxDlValue}
-                      onChange={e => setMaxDlValue(e.target.value)}
-                      placeholder={t('common.unlimited')}
-                      className="input text-sm py-1.5 flex-1 min-w-24"
-                    />
-                    <button
-                      onClick={() => handleSaveMaxDl(f.id)}
-                      disabled={savingMaxDlId === f.id || !maxDlValue}
-                      className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1.5 disabled:opacity-40">
-                      {savingMaxDlId === f.id
-                        ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        : <Check size={12} />}
-                      {t('common.save')}
-                    </button>
-                    <button
-                      onClick={() => handleSaveMaxDl(f.id, true)}
-                      disabled={savingMaxDlId === f.id}
-                      className="btn-secondary text-xs px-2.5 py-1.5 disabled:opacity-40">
-                      {t('common.unlimited')}
-                    </button>
-                    <button onClick={() => setMaxDlEditId(null)} className="btn-secondary text-xs px-2.5 py-1.5">✕</button>
                   </div>
                 )}
               </div>
