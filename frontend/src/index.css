@@ -137,6 +137,7 @@
 
   .btn-danger {
     @apply font-medium px-4 py-2 rounded-xl transition-all duration-200 active:scale-95;
+
     -webkit-tap-highlight-color: transparent;
     background: rgba(239,68,68,0.15);
     border: 1px solid rgba(239,68,68,0.30);
@@ -148,6 +149,7 @@
   }
   .btn-success {
     @apply font-medium px-4 py-2 rounded-xl transition-all duration-200 active:scale-95;
+
     -webkit-tap-highlight-color: transparent;
     background: rgba(16,185,129,0.15);
     border: 1px solid rgba(16,185,129,0.30);
