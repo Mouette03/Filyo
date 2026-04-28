@@ -105,7 +105,6 @@ export default function SharePage() {
       setDownloaded(p => ({ ...p, [token]: true }))
       setInfo(prev => prev ? { ...prev, downloads: prev.downloads + 1 } : prev)
       toast.success(t('toast.downloadStarted'))
-      refreshInfo()
     } catch (err: any) {
       if (err.response?.status === 429) {
         toast.error(t('toast.tooManyRequests'))
@@ -137,7 +136,6 @@ export default function SharePage() {
         ) ?? null
       } : prev)
       toast.success(t('toast.downloadStarted'))
-      refreshInfo()
     } catch (err: any) {
       if (err.response?.status === 429) {
         toast.error(t('toast.tooManyRequests'))
