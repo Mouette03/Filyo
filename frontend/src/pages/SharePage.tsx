@@ -106,12 +106,17 @@ export default function SharePage() {
       setInfo(prev => prev ? { ...prev, downloads: prev.downloads + 1 } : prev)
       toast.success(t('toast.downloadStarted'))
     } catch (err: any) {
+      const code = err.response?.data?.code
       if (err.response?.status === 429) {
         toast.error(t('toast.tooManyRequests'))
       } else if (err.response?.status === 401) {
         toast.error(t('toast.passwordWrong'))
-      } else if (err.response?.data?.code === 'FILE_MISSING') {
+      } else if (code === 'FILE_MISSING') {
         toast.error(t('error.fileMissing'))
+      } else if (code === 'SHARE_LIMIT_REACHED') {
+        toast.error(t('share.limitReachedDesc'))
+      } else if (code === 'SHARE_EXPIRED' || code === 'SHARE_INACTIVE') {
+        toast.error(t('share.expiredDesc'))
       } else {
         toast.error(t('common.error'))
       }
@@ -137,12 +142,17 @@ export default function SharePage() {
       } : prev)
       toast.success(t('toast.downloadStarted'))
     } catch (err: any) {
+      const code = err.response?.data?.code
       if (err.response?.status === 429) {
         toast.error(t('toast.tooManyRequests'))
       } else if (err.response?.status === 401) {
         toast.error(t('toast.passwordWrong'))
-      } else if (err.response?.data?.code === 'FILE_MISSING') {
+      } else if (code === 'FILE_MISSING') {
         toast.error(t('error.fileMissing'))
+      } else if (code === 'SHARE_LIMIT_REACHED') {
+        toast.error(t('share.limitReachedDesc'))
+      } else if (code === 'SHARE_EXPIRED' || code === 'SHARE_INACTIVE') {
+        toast.error(t('share.expiredDesc'))
       } else {
         toast.error(t('common.error'))
       }
