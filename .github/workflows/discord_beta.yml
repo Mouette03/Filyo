@@ -26,46 +26,45 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.inputs.branch }}
 
-      - name: Récupérer les commits depuis le tag latest
+      - name: Récupérer et formater les commits
         id: commits
         run: |
           LAST_TAG=$(git tag --sort=-creatordate | grep -E '^latest$' | head -n 1)
-
           if [ -z "$LAST_TAG" ]; then
             LAST_TAG=$(git tag --sort=-creatordate | grep -v -E 'beta|alpha|rc' | head -n 1)
           fi
-
           if [ -z "$LAST_TAG" ]; then
             LAST_TAG="début du projet"
-            RANGE="-20"
+            RANGE=""
           else
             RANGE="${LAST_TAG}..HEAD"
           fi
 
-          # Construire un log enrichi : message + fichiers modifiés par commit
-          RAW=""
-          while IFS= read -r sha; do
-            MSG=$(git log -1 --pretty=format:"%s" "$sha")
-            FILES=$(git diff-tree --no-commit-id -r --name-only "$sha" | grep -v -E '\.github/|\.yml$|\.yaml$' | head -10 | tr '\n' ', ' | sed 's/,$//')
-            if [ -n "$FILES" ]; then
-              RAW="${RAW}- ${MSG} [fichiers: ${FILES}]\n"
-            else
-              RAW="${RAW}- ${MSG}\n"
-            fi
-          done < <(git log $RANGE --pretty=format:"%H" -- ':!.github/' ':!*.yml' ':!*.yaml' 2>/dev/null || git log --oneline -20 --pretty=format:"%H")
-
-          # Fallback si vide
-          if [ -z "$RAW" ]; then
-            while IFS= read -r sha; do
-              MSG=$(git log -1 --pretty=format:"%s" "$sha")
-              FILES=$(git diff-tree --no-commit-id -r --name-only "$sha" | head -10 | tr '\n' ', ' | sed 's/,$//')
-              RAW="${RAW}- ${MSG} [fichiers: ${FILES}]\n"
-            done < <(git log --oneline -20 --pretty=format:"%H")
+          # Récupérer TOUS les commits (pas de filtre sur les fichiers)
+          if [ -n "$RANGE" ]; then
+            SHAS=$(git log "$RANGE" --pretty=format:"%H")
+          else
+            SHAS=$(git log --oneline -30 --pretty=format:"%H")
           fi
 
-          echo "=== COMMITS TRANSMIS À L'IA ==="
+          # Construire le log enrichi : message + fichiers modifiés
+          RAW=""
+          while IFS= read -r sha; do
+            [ -z "$sha" ] && continue
+            MSG=$(git log -1 --pretty=format:"%s" "$sha")
+            # Ignorer les commits automatiques sans intérêt
+            echo "$MSG" | grep -qiE '^(Update licenses|Merge branch|Bump version|skip ci)' && continue
+            FILES=$(git diff-tree --no-commit-id -r --name-only "$sha" 2>/dev/null | head -8 | tr '\n' ',' | sed 's/,$//')
+            RAW="${RAW}COMMIT: ${MSG} | FILES: ${FILES}\n"
+          done <<< "$SHAS"
+
+          if [ -z "$RAW" ]; then
+            RAW="Aucun commit applicatif trouvé."
+          fi
+
+          echo "=== COMMITS BRUTS ==="
           printf "%b\n" "$RAW"
-          echo "================================"
+          echo "===================="
 
           DELIMITER="DELIM_$(openssl rand -hex 8)"
           echo "last_tag=$LAST_TAG" >> $GITHUB_OUTPUT
@@ -79,7 +78,7 @@ jobs:
         run: |
           printf "%s" "$COMMITS" > /tmp/commits.txt
 
-          PROMPT=$(printf 'Tu es un assistant technique. Voici une liste de commits git avec les fichiers modifiés pour une release bêta de lapplication Filyo (application de partage de fichiers). Chaque ligne est au format "- message [fichiers: ...]".\n\nTa mission : faire un résumé CONCRET et PRÉCIS en français de ce qui a changé, groupé par thème avec des emojis :\n🆕 Nouveautés\n🐛 Corrections de bugs\n⚡ Améliorations\n\nRègles importantes :\n- Utilise les noms de fichiers pour déduire la fonctionnalité impactée (ex: SharePage.tsx = page de partage, DashboardPage.tsx = tableau de bord)\n- Sois spécifique : écris "Correction de la limite de téléchargement" pas "Résolution de divers bugs"\n- Si plusieurs commits touchent la même fonctionnalité, regroupe-les en une seule ligne\n- Maximum 15 lignes au total\n- NE PAS inventer ni généraliser, reste fidèle aux commits\n\nCommits :\n%s' "$(cat /tmp/commits.txt)")
+          PROMPT=$(printf 'Tu es un assistant technique pour lapplication Filyo (partage de fichiers). Voici les commits git au format "COMMIT: message | FILES: fichiers modifiés".\n\nCorrespondances fichiers → fonctionnalités :\n- SharePage.tsx / share → Page de partage de fichiers\n- DashboardPage.tsx / dashboard → Tableau de bord\n- DownloadPage.tsx / download → Page de téléchargement\n- index.css / App.tsx → Interface globale / thème\n- routes/files → API fichiers backend\n- routes/user / UserPage → Gestion utilisateurs\n- SettingsPage / settings → Page paramètres\n- prisma / schema → Base de données\n- package.json → Dépendances\n- .github / workflow / .yml → CI/CD (à mettre EN DERNIER ou ignorer)\n- ClockButton / clock → Composant horloge\n- NavBar / nav → Barre de navigation\n\nConsignes :\n1. Groupe les changements par thème avec emojis : 🆕 Nouveautés, 🐛 Corrections, ⚡ Améliorations\n2. Pour chaque ligne, écris la FONCTIONNALITÉ impactée (déduis-la des fichiers), pas juste le message du commit\n3. Regroupe les commits qui touchent la même fonctionnalité\n4. Les changements CI/CD (.github, .yml) vont dans une section séparée 🔧 CI/CD tout à la fin, en 1-2 lignes max\n5. Maximum 15 lignes, sois précis et concret\n6. Ne jamais écrire de phrases génériques comme "divers bugs" ou "améliorations générales"\n\nCommits :\n%s' "$(cat /tmp/commits.txt)")
 
           BODY=$(jq -n --arg content "$PROMPT" \
             '{"model":"gpt-4o-mini","messages":[{"role":"user","content":$content}],"max_tokens":700}')
