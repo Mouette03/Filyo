@@ -175,6 +175,7 @@ export default function SharePage() {
     const files = info.batchFiles.filter(bf => bf.shareToken)
     setDownloadingAll(true)
     let failures = 0
+    let successes = 0
     for (let i = 0; i < files.length; i++) {
       const bf = files[i]
       if (downloaded[bf.shareToken]) continue
@@ -186,6 +187,7 @@ export default function SharePage() {
         a.href = `/api/shares/dl/${res.data.dlToken}`
         a.download = info.hideFilenames ? `fichier-${i + 1}` : bf.filename
         a.click()
+        successes++
         setDownloaded(p => ({ ...p, [bf.shareToken]: true }))
         setInfo(prev => prev ? {
           ...prev,
@@ -210,10 +212,13 @@ export default function SharePage() {
         } else if (code === 'SHARE_LIMIT_REACHED') {
           toast.error(t('share.limitReachedDesc'))
           refreshInfo()
+          failures++
         } else if (code === 'SHARE_EXPIRED') {
           toast.error(t('share.expiredDesc'))
+          failures++
         } else if (code === 'SHARE_INACTIVE') {
           toast.error(t('share.inactiveDesc'))
+          failures++
         } else if (code === 'FILE_MISSING') {
           toast.error(t('error.fileMissing'))
           failures++
@@ -225,7 +230,7 @@ export default function SharePage() {
       setDownloading(p => ({ ...p, [bf.shareToken]: false }))
     }
     setDownloadingAll(false)
-    if (failures === 0) toast.success(t('toast.downloadStarted'))
+    if (successes > 0) toast.success(t('toast.downloadStarted'))
     refreshInfo()
   }
 
