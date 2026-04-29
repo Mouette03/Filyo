@@ -5,6 +5,9 @@ on:
     tags: ["v*.*.*"]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 env:
   REGISTRY: ghcr.io
   IMAGE: ghcr.io/${{ github.repository }}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { Download, Lock, AlertTriangle, ArrowDownUp, Clock, Shield, EyeOff, Package } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -81,6 +81,17 @@ export default function SharePage() {
       })
   }, [token, retryCount])
 
+  // Rafraîchit silencieusement les compteurs après un téléchargement
+  // sans jamais modifier le status (évite le flash "Lien invalide")
+  const refreshCounter = useRef(0)
+  const refreshInfo = () => {
+    if (!token) return
+    const id = ++refreshCounter.current
+    getShareInfo(token)
+      .then(r => { if (id === refreshCounter.current) setInfo(r.data) })
+      .catch(() => {})
+  }
+
   // Téléchargement d'un fichier unique
   const handleDownloadSingle = async () => {
     if (!token || !info) return
@@ -92,14 +103,25 @@ export default function SharePage() {
       a.download = info.filename
       a.click()
       setDownloaded(p => ({ ...p, [token]: true }))
+      setInfo(prev => prev ? { ...prev, downloads: prev.downloads + 1 } : prev)
       toast.success(t('toast.downloadStarted'))
     } catch (err: any) {
+      const code = err.response?.data?.code
       if (err.response?.status === 429) {
         toast.error(t('toast.tooManyRequests'))
       } else if (err.response?.status === 401) {
         toast.error(t('toast.passwordWrong'))
-      } else if (err.response?.data?.code === 'FILE_MISSING') {
+      } else if (code === 'FILE_MISSING') {
         toast.error(t('error.fileMissing'))
+      } else if (code === 'SHARE_LIMIT_REACHED') {
+        setError('share.limitReachedDesc')
+        setStatus('expired')
+      } else if (code === 'SHARE_EXPIRED') {
+        setError('share.expiredDesc')
+        setStatus('expired')
+      } else if (code === 'SHARE_INACTIVE') {
+        setError('share.inactiveDesc')
+        setStatus('expired')
       } else {
         toast.error(t('common.error'))
       }
@@ -117,14 +139,29 @@ export default function SharePage() {
       a.download = filename
       a.click()
       setDownloaded(p => ({ ...p, [shareToken]: true }))
+      setInfo(prev => prev ? {
+        ...prev,
+        batchFiles: prev.batchFiles?.map(bf =>
+          bf.shareToken === shareToken ? { ...bf, downloads: bf.downloads + 1 } : bf
+        ) ?? null
+      } : prev)
       toast.success(t('toast.downloadStarted'))
+      refreshInfo()
     } catch (err: any) {
+      const code = err.response?.data?.code
       if (err.response?.status === 429) {
         toast.error(t('toast.tooManyRequests'))
       } else if (err.response?.status === 401) {
         toast.error(t('toast.passwordWrong'))
-      } else if (err.response?.data?.code === 'FILE_MISSING') {
+      } else if (code === 'FILE_MISSING') {
         toast.error(t('error.fileMissing'))
+      } else if (code === 'SHARE_LIMIT_REACHED') {
+        toast.error(t('share.limitReachedDesc'))
+        refreshInfo()
+      } else if (code === 'SHARE_EXPIRED') {
+        toast.error(t('share.expiredDesc'))
+      } else if (code === 'SHARE_INACTIVE') {
+        toast.error(t('share.inactiveDesc'))
       } else {
         toast.error(t('common.error'))
       }
@@ -138,9 +175,11 @@ export default function SharePage() {
     const files = info.batchFiles.filter(bf => bf.shareToken)
     setDownloadingAll(true)
     let failures = 0
+    let successes = 0
     for (let i = 0; i < files.length; i++) {
       const bf = files[i]
       if (downloaded[bf.shareToken]) continue
+      if (bf.maxDownloads !== null && bf.downloads >= bf.maxDownloads) continue
       setDownloading(p => ({ ...p, [bf.shareToken]: true }))
       try {
         const res = await getShareDlToken(bf.shareToken, password || undefined)
@@ -148,26 +187,51 @@ export default function SharePage() {
         a.href = `/api/shares/dl/${res.data.dlToken}`
         a.download = info.hideFilenames ? `fichier-${i + 1}` : bf.filename
         a.click()
+        successes++
         setDownloaded(p => ({ ...p, [bf.shareToken]: true }))
+        setInfo(prev => prev ? {
+          ...prev,
+          batchFiles: prev.batchFiles?.map(b =>
+            b.shareToken === bf.shareToken ? { ...b, downloads: b.downloads + 1 } : b
+          ) ?? null
+        } : prev)
       } catch (err: any) {
+        const code = err.response?.data?.code
         if (err.response?.status === 429) {
           toast.error(t('toast.tooManyRequests'))
           setDownloading(p => ({ ...p, [bf.shareToken]: false }))
           setDownloadingAll(false)
+          refreshInfo()
           return
         } else if (err.response?.status === 401) {
           toast.error(t('toast.passwordWrong'))
           setDownloading(p => ({ ...p, [bf.shareToken]: false }))
           setDownloadingAll(false)
+          refreshInfo()
           return
+        } else if (code === 'SHARE_LIMIT_REACHED') {
+          toast.error(t('share.limitReachedDesc'))
+          refreshInfo()
+          failures++
+        } else if (code === 'SHARE_EXPIRED') {
+          toast.error(t('share.expiredDesc'))
+          failures++
+        } else if (code === 'SHARE_INACTIVE') {
+          toast.error(t('share.inactiveDesc'))
+          failures++
+        } else if (code === 'FILE_MISSING') {
+          toast.error(t('error.fileMissing'))
+          failures++
+        } else {
+          failures++
+          toast.error(t('common.error'))
         }
-        failures++
-        toast.error(t('common.error'))
       }
       setDownloading(p => ({ ...p, [bf.shareToken]: false }))
     }
     setDownloadingAll(false)
-    if (failures === 0) toast.success(t('toast.downloadStarted'))
+    if (successes > 0) toast.success(t('toast.downloadStarted'))
+    refreshInfo()
   }
 
   const isBatch = info?.batchFiles && info.batchFiles.filter(bf => bf.shareToken).length > 1
@@ -333,6 +397,8 @@ export default function SharePage() {
                         </div>
                         {downloaded[bf.shareToken] ? (
                           <span className="text-xs text-emerald-400 flex-shrink-0">✓</span>
+                        ) : bf.maxDownloads !== null && bf.downloads >= bf.maxDownloads ? (
+                          <span className="text-xs text-red-400 flex-shrink-0">{t('dash.limitReached')}</span>
                         ) : (
                           <button
                             onClick={() => handleDownloadBatch(bf.shareToken, bf.filename)}

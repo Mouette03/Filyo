@@ -8,7 +8,12 @@ on:
         required: true
         type: string
       branch:
-        description: "Branche à analyser (ex: main)"
+        description: "Branche bêta à analyser (ex: v1.2.4-beta)"
+        required: true
+        default: "v1.2.4-beta"
+        type: string
+      base_branch:
+        description: "Branche de référence pour la comparaison (ex: main)"
         required: true
         default: "main"
         type: string
@@ -18,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      models: read  
+      models: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,33 +31,50 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.inputs.branch }}
 
-      - name: Récupérer les commits depuis le tag latest
+      - name: Récupérer et formater les commits
         id: commits
         run: |
-          # Chercher explicitement le tag "latest"
-          LAST_TAG=$(git tag --sort=-creatordate | grep -E '^latest$' | head -n 1)
+          BASE="${{ github.event.inputs.base_branch }}"
+          BETA="${{ github.event.inputs.branch }}"
 
-          # Fallback : dernier tag stable si "latest" n'existe pas
-          if [ -z "$LAST_TAG" ]; then
-            LAST_TAG=$(git tag --sort=-creatordate | grep -v -E 'beta|alpha|rc' | head -n 1)
+          # S'assurer que la branche de base est disponible localement
+          git fetch origin "$BASE" --depth=0 2>/dev/null || git fetch origin "$BASE"
+
+          # Comparer beta par rapport à la branche base (ex: main)
+          RANGE="origin/${BASE}..HEAD"
+
+          SHAS=$(git log "$RANGE" --pretty=format:"%H")
+
+          if [ -z "$SHAS" ]; then
+            echo "Aucun commit trouvé entre origin/$BASE et $BETA"
+            DELIMITER="DELIM_$(openssl rand -hex 8)"
+            echo "last_tag=origin/$BASE" >> $GITHUB_OUTPUT
+            printf "raw<<%s\nAucun changement détecté par rapport à %s.\n%s\n" "${DELIMITER}" "$BASE" "${DELIMITER}" >> $GITHUB_OUTPUT
+            exit 0
           fi
 
-          if [ -z "$LAST_TAG" ]; then
-            RAW=$(git log --oneline -10 --pretty=format:"%s")
-            LAST_TAG="début du projet"
-          else
-            RAW=$(git log ${LAST_TAG}..HEAD --pretty=format:"%s")
-          fi
+          # Construire le log enrichi : message + fichiers modifiés
+          RAW=""
+          while IFS= read -r sha; do
+            [ -z "$sha" ] && continue
+            MSG=$(git log -1 --pretty=format:"%s" "$sha")
+            # Ignorer les commits automatiques sans intérêt
+            echo "$MSG" | grep -qiE '^(Update licenses|Merge branch|Bump version|skip ci)' && continue
+            FILES=$(git diff-tree --no-commit-id -r --name-only "$sha" 2>/dev/null | head -8 | tr '\n' ',' | sed 's/,$//')
+            RAW="${RAW}COMMIT: ${MSG} | FILES: ${FILES}\n"
+          done <<< "$SHAS"
 
-          # Fallback si toujours vide
           if [ -z "$RAW" ]; then
-            RAW=$(git log --oneline -10 --pretty=format:"%s")
+            RAW="Aucun commit applicatif trouvé."
           fi
 
-          echo "last_tag=$LAST_TAG" >> $GITHUB_OUTPUT
-          echo "raw<<EOF" >> $GITHUB_OUTPUT
-          echo "$RAW" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          echo "=== COMMITS BRUTS ==="
+          printf "%b\n" "$RAW"
+          echo "===================="
+
+          DELIMITER="DELIM_$(openssl rand -hex 8)"
+          echo "last_tag=$BASE" >> $GITHUB_OUTPUT
+          printf "raw<<%s\n%b\n%s\n" "${DELIMITER}" "$RAW" "${DELIMITER}" >> $GITHUB_OUTPUT
 
       - name: Résumer les commits avec l'IA
         id: summary
@@ -60,16 +82,24 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COMMITS: ${{ steps.commits.outputs.raw }}
         run: |
-          PROMPT="Voici une liste de commits git pour une release bêta. Fais un résumé clair et lisible en français, groupé par thème (nouveautés, corrections, etc.), avec des emojis. Maximum 10 lignes. Commits :\n${COMMITS}"
-          BODY=$(jq -n --arg content "$PROMPT" '{"model":"gpt-4o-mini","messages":[{"role":"user","content":$content}],"max_tokens":400}')
+          printf "%s" "$COMMITS" > /tmp/commits.txt
+
+          PROMPT=$(printf 'Tu es un assistant technique pour lapplication Filyo (partage de fichiers). Voici les commits git au format "COMMIT: message | FILES: fichiers modifiés".\n\nCorrespondances fichiers → fonctionnalités :\n- SharePage.tsx / share → Page de partage de fichiers\n- DashboardPage.tsx / dashboard → Tableau de bord\n- DownloadPage.tsx / download → Page de téléchargement\n- index.css / App.tsx → Interface globale / thème\n- routes/files → API fichiers backend\n- routes/user / UserPage → Gestion utilisateurs\n- SettingsPage / settings → Page paramètres\n- prisma / schema → Base de données\n- package.json → Dépendances\n- .github / workflow / .yml → CI/CD (à mettre EN DERNIER ou ignorer)\n- ClockButton / clock → Composant horloge\n- NavBar / nav → Barre de navigation\n\nConsignes :\n1. Groupe les changements par thème avec emojis : 🆕 Nouveautés, 🐛 Corrections, ⚡ Améliorations\n2. Pour chaque ligne, écris la FONCTIONNALITÉ impactée (déduis-la des fichiers), pas juste le message du commit\n3. Regroupe les commits qui touchent la même fonctionnalité\n4. Les changements CI/CD (.github, .yml) vont dans une section séparée 🔧 CI/CD tout à la fin, en 1-2 lignes max\n5. Maximum 15 lignes, sois précis et concret\n6. Ne jamais écrire de phrases génériques comme "divers bugs" ou "améliorations générales"\n\nCommits :\n%s' "$(cat /tmp/commits.txt)")
+
+          BODY=$(jq -n --arg content "$PROMPT" \
+            '{"model":"gpt-4o-mini","messages":[{"role":"user","content":$content}],"max_tokens":700}')
+
           RESPONSE=$(curl -s https://models.inference.ai.azure.com/chat/completions \
             -H "Authorization: Bearer $GITHUB_TOKEN" \
             -H "Content-Type: application/json" \
             -d "$BODY")
+
           SUMMARY=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // "Résumé indisponible"')
-          echo "summary<<EOF" >> $GITHUB_OUTPUT
+
+          DELIMITER="DELIM_$(openssl rand -hex 8)"
+          echo "summary<<${DELIMITER}" >> $GITHUB_OUTPUT
           echo "$SUMMARY" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          echo "${DELIMITER}" >> $GITHUB_OUTPUT
 
       - name: Envoyer notif Discord
         uses: tsickert/discord-webhook@v6.0.0
@@ -78,9 +108,10 @@ jobs:
           embed-title: "🧪 Beta Release"
           embed-description: |
             **Image :** `ghcr.io/mouette03/filyo:${{ github.event.inputs.sha_tag }}`
-            **Branche :** `${{ github.event.inputs.branch }}`
+            **Branche bêta :** `${{ github.event.inputs.branch }}`
+            **Comparé à :** `${{ github.event.inputs.base_branch }}`
             **Déclenché par :** ${{ github.actor }}
-            **Changements depuis `latest` :**
+            **Changements depuis `${{ steps.commits.outputs.last_tag }}` :**
 
             ${{ steps.summary.outputs.summary }}
           embed-color: 16753920
