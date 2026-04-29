@@ -8,7 +8,12 @@ on:
         required: true
         type: string
       branch:
-        description: "Branche à analyser (ex: main)"
+        description: "Branche bêta à analyser (ex: v1.2.4-beta)"
+        required: true
+        default: "v1.2.4-beta"
+        type: string
+      base_branch:
+        description: "Branche de référence pour la comparaison (ex: main)"
         required: true
         default: "main"
         type: string
@@ -29,22 +34,23 @@ jobs:
       - name: Récupérer et formater les commits
         id: commits
         run: |
-          LAST_TAG=$(git tag --sort=-creatordate | grep -E '^latest$' | head -n 1)
-          if [ -z "$LAST_TAG" ]; then
-            LAST_TAG=$(git tag --sort=-creatordate | grep -v -E 'beta|alpha|rc' | head -n 1)
-          fi
-          if [ -z "$LAST_TAG" ]; then
-            LAST_TAG="début du projet"
-            RANGE=""
-          else
-            RANGE="${LAST_TAG}..HEAD"
-          fi
+          BASE="${{ github.event.inputs.base_branch }}"
+          BETA="${{ github.event.inputs.branch }}"
 
-          # Récupérer TOUS les commits (pas de filtre sur les fichiers)
-          if [ -n "$RANGE" ]; then
-            SHAS=$(git log "$RANGE" --pretty=format:"%H")
-          else
-            SHAS=$(git log --oneline -30 --pretty=format:"%H")
+          # S'assurer que la branche de base est disponible localement
+          git fetch origin "$BASE" --depth=0 2>/dev/null || git fetch origin "$BASE"
+
+          # Comparer beta par rapport à la branche base (ex: main)
+          RANGE="origin/${BASE}..HEAD"
+
+          SHAS=$(git log "$RANGE" --pretty=format:"%H")
+
+          if [ -z "$SHAS" ]; then
+            echo "Aucun commit trouvé entre origin/$BASE et $BETA"
+            DELIMITER="DELIM_$(openssl rand -hex 8)"
+            echo "last_tag=origin/$BASE" >> $GITHUB_OUTPUT
+            printf "raw<<%s\nAucun changement détecté par rapport à %s.\n%s\n" "${DELIMITER}" "$BASE" "${DELIMITER}" >> $GITHUB_OUTPUT
+            exit 0
           fi
 
           # Construire le log enrichi : message + fichiers modifiés
@@ -67,7 +73,7 @@ jobs:
           echo "===================="
 
           DELIMITER="DELIM_$(openssl rand -hex 8)"
-          echo "last_tag=$LAST_TAG" >> $GITHUB_OUTPUT
+          echo "last_tag=$BASE" >> $GITHUB_OUTPUT
           printf "raw<<%s\n%b\n%s\n" "${DELIMITER}" "$RAW" "${DELIMITER}" >> $GITHUB_OUTPUT
 
       - name: Résumer les commits avec l'IA
@@ -102,7 +108,8 @@ jobs:
           embed-title: "🧪 Beta Release"
           embed-description: |
             **Image :** `ghcr.io/mouette03/filyo:${{ github.event.inputs.sha_tag }}`
-            **Branche :** `${{ github.event.inputs.branch }}`
+            **Branche bêta :** `${{ github.event.inputs.branch }}`
+            **Comparé à :** `${{ github.event.inputs.base_branch }}`
             **Déclenché par :** ${{ github.actor }}
             **Changements depuis `${{ steps.commits.outputs.last_tag }}` :**
 
