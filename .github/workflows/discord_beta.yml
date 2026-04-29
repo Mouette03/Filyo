@@ -36,15 +36,26 @@ jobs:
           fi
 
           if [ -z "$LAST_TAG" ]; then
-            RAW=$(git log --oneline -20 --pretty=format:"- %s")
             LAST_TAG="début du projet"
+            ALL=$(git log --oneline -20 --pretty=format:"- %s")
+            APP=$(git log --oneline -20 --pretty=format:"- %s" -- ':!.github/' ':!*.yml' ':!*.yaml')
           else
-            RAW=$(git log "${LAST_TAG}..HEAD" --pretty=format:"- %s")
+            ALL=$(git log "${LAST_TAG}..HEAD" --pretty=format:"- %s")
+            APP=$(git log "${LAST_TAG}..HEAD" --pretty=format:"- %s" -- ':!.github/' ':!*.yml' ':!*.yaml')
           fi
 
-          if [ -z "$RAW" ]; then
+          # Préférer les commits applicatifs, fallback sur tous si vide
+          if [ -n "$APP" ]; then
+            RAW="$APP"
+          elif [ -n "$ALL" ]; then
+            RAW="$ALL"
+          else
             RAW=$(git log --oneline -20 --pretty=format:"- %s")
           fi
+
+          echo "=== COMMITS TRANSMIS À L'IA ==="
+          echo "$RAW"
+          echo "================================"
 
           DELIMITER="DELIM_$(openssl rand -hex 8)"
           echo "last_tag=$LAST_TAG" >> $GITHUB_OUTPUT
@@ -60,7 +71,7 @@ jobs:
         run: |
           echo "$COMMITS" > /tmp/commits.txt
 
-          PROMPT=$(printf 'Voici une liste de commits git pour une release bêta. Fais un résumé clair et lisible en français, groupé par thème (nouveautés, corrections, etc.), avec des emojis. Maximum 15 lignes.\n\nCommits :\n%s' "$(cat /tmp/commits.txt)")
+          PROMPT=$(printf 'Voici une liste de commits git pour une release bêta d'\''une application. Fais un résumé clair et lisible en français, groupé par thème (✨ Nouveautés, 🐛 Corrections, ⚡ Améliorations, etc.), avec des emojis. Concentre-toi sur les changements applicatifs (fonctionnalités, UI, API, base de données, etc.). Ignore ou mets en dernier les changements de CI/CD, workflows et configuration. Maximum 15 lignes.\n\nCommits :\n%s' "$(cat /tmp/commits.txt)")
 
           BODY=$(jq -n --arg content "$PROMPT" \
             '{"model":"gpt-4o-mini","messages":[{"role":"user","content":$content}],"max_tokens":600}')
