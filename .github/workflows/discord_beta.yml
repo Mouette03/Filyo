@@ -37,31 +37,39 @@ jobs:
 
           if [ -z "$LAST_TAG" ]; then
             LAST_TAG="début du projet"
-            ALL=$(git log --oneline -20 --pretty=format:"- %s")
-            APP=$(git log --oneline -20 --pretty=format:"- %s" -- ':!.github/' ':!*.yml' ':!*.yaml')
+            RANGE="-20"
           else
-            ALL=$(git log "${LAST_TAG}..HEAD" --pretty=format:"- %s")
-            APP=$(git log "${LAST_TAG}..HEAD" --pretty=format:"- %s" -- ':!.github/' ':!*.yml' ':!*.yaml')
+            RANGE="${LAST_TAG}..HEAD"
           fi
 
-          # Préférer les commits applicatifs, fallback sur tous si vide
-          if [ -n "$APP" ]; then
-            RAW="$APP"
-          elif [ -n "$ALL" ]; then
-            RAW="$ALL"
-          else
-            RAW=$(git log --oneline -20 --pretty=format:"- %s")
+          # Construire un log enrichi : message + fichiers modifiés par commit
+          RAW=""
+          while IFS= read -r sha; do
+            MSG=$(git log -1 --pretty=format:"%s" "$sha")
+            FILES=$(git diff-tree --no-commit-id -r --name-only "$sha" | grep -v -E '\.github/|\.yml$|\.yaml$' | head -10 | tr '\n' ', ' | sed 's/,$//')
+            if [ -n "$FILES" ]; then
+              RAW="${RAW}- ${MSG} [fichiers: ${FILES}]\n"
+            else
+              RAW="${RAW}- ${MSG}\n"
+            fi
+          done < <(git log $RANGE --pretty=format:"%H" -- ':!.github/' ':!*.yml' ':!*.yaml' 2>/dev/null || git log --oneline -20 --pretty=format:"%H")
+
+          # Fallback si vide
+          if [ -z "$RAW" ]; then
+            while IFS= read -r sha; do
+              MSG=$(git log -1 --pretty=format:"%s" "$sha")
+              FILES=$(git diff-tree --no-commit-id -r --name-only "$sha" | head -10 | tr '\n' ', ' | sed 's/,$//')
+              RAW="${RAW}- ${MSG} [fichiers: ${FILES}]\n"
+            done < <(git log --oneline -20 --pretty=format:"%H")
           fi
 
           echo "=== COMMITS TRANSMIS À L'IA ==="
-          echo "$RAW"
+          printf "%b\n" "$RAW"
           echo "================================"
 
           DELIMITER="DELIM_$(openssl rand -hex 8)"
           echo "last_tag=$LAST_TAG" >> $GITHUB_OUTPUT
-          echo "raw<<${DELIMITER}" >> $GITHUB_OUTPUT
-          echo "$RAW" >> $GITHUB_OUTPUT
-          echo "${DELIMITER}" >> $GITHUB_OUTPUT
+          printf "raw<<%s\n%b\n%s\n" "${DELIMITER}" "$RAW" "${DELIMITER}" >> $GITHUB_OUTPUT
 
       - name: Résumer les commits avec l'IA
         id: summary
@@ -69,12 +77,12 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COMMITS: ${{ steps.commits.outputs.raw }}
         run: |
-          echo "$COMMITS" > /tmp/commits.txt
+          printf "%s" "$COMMITS" > /tmp/commits.txt
 
-          PROMPT=$(printf 'Voici une liste de commits git pour une release bêta d'\''une application. Fais un résumé clair et lisible en français, groupé par thème (✨ Nouveautés, 🐛 Corrections, ⚡ Améliorations, etc.), avec des emojis. Concentre-toi sur les changements applicatifs (fonctionnalités, UI, API, base de données, etc.). Ignore ou mets en dernier les changements de CI/CD, workflows et configuration. Maximum 15 lignes.\n\nCommits :\n%s' "$(cat /tmp/commits.txt)")
+          PROMPT=$(printf 'Tu es un assistant technique. Voici une liste de commits git avec les fichiers modifiés pour une release bêta de lapplication Filyo (application de partage de fichiers). Chaque ligne est au format "- message [fichiers: ...]".\n\nTa mission : faire un résumé CONCRET et PRÉCIS en français de ce qui a changé, groupé par thème avec des emojis :\n🆕 Nouveautés\n🐛 Corrections de bugs\n⚡ Améliorations\n\nRègles importantes :\n- Utilise les noms de fichiers pour déduire la fonctionnalité impactée (ex: SharePage.tsx = page de partage, DashboardPage.tsx = tableau de bord)\n- Sois spécifique : écris "Correction de la limite de téléchargement" pas "Résolution de divers bugs"\n- Si plusieurs commits touchent la même fonctionnalité, regroupe-les en une seule ligne\n- Maximum 15 lignes au total\n- NE PAS inventer ni généraliser, reste fidèle aux commits\n\nCommits :\n%s' "$(cat /tmp/commits.txt)")
 
           BODY=$(jq -n --arg content "$PROMPT" \
-            '{"model":"gpt-4o-mini","messages":[{"role":"user","content":$content}],"max_tokens":600}')
+            '{"model":"gpt-4o-mini","messages":[{"role":"user","content":$content}],"max_tokens":700}')
 
           RESPONSE=$(curl -s https://models.inference.ai.azure.com/chat/completions \
             -H "Authorization: Bearer $GITHUB_TOKEN" \
