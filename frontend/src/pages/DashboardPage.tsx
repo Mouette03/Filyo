@@ -651,6 +651,14 @@ export default function DashboardPage() {
                           <Hash size={13} />
                         </button>
                         <button
+                          onClick={() => {
+                            setExpiryEditId(expiryEditId === batchToken ? null : batchToken)
+                            setExpiryValue(firstFile.expiresAt ? toLocalDatetimeValue(firstFile.expiresAt) : '')
+                          }}
+                          className={`btn-icon flex-shrink-0 ${expiryEditId === batchToken ? '!bg-brand-500/20 !text-brand-400 !border-brand-500/30' : ''}`}>
+                          <Clock size={13} />
+                        </button>
+                        <button
                           onClick={() => handleToggleShareBatch(bf)}
                           className="btn-icon flex-shrink-0"
                           title={firstShare.active ? t('dash.disable') : t('dash.enable')}>
@@ -661,14 +669,6 @@ export default function DashboardPage() {
                         </button>
                       </>
                     )}
-                    <button
-                      onClick={() => {
-                        setExpiryEditId(expiryEditId === batchToken ? null : batchToken)
-                        setExpiryValue(firstFile.expiresAt ? toLocalDatetimeValue(firstFile.expiresAt) : '')
-                      }}
-                      className={`btn-icon flex-shrink-0 ${expiryEditId === batchToken ? '!bg-brand-500/20 !text-brand-400 !border-brand-500/30' : ''}`}>
-                      <Clock size={13} />
-                    </button>
                   </div>
                   {/* Email inline lot */}
                   {emailingFileId === batchToken && firstShare && (
