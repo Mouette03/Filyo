@@ -314,9 +314,6 @@ export async function shareRoutes(app: FastifyInstance) {
     const subject = shares.length === 1
       ? t(lang, 'email.share.subjectSingle', { name: firstDisplayName })
       : t(lang, 'email.share.subjectMulti', { count: shares.length })
-    const intro = shares.length === 1
-      ? t(lang, 'email.share.introSingle')
-      : t(lang, 'email.share.introMulti', { count: shares.length })
     const linkLabel = t(lang, shares.length === 1 ? 'email.share.linkLabelSingle' : 'email.share.linkLabelMulti')
     const greetingText = t(lang, 'email.share.textBody', { linkLabel, files: filesText, appName })
 
