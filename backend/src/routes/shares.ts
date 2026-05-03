@@ -7,6 +7,7 @@ import { getAppSettings } from '../lib/appSettings'
 import { createSmtpTransport } from '../lib/smtp'
 import { t, escapeHtml } from '../lib/i18n'
 import { createDlToken, consumeDlToken } from '../lib/dlTokens'
+import { EMAIL_LOGO_SRC, EMAIL_DARK_CSS, mimeEmoji, formatFileSize } from '../lib/emailHelpers'
 
 /** Retourne le nom d'affichage d'un fichier en tenant compte de hideFilenames. */
 function getDisplayName(originalName: string, hideFilenames: boolean, lang = 'fr'): string {
@@ -255,45 +256,54 @@ export async function shareRoutes(app: FastifyInstance) {
     if (isSingleBatch) {
       // Un seul lien pour tout le lot, affiche la liste des noms dans l'email
       const batchUrl = `${baseUrl}/s/${shares[0].token}`
+      const totalSize = shares.reduce((acc: number, s: any) => acc + Number(s.file.size), 0)
+      const totalSizeStr = formatFileSize(totalSize, lang)
+      const safeBatchUrl = escapeHtml(encodeURI(batchUrl))
       const fileListHtml = shares.map((s: any) => {
-        return `<li style="color:#ccc;font-size:13px;padding:2px 0">${escapeHtml(getDisplayName(s.file.originalName, s.file.hideFilenames, lang))}</li>`
+        const name = escapeHtml(getDisplayName(s.file.originalName, s.file.hideFilenames, lang))
+        const size = formatFileSize(s.file.size, lang)
+        return `<li style="color:#555;font-size:13px;padding:3px 0" class="fi">${mimeEmoji(s.file.mimeType)} ${name} <span style="color:#bbb;font-size:11px" class="fs">(${size})</span></li>`
       }).join('')
       const fileListText = shares.map((s: any) => {
-        return s.file.hideFilenames ? `- ${t(lang, 'email.share.hiddenName')}` : `- ${s.file.originalName}`
+        const name = s.file.hideFilenames ? `- ${t(lang, 'email.share.hiddenName')}` : `- ${s.file.originalName}`
+        return `${name} (${formatFileSize(s.file.size, lang)})`
       }).join('\n')
       const expiry = shares[0].expiresAt
         ? t(lang, 'email.share.expiresOn', { date: new Date(shares[0].expiresAt).toLocaleDateString(lang === 'en' ? 'en-GB' : 'fr-FR') })
         : t(lang, 'email.share.noExpiry')
 
       filesHtml = `
-        <tr>
-          <td style="padding:10px 12px;border-bottom:1px solid #2a2d4a">
-            <ul style="margin:0 0 8px;padding-left:16px">${fileListHtml}</ul>
-            <a href="${escapeHtml(encodeURI(batchUrl))}" style="color:#7a8dff;font-weight:600;text-decoration:none">${t(lang, 'email.share.downloadAll')}</a><br>
-            <span style="font-size:12px;color:#666;font-family:monospace">${escapeHtml(encodeURI(batchUrl))}</span><br>
-            <span style="font-size:11px;color:#888">${expiry}</span>
-          </td>
-        </tr>`
-      filesText = t(lang, 'email.share.filesLabel') + '\n' + fileListText + `\n\n${batchUrl}`
+        <tr class="cr"><td style="padding:14px 16px;border-bottom:1px solid transparent">
+          <ul style="margin:0 0 10px;padding-left:20px">${fileListHtml}</ul>
+          <p style="margin:0 0 4px;font-size:12px;color:#999" class="fs">${totalSizeStr} total · ${expiry}</p>
+          <p style="margin:0 0 14px;font-size:11px;word-break:break-all;font-family:monospace;color:#bbb" class="fu">${safeBatchUrl}</p>
+          <a href="${safeBatchUrl}" style="display:inline-block;background:#5c6bfa;color:#ffffff;padding:11px 22px;border-radius:9px;text-decoration:none;font-weight:600;font-size:14px">${t(lang, 'email.share.accessBtn')}</a>
+        </td></tr>`
+      filesText = t(lang, 'email.share.filesLabel') + '\n' + fileListText + `\n\n${batchUrl}\n${totalSizeStr} total · ${expiry}`
     } else {
       filesHtml = shares.map((s: any) => {
         const url = `${baseUrl}/s/${s.token}`
+        const safeUrl = escapeHtml(encodeURI(url))
         const displayName = getDisplayName(s.file.originalName, s.file.hideFilenames, lang)
+        const size = formatFileSize(s.file.size, lang)
         const expiry = s.expiresAt
           ? t(lang, 'email.share.expiresOn', { date: new Date(s.expiresAt).toLocaleDateString(lang === 'en' ? 'en-GB' : 'fr-FR') })
           : t(lang, 'email.share.noExpiry')
+        const ctaBtn = shares.length === 1
+          ? `<a href="${safeUrl}" style="display:inline-block;background:#5c6bfa;color:#ffffff;padding:10px 20px;border-radius:9px;text-decoration:none;font-weight:600;font-size:14px;margin-top:10px">${t(lang, 'email.share.downloadBtn')}</a>`
+          : ''
         return `
-          <tr>
-            <td style="padding:10px 12px;border-bottom:1px solid #2a2d4a">
-              <a href="${escapeHtml(encodeURI(url))}" style="color:#7a8dff;font-weight:600;text-decoration:none">${escapeHtml(displayName)}</a><br>
-              <span style="font-size:12px;color:#666;font-family:monospace">${escapeHtml(encodeURI(url))}</span><br>
-              <span style="font-size:11px;color:#888">${expiry}</span>
-            </td>
-          </tr>`
+          <tr class="cr"><td style="padding:12px 16px;border-bottom:1px solid #e8eaed">
+            <p style="margin:0 0 3px;font-size:15px">${mimeEmoji(s.file.mimeType)} <a href="${safeUrl}" class="fl" style="color:#5c6bfa;font-weight:600;text-decoration:none">${escapeHtml(displayName)}</a></p>
+            <p style="margin:0 0 3px;font-size:12px;color:#999" class="fs">${size} · ${expiry}</p>
+            <p style="margin:0;font-size:11px;word-break:break-all;font-family:monospace;color:#bbb" class="fu">${safeUrl}</p>
+            ${ctaBtn}
+          </td></tr>`
       }).join('')
       filesText = shares.map((s: any) => {
         const displayName = s.file.hideFilenames ? t(lang, 'email.share.hiddenName') : s.file.originalName
-        return `- ${displayName}\n  ${baseUrl}/s/${s.token}`
+        const size = formatFileSize(s.file.size, lang)
+        return `- ${displayName} (${size})\n  ${baseUrl}/s/${s.token}`
       }).join('\n')
     }
 
@@ -320,17 +330,29 @@ export async function shareRoutes(app: FastifyInstance) {
         bcc: addresses.join(', '),
         subject: `[${appName}] ${subject}`,
         text: greetingText,
-        html: `
-          <div style="font-family:system-ui,sans-serif;max-width:520px;margin:0 auto;background:#0d0e1a;color:#e8eaf6;padding:32px 24px;border-radius:16px">
-            <h2 style="margin:0 0 6px;color:#7a8dff;font-size:20px">${safeAppName}</h2>
-            <p style="color:#aaa;font-size:13px;margin:0 0 24px">
-              ${intro}
-            </p>
-            <table style="width:100%;border-collapse:collapse;background:#13152a;border-radius:12px;overflow:hidden">
-              ${filesHtml}
-            </table>
-            <p style="font-size:11px;color:#555;margin-top:24px;text-align:center">${t(lang, 'email.share.footer', { appName: safeAppName })}</p>
-          </div>`
+        html: `<!DOCTYPE html><html lang="${lang}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
+<style>${EMAIL_DARK_CSS}</style>
+</head>
+<body style="margin:0;padding:20px 8px;background:#eef0f5">
+<div class="w" style="font-family:system-ui,-apple-system,sans-serif;max-width:520px;margin:0 auto;background:#ffffff;color:#1a1a2e;padding:28px 24px;border-radius:16px">
+  <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:6px"><tr>
+    <td width="46" valign="middle"><img src="${EMAIL_LOGO_SRC}" width="36" height="36" alt="${safeAppName}" style="border-radius:9px;display:block"></td>
+    <td valign="middle"><span class="an" style="font-size:17px;font-weight:700;color:#1a1a2e">${safeAppName}</span></td>
+  </tr></table>
+  <p class="sl" style="color:#666;font-size:13px;margin:0 0 20px">${t(lang, 'email.share.sentBy', { name: escapeHtml(req.user.name) })}</p>
+  ${shares[0].label ? `<p class="lb" style="border-left:3px solid #5c6bfa;padding:8px 12px;margin:0 0 16px;background:#f5f6ff;border-radius:0 6px 6px 0;font-size:13px;color:#555;font-style:italic">"${escapeHtml(shares[0].label)}"</p>` : ''}
+  <table class="ca" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#f8f9fc;border-radius:12px;overflow:hidden">
+    ${filesHtml}
+  </table>
+  <p class="ft" style="font-size:11px;color:#aaa;margin-top:22px;text-align:center">${t(lang, 'email.share.footer', { appName: safeAppName })}</p>
+</div>
+</body>
+</html>`
       })
     } catch (err: any) {
       req.log.error({ err: err.message }, 'SMTP sendMail failed')

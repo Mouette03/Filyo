@@ -10,6 +10,7 @@ import { getAppSettings } from '../lib/appSettings'
 import { createSmtpTransport } from '../lib/smtp'
 import { t, escapeHtml } from '../lib/i18n'
 import { createDlToken, consumeDlToken } from '../lib/dlTokens'
+import { EMAIL_LOGO_SRC, EMAIL_DARK_CSS } from '../lib/emailHelpers'
 import { createRequestsTusServer } from '../lib/tus'
 
 /**
@@ -269,15 +270,31 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
           bcc: addresses.join(', '),
           subject,
           text: bodyText,
-          html: `<div style="font-family:system-ui,sans-serif;max-width:520px;margin:0 auto;background:#0d0e1a;color:#e8eaf6;padding:32px 24px;border-radius:16px">
-          <h2 style="margin:0 0 6px;color:#7a8dff;font-size:20px">${safeAppName}</h2>
-          <p style="color:#aaa;font-size:13px;margin:0 0 24px">${t(lang, 'email.uploadRequest.htmlSubtitle')}</p>
-          <p style="margin:0 0 8px">${t(lang, 'email.uploadRequest.htmlBody')} <strong>${safeTitle}</strong></p>
-          ${safeMessage ? `<p style="margin:0 0 16px;color:#ccc;font-style:italic">"${safeMessage}"</p>` : ''}
-          <a href="${safeDepositUrl}" style="display:inline-block;background:#5c6bfa;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px">${t(lang, 'email.uploadRequest.htmlButton')}</a>
-          <p style="margin:12px 0 0;font-size:12px;color:#666;font-family:monospace">${safeDepositUrl}</p>
-          <p style="margin:24px 0 0;font-size:11px;color:#444">${safeAppName}</p>
-        </div>`
+          html: `<!DOCTYPE html><html lang="${lang}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
+<style>${EMAIL_DARK_CSS}</style>
+</head>
+<body style="margin:0;padding:20px 8px;background:#eef0f5">
+<div class="w" style="font-family:system-ui,-apple-system,sans-serif;max-width:520px;margin:0 auto;background:#ffffff;color:#1a1a2e;padding:28px 24px;border-radius:16px">
+  <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:6px"><tr>
+    <td width="46" valign="middle"><img src="${EMAIL_LOGO_SRC}" width="36" height="36" alt="${safeAppName}" style="border-radius:9px;display:block"></td>
+    <td valign="middle"><span class="an" style="font-size:17px;font-weight:700;color:#1a1a2e">${safeAppName}</span></td>
+  </tr></table>
+  <p class="sl" style="color:#666;font-size:13px;margin:0 0 20px">${t(lang, 'email.uploadRequest.sentBy', { name: escapeHtml(req.user.name) })}</p>
+  <div class="ca" style="background:#f8f9fc;border-radius:12px;padding:16px 18px;margin-bottom:20px">
+    <p style="margin:0 0 6px;font-size:16px;font-weight:600">📥 ${safeTitle}</p>
+    ${safeMessage ? `<p style="margin:0 0 14px;font-size:13px;color:#666;font-style:italic" class="sl">"${safeMessage}"</p>` : ''}
+    <a href="${safeDepositUrl}" style="display:inline-block;background:#5c6bfa;color:#ffffff;padding:11px 22px;border-radius:9px;text-decoration:none;font-weight:600;font-size:14px">${t(lang, 'email.uploadRequest.htmlButton')}</a>
+    <p style="margin:10px 0 0;font-size:11px;word-break:break-all;font-family:monospace;color:#bbb" class="fu">${safeDepositUrl}</p>
+  </div>
+  <p class="ft" style="font-size:11px;color:#aaa;margin:0;text-align:center">${safeAppName}</p>
+</div>
+</body>
+</html>`
         })
       } catch (err: any) {
         req.log.error({ err: err.message }, 'Upload request email failed')
