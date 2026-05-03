@@ -29,6 +29,9 @@ export const fr = {
       downloadAll: 'Télécharger tous les fichiers',
       filesLabel: 'Fichiers :',
       footer: 'Envoyé via {{appName}}',
+      sentBy: 'Partagé par {{name}}',
+      downloadBtn: 'Télécharger',
+      accessBtn: 'Accéder aux fichiers',
     },
     uploadRequest: {
       subject: '[{{appName}}] Demande de dépôt : {{title}}',
@@ -36,6 +39,7 @@ export const fr = {
       htmlSubtitle: 'Demande de dépôt de fichiers',
       htmlBody: 'Vous êtes invité(e) à déposer des fichiers :',
       htmlButton: 'Déposer des fichiers',
+      sentBy: 'Envoyé par {{name}}',
     },
   },
 }

@@ -9,6 +9,7 @@ import { UPLOAD_DIR } from '../lib/config'
 import { getAppSettings } from '../lib/appSettings'
 import { createSmtpTransport } from '../lib/smtp'
 import { t, escapeHtml } from '../lib/i18n'
+import { EMAIL_DARK_CSS, getEmailLogoSrc } from '../lib/emailHelpers'
 
 const AVATAR_DIR = path.join(UPLOAD_DIR, 'avatars')
 
@@ -292,6 +293,7 @@ export async function authRoutes(app: FastifyInstance) {
     if (!settings.smtpHost || !settings.smtpFrom) {
       return reply.code(503).send({ code: 'SMTP_NOT_CONFIGURED' })
     }
+    const emailLogoSrc = getEmailLogoSrc(settings, UPLOAD_DIR)
 
     // Générer le token (1h de validité)
     const token = nanoid(40)
@@ -316,16 +318,29 @@ export async function authRoutes(app: FastifyInstance) {
         to: user.email,
         subject: t(lang, 'email.forgotPassword.subject', { appName }),
         text: t(lang, 'email.forgotPassword.text', { name: user.name, resetUrl, appName }),
-        html: `
-          <div style="font-family:system-ui,sans-serif;max-width:520px;margin:0 auto;background:#0d0e1a;color:#e8eaf6;padding:32px 24px;border-radius:16px">
-            <h2 style="margin:0 0 6px;color:#7a8dff;font-size:20px">${safeAppName}</h2>
-            <p style="color:#aaa;font-size:13px;margin:0 0 24px">${t(lang, 'email.forgotPassword.htmlSubtitle')}</p>
-            <p style="margin:0 0 12px">${t(lang, 'email.forgotPassword.htmlGreeting')} <strong>${safeUserName}</strong>,</p>
-            <p style="margin:0 0 24px;color:#ccc">${t(lang, 'email.forgotPassword.htmlBody')}</p>
-            <a href="${safeResetUrl}" style="display:inline-block;background:#5c6bfa;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px">${t(lang, 'email.forgotPassword.htmlButton')}</a>
-            <p style="margin:24px 0 0;font-size:12px;color:#666">${t(lang, 'email.forgotPassword.htmlDisclaimer')}</p>
-            <p style="margin:16px 0 0;font-size:11px;color:#444">${safeAppName}</p>
-          </div>`
+        html: `<!DOCTYPE html><html lang="${lang}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
+<style>${EMAIL_DARK_CSS}</style>
+</head>
+<body style="margin:0;padding:20px 8px;background:#eef0f5">
+<div class="w" style="font-family:system-ui,-apple-system,sans-serif;max-width:520px;margin:0 auto;background:#ffffff;color:#1a1a2e;padding:28px 24px;border-radius:16px">
+  <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:6px"><tr>
+    <td width="46" valign="middle"><img src="${emailLogoSrc}" width="36" height="36" alt="${safeAppName}" style="border-radius:9px;display:block"></td>
+    <td valign="middle"><span class="an" style="font-size:17px;font-weight:700;color:#1a1a2e">${safeAppName}</span></td>
+  </tr></table>
+  <p class="sl" style="color:#666;font-size:13px;margin:0 0 24px">${t(lang, 'email.forgotPassword.htmlSubtitle')}</p>
+  <p style="margin:0 0 12px">${t(lang, 'email.forgotPassword.htmlGreeting')} <strong>${safeUserName}</strong>,</p>
+  <p style="margin:0 0 24px;color:#777" class="sl">${t(lang, 'email.forgotPassword.htmlBody')}</p>
+  <a href="${safeResetUrl}" style="display:inline-block;background:#5c6bfa;color:#ffffff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px">${t(lang, 'email.forgotPassword.htmlButton')}</a>
+  <p style="margin:22px 0 0;font-size:12px;color:#888" class="fs">${t(lang, 'email.forgotPassword.htmlDisclaimer')}</p>
+  <p style="margin:14px 0 0;font-size:11px;color:#bbb" class="ft">${safeAppName}</p>
+</div>
+</body>
+</html>`
       })
     } catch (err: any) {
       req.log.error({ err: err.message }, 'Reset password email failed')

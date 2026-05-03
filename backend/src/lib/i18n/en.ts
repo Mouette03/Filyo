@@ -29,6 +29,9 @@ export const en = {
       downloadAll: 'Download all files',
       filesLabel: 'Files:',
       footer: 'Sent via {{appName}}',
+      sentBy: 'Shared by {{name}}',
+      downloadBtn: 'Download',
+      accessBtn: 'Access files',
     },
     uploadRequest: {
       subject: '[{{appName}}] File deposit request: {{title}}',
@@ -36,6 +39,7 @@ export const en = {
       htmlSubtitle: 'File deposit request',
       htmlBody: 'You have been invited to deposit files:',
       htmlButton: 'Deposit files',
+      sentBy: 'Sent by {{name}}',
     },
   },
 }
