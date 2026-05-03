@@ -9,7 +9,7 @@ import { UPLOAD_DIR } from '../lib/config'
 import { getAppSettings } from '../lib/appSettings'
 import { createSmtpTransport } from '../lib/smtp'
 import { t, escapeHtml } from '../lib/i18n'
-import { EMAIL_LOGO_SRC, EMAIL_DARK_CSS } from '../lib/emailHelpers'
+import { EMAIL_DARK_CSS, getEmailLogoSrc } from '../lib/emailHelpers'
 
 const AVATAR_DIR = path.join(UPLOAD_DIR, 'avatars')
 
@@ -293,6 +293,7 @@ export async function authRoutes(app: FastifyInstance) {
     if (!settings.smtpHost || !settings.smtpFrom) {
       return reply.code(503).send({ code: 'SMTP_NOT_CONFIGURED' })
     }
+    const emailLogoSrc = getEmailLogoSrc(settings, UPLOAD_DIR)
 
     // Générer le token (1h de validité)
     const token = nanoid(40)
@@ -328,7 +329,7 @@ export async function authRoutes(app: FastifyInstance) {
 <body style="margin:0;padding:20px 8px;background:#eef0f5">
 <div class="w" style="font-family:system-ui,-apple-system,sans-serif;max-width:520px;margin:0 auto;background:#ffffff;color:#1a1a2e;padding:28px 24px;border-radius:16px">
   <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:6px"><tr>
-    <td width="46" valign="middle"><img src="${EMAIL_LOGO_SRC}" width="36" height="36" alt="${safeAppName}" style="border-radius:9px;display:block"></td>
+    <td width="46" valign="middle"><img src="${emailLogoSrc}" width="36" height="36" alt="${safeAppName}" style="border-radius:9px;display:block"></td>
     <td valign="middle"><span class="an" style="font-size:17px;font-weight:700;color:#1a1a2e">${safeAppName}</span></td>
   </tr></table>
   <p class="sl" style="color:#666;font-size:13px;margin:0 0 24px">${t(lang, 'email.forgotPassword.htmlSubtitle')}</p>
