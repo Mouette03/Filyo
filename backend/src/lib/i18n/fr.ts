@@ -40,6 +40,8 @@ export const fr = {
       htmlBody: 'Vous êtes invité(e) à déposer des fichiers :',
       htmlButton: 'Déposer des fichiers',
       sentBy: 'Envoyé par {{name}}',
+      expiresOn: 'Expire le {{date}}',
+      noExpiry: 'Sans expiration',
     },
   },
 }

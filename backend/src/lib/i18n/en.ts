@@ -40,6 +40,8 @@ export const en = {
       htmlBody: 'You have been invited to deposit files:',
       htmlButton: 'Deposit files',
       sentBy: 'Sent by {{name}}',
+      expiresOn: 'Expires {{date}}',
+      noExpiry: 'No expiry',
     },
   },
 }
