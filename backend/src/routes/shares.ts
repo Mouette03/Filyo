@@ -272,7 +272,7 @@ export async function shareRoutes(app: FastifyInstance) {
         return `${name} (${formatFileSize(s.file.size, lang)})`
       }).join('\n')
       const expiry = shares[0].expiresAt
-        ? t(lang, 'email.share.expiresOn', { date: new Date(shares[0].expiresAt).toLocaleDateString(lang === 'en' ? 'en-GB' : 'fr-FR') })
+        ? t(lang, 'email.share.expiresOn', { date: new Date(shares[0].expiresAt).toLocaleString(lang === 'en' ? 'en-GB' : 'fr-FR', { dateStyle: 'short', timeStyle: 'short' }) })
         : t(lang, 'email.share.noExpiry')
 
       filesHtml = `
@@ -290,7 +290,7 @@ export async function shareRoutes(app: FastifyInstance) {
         const displayName = getDisplayName(s.file.originalName, s.file.hideFilenames, lang)
         const size = formatFileSize(s.file.size, lang)
         const expiry = s.expiresAt
-          ? t(lang, 'email.share.expiresOn', { date: new Date(s.expiresAt).toLocaleDateString(lang === 'en' ? 'en-GB' : 'fr-FR') })
+          ? t(lang, 'email.share.expiresOn', { date: new Date(s.expiresAt).toLocaleString(lang === 'en' ? 'en-GB' : 'fr-FR', { dateStyle: 'short', timeStyle: 'short' }) })
           : t(lang, 'email.share.noExpiry')
         const ctaBtn = shares.length === 1
           ? `<a href="${safeUrl}" style="display:inline-block;background:#5c6bfa;color:#ffffff;padding:10px 20px;border-radius:9px;text-decoration:none;font-weight:600;font-size:14px;margin-top:10px">${t(lang, 'email.share.downloadBtn')}</a>`

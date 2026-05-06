@@ -258,8 +258,11 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
       const appName = settings.appName || 'Filyo'
       const transporter = createSmtpTransport(settings)
       const messageBlock = request.message ? request.message + '\n\n' : ''
+      const expiryDate = request.expiresAt
+        ? t(lang, 'email.share.expiresOn', { date: new Date(request.expiresAt).toLocaleString(lang === 'en' ? 'en-GB' : 'fr-FR', { dateStyle: 'short', timeStyle: 'short' }) })
+        : t(lang, 'email.share.noExpiry')
       const subject = t(lang, 'email.uploadRequest.subject', { appName, title: request.title })
-      const bodyText = t(lang, 'email.uploadRequest.text', { title: request.title, message: messageBlock, depositUrl, appName })
+      const bodyText = t(lang, 'email.uploadRequest.text', { title: request.title, message: messageBlock, depositUrl, appName, expiry: expiryDate })
       const safeTitle = escapeHtml(request.title)
       const safeMessage = request.message ? escapeHtml(request.message) : null
       const safeAppName = escapeHtml(appName)
@@ -289,6 +292,7 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
   <div class="ca" style="background:#f8f9fc;border-radius:12px;padding:16px 18px;margin-bottom:20px">
     <p style="margin:0 0 6px;font-size:16px;font-weight:600">📥 ${safeTitle}</p>
     ${safeMessage ? `<p style="margin:0 0 14px;font-size:13px;color:#666;font-style:italic" class="sl">"${safeMessage}"</p>` : ''}
+    <p style="margin:0 0 14px;font-size:12px;color:#999" class="fs">${expiryDate}</p>
     <a href="${safeDepositUrl}" style="display:inline-block;background:#5c6bfa;color:#ffffff;padding:11px 22px;border-radius:9px;text-decoration:none;font-weight:600;font-size:14px">${t(lang, 'email.uploadRequest.htmlButton')}</a>
     <p style="margin:10px 0 0;font-size:11px;word-break:break-all;font-family:monospace;color:#bbb" class="fu">${safeDepositUrl}</p>
   </div>

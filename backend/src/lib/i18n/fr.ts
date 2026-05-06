@@ -35,7 +35,7 @@ export const fr = {
     },
     uploadRequest: {
       subject: '[{{appName}}] Demande de dépôt : {{title}}',
-      text: 'Bonjour,\n\nVous êtes invité(e) à déposer des fichiers : "{{title}}".\n\n{{message}}Lien de dépôt :\n{{depositUrl}}\n\nEnvoyé via {{appName}}.',
+      text: 'Bonjour,\n\nVous êtes invité(e) à déposer des fichiers : "{{title}}".\n\n{{message}}Lien de dépôt :\n{{depositUrl}}\n{{expiry}}\n\nEnvoyé via {{appName}}.',
       htmlSubtitle: 'Demande de dépôt de fichiers',
       htmlBody: 'Vous êtes invité(e) à déposer des fichiers :',
       htmlButton: 'Déposer des fichiers',
