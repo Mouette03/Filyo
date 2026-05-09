@@ -18,7 +18,7 @@ export function useT() {
   const dict: Record<string, string> = translations[lang as Lang] ?? translations['en-GB']
 
   const t = (key: string, vars?: Record<string, string>): string => {
-    let str = dict[key] ?? frFR[key as TranslationKey] ?? key
+    let str = dict[key] ?? enGB[key as TranslationKey] ?? key
     if (vars) {
       Object.entries(vars).forEach(([k, v]) => {
         str = str.replace(`{{${k}}}`, v)
