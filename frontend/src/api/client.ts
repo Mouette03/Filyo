@@ -2,6 +2,7 @@ import axios from 'axios'
 import toast from 'react-hot-toast'
 import { fr, en } from '../i18n'
 import { useI18nStore } from '../stores/useI18nStore'
+import type { Lang } from '../stores/useI18nStore'
 import { useAuthStore } from '../stores/useAuthStore'
 
 const api = axios.create({
@@ -104,10 +105,10 @@ export const getReceivedFileDlToken = (requestId: string, fileId: string) =>
   api.post<{ dlToken: string }>(`/upload-requests/${requestId}/received/${fileId}/dl-token`)
 
 // ---- Envoi email ----
-export const sendShareByEmail = (to: string, tokens: string[], lang: string = 'en-GB') =>
+export const sendShareByEmail = (to: string, tokens: string[], lang: Lang = 'en-GB') =>
   api.post('/shares/send-email', { to, tokens, lang })
 
-export const sendRequestByEmail = (id: string, to: string, lang: string = 'en-GB') =>
+export const sendRequestByEmail = (id: string, to: string, lang: Lang = 'en-GB') =>
   api.post(`/upload-requests/${id}/send-email`, { to, lang })
 
 // ---- Expiration fichier ----
@@ -136,7 +137,7 @@ export const updateCleanupSetting = (cleanupAfterDays: number | null) =>
 export const updateCleanupPreference = (cleanupAfterDays: number | null) =>
   api.patch('/auth/cleanup-preference', { cleanupAfterDays })
 
-export const forgotPassword = (email: string, lang: string = 'en-GB') =>
+export const forgotPassword = (email: string, lang: Lang = 'en-GB') =>
   api.post('/auth/forgot-password', { email, lang })
 
 export const resetPassword = (token: string, password: string) =>
