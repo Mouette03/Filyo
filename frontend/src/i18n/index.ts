@@ -15,7 +15,7 @@ const translations: Record<Lang, Record<string, string>> = { 'fr-FR': frFR, 'en-
  */
 export function useT() {
   const { lang, setLang } = useI18nStore()
-  const dict: Record<string, string> = translations[lang as Lang] ?? translations['fr-FR']
+  const dict: Record<string, string> = translations[lang as Lang] ?? translations['en-GB']
 
   const t = (key: string, vars?: Record<string, string>): string => {
     let str = dict[key] ?? frFR[key as TranslationKey] ?? key

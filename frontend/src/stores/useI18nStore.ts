@@ -5,7 +5,7 @@ export type Lang = 'fr-FR' | 'en-GB'
 
 /** Détecte la langue préférée du navigateur ; retourne 'fr-FR' ou 'en-GB'. */
 function detectBrowserLang(): Lang {
-  const nav = (navigator.language || 'fr-FR').slice(0, 2).toLowerCase()
+  const nav = (navigator.language || 'en-GB').slice(0, 2).toLowerCase()
   return nav === 'fr' ? 'fr-FR' : 'en-GB'
 }
 

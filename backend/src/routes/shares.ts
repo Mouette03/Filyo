@@ -13,11 +13,11 @@ import { EMAIL_DARK_CSS, mimeEmoji, formatFileSize, getEmailLogoSrc } from '../l
 
 /** Formate une date d'expiration pour les emails selon la langue. */
 function formatExpiry(date: Date, lang: string): string {
-  return date.toLocaleString(lang === 'en' ? 'en-GB' : 'fr-FR', { dateStyle: 'short', timeStyle: 'short' })
+  return date.toLocaleString(lang, { dateStyle: 'short', timeStyle: 'short' })
 }
 
 /** Retourne le nom d'affichage d'un fichier en tenant compte de hideFilenames. */
-function getDisplayName(originalName: string, hideFilenames: boolean, lang = 'fr'): string {
+function getDisplayName(originalName: string, hideFilenames: boolean, lang = 'en-GB'): string {
   if (!hideFilenames) return originalName
   const ext = originalName.includes('.') ? originalName.split('.').pop() : ''
   const base = t(lang, 'email.share.hiddenFile')
@@ -202,8 +202,8 @@ export async function shareRoutes(app: FastifyInstance) {
       },
     },
   }, async (req, reply) => {
-    const { to, tokens, lang: rawLang = 'fr-FR' } = req.body
-    const lang = (['fr-FR', 'en-GB'] as const).includes(rawLang as any) ? rawLang : 'fr-FR'
+    const { to, tokens, lang: rawLang = 'en-GB' } = req.body
+    const lang = (['fr-FR', 'en-GB'] as const).includes(rawLang as any) ? rawLang : 'en-GB'
     const MAX_RECIPIENTS = 10
     const rawAddresses: string[] = (to || '').split(',').map((s: string) => s.trim()).filter(Boolean)
     const addresses: string[] = [...new Set(rawAddresses)]

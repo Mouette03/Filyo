@@ -234,8 +234,8 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
       },
     },
     async (req, reply) => {
-      const { to, lang: rawLang = 'fr-FR' } = req.body
-      const lang = (['fr-FR', 'en-GB'] as const).includes(rawLang as any) ? rawLang : 'fr-FR'
+      const { to, lang: rawLang = 'en-GB' } = req.body
+      const lang = (['fr-FR', 'en-GB'] as const).includes(rawLang as any) ? rawLang : 'en-GB'
       const MAX_RECIPIENTS = 10
       const raw: string[] = (to || '').split(',').map((s: string) => s.trim()).filter(Boolean)
       const addresses: string[] = [...new Set(raw)]
@@ -260,7 +260,7 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
       const transporter = createSmtpTransport(settings)
       const messageBlock = request.message ? request.message + '\n\n' : ''
       const expiryDate = request.expiresAt
-        ? t(lang, 'email.uploadRequest.expiresOn', { date: new Date(request.expiresAt).toLocaleString(lang === 'en' ? 'en-GB' : 'fr-FR', { dateStyle: 'short', timeStyle: 'short' }) })
+        ? t(lang, 'email.uploadRequest.expiresOn', { date: new Date(request.expiresAt).toLocaleString(lang, { dateStyle: 'short', timeStyle: 'short' }) })
         : t(lang, 'email.uploadRequest.noExpiry')
       const subject = t(lang, 'email.uploadRequest.subject', { appName, title: request.title })
       const bodyText = t(lang, 'email.uploadRequest.text', { title: request.title, message: messageBlock, depositUrl, appName, expiry: expiryDate })

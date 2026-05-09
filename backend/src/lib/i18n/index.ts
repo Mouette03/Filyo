@@ -34,7 +34,7 @@ export function escapeHtml(str: string): string {
  * // => '[Filyo] Reset your password'
  */
 export function t(lang: string, key: string, vars: Record<string, string | number> = {}): string {
-  const dict = translations[lang] ?? translations['fr-FR']
+  const dict = translations[lang] ?? translations['en-GB']
   const value = key.split('.').reduce((obj: any, k) => obj?.[k], dict)
   if (typeof value !== 'string') return key
   return value.replace(/\{\{(\w+)\}\}/g, (_, k) => String(vars[k] ?? `{{${k}}}`))
