@@ -9,6 +9,16 @@ type Translations = typeof frFR
 /** Registry mapping locale codes to their translation dictionaries. */
 const translations: Record<string, Translations> = { 'en-GB': enGB, 'fr-FR': frFR }
 
+const SUPPORTED: SupportedLang[] = ['fr-FR', 'en-GB']
+
+/**
+ * Normalise une valeur `lang` inconnue (issue du body HTTP) en un code locale valide.
+ * Retombe sur 'en-GB' si la valeur est absente ou non supportée.
+ */
+export function normalizeLang(raw: unknown): SupportedLang {
+  return (SUPPORTED as string[]).includes(raw as string) ? raw as SupportedLang : 'en-GB'
+}
+
 /**
  * Escapes special HTML characters in a string to prevent injection in email bodies.
  * Covers `&`, `<`, `>`, `"`, and `'`.

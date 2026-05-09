@@ -8,7 +8,7 @@ import { prisma } from '../lib/prisma'
 import { UPLOAD_DIR } from '../lib/config'
 import { getAppSettings } from '../lib/appSettings'
 import { createSmtpTransport } from '../lib/smtp'
-import { t, escapeHtml } from '../lib/i18n'
+import { t, escapeHtml, normalizeLang } from '../lib/i18n'
 import { createDlToken, consumeDlToken } from '../lib/dlTokens'
 import { EMAIL_DARK_CSS, getEmailLogoSrc } from '../lib/emailHelpers'
 import { createRequestsTusServer } from '../lib/tus'
@@ -234,8 +234,8 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
       },
     },
     async (req, reply) => {
-      const { to, lang: rawLang = 'en-GB' } = req.body
-      const lang = (['fr-FR', 'en-GB'] as const).includes(rawLang as any) ? rawLang : 'en-GB'
+      const { to, lang: rawLang } = req.body
+      const lang = normalizeLang(rawLang)
       const MAX_RECIPIENTS = 10
       const raw: string[] = (to || '').split(',').map((s: string) => s.trim()).filter(Boolean)
       const addresses: string[] = [...new Set(raw)]

@@ -8,7 +8,7 @@ import { z } from 'zod'
 import { UPLOAD_DIR } from '../lib/config'
 import { getAppSettings } from '../lib/appSettings'
 import { createSmtpTransport } from '../lib/smtp'
-import { t, escapeHtml } from '../lib/i18n'
+import { t, escapeHtml, normalizeLang } from '../lib/i18n'
 import { EMAIL_DARK_CSS, getEmailLogoSrc } from '../lib/emailHelpers'
 
 const AVATAR_DIR = path.join(UPLOAD_DIR, 'avatars')
@@ -282,8 +282,7 @@ export async function authRoutes(app: FastifyInstance) {
   }, async (req, reply) => {
     const body = req.body as Record<string, unknown>
     const email = typeof body?.email === 'string' ? body.email.trim() : null
-    const rawLang = typeof body?.lang === 'string' ? body.lang : 'en-GB'
-    const lang = (['fr-FR', 'en-GB'] as const).includes(rawLang as any) ? rawLang : 'en-GB'
+    const lang = normalizeLang(body?.lang)
     // Toujours répondre 200 pour ne pas révéler l'existence d'un compte
     if (!email) return reply.send({ success: true })
 

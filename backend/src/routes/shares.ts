@@ -5,7 +5,7 @@ import { nanoid } from 'nanoid'
 import { prisma } from '../lib/prisma'
 import { getAppSettings } from '../lib/appSettings'
 import { createSmtpTransport } from '../lib/smtp'
-import { t, escapeHtml } from '../lib/i18n'
+import { t, escapeHtml, normalizeLang } from '../lib/i18n'
 import { createDlToken, consumeDlToken } from '../lib/dlTokens'
 import path from 'path'
 import { UPLOAD_DIR } from '../lib/config'
@@ -202,8 +202,8 @@ export async function shareRoutes(app: FastifyInstance) {
       },
     },
   }, async (req, reply) => {
-    const { to, tokens, lang: rawLang = 'en-GB' } = req.body
-    const lang = (['fr-FR', 'en-GB'] as const).includes(rawLang as any) ? rawLang : 'en-GB'
+    const { to, tokens, lang: rawLang } = req.body
+    const lang = normalizeLang(rawLang)
     const MAX_RECIPIENTS = 10
     const rawAddresses: string[] = (to || '').split(',').map((s: string) => s.trim()).filter(Boolean)
     const addresses: string[] = [...new Set(rawAddresses)]
