@@ -282,7 +282,8 @@ export async function authRoutes(app: FastifyInstance) {
   }, async (req, reply) => {
     const body = req.body as Record<string, unknown>
     const email = typeof body?.email === 'string' ? body.email.trim() : null
-    const lang = typeof body?.lang === 'string' ? body.lang : 'fr-FR'
+    const rawLang = typeof body?.lang === 'string' ? body.lang : 'fr-FR'
+    const lang = (['fr-FR', 'en-GB'] as const).includes(rawLang as any) ? rawLang : 'fr-FR'
     // Toujours répondre 200 pour ne pas révéler l'existence d'un compte
     if (!email) return reply.send({ success: true })
 
