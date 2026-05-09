@@ -1,4 +1,4 @@
-export const fr = {
+export const frFR = {
   // ── Navigation ──────────────────────────────────────────────
   'nav.send': 'Envoyer',
   'nav.reverseShare': 'Partage inversé',

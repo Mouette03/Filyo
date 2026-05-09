@@ -1,13 +1,13 @@
-import { en } from './en'
-import { fr } from './fr'
+import { enGB } from './en-GB'
+import { frFR } from './fr-FR'
 
 /** Union type of all supported locale codes. */
-export type SupportedLang = 'fr' | 'en'
+export type SupportedLang = 'fr-FR' | 'en-GB'
 
-type Translations = typeof fr
+type Translations = typeof frFR
 
 /** Registry mapping locale codes to their translation dictionaries. */
-const translations: Record<string, Translations> = { en, fr }
+const translations: Record<string, Translations> = { 'en-GB': enGB, 'fr-FR': frFR }
 
 /**
  * Escapes special HTML characters in a string to prevent injection in email bodies.
@@ -34,7 +34,7 @@ export function escapeHtml(str: string): string {
  * // => '[Filyo] Reset your password'
  */
 export function t(lang: string, key: string, vars: Record<string, string | number> = {}): string {
-  const dict = translations[lang] ?? translations['fr']
+  const dict = translations[lang] ?? translations['fr-FR']
   const value = key.split('.').reduce((obj: any, k) => obj?.[k], dict)
   if (typeof value !== 'string') return key
   return value.replace(/\{\{(\w+)\}\}/g, (_, k) => String(vars[k] ?? `{{${k}}}`))

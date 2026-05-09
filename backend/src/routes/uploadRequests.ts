@@ -234,7 +234,7 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
       },
     },
     async (req, reply) => {
-      const { to, lang = 'fr' } = req.body
+      const { to, lang = 'fr-FR' } = req.body
       const MAX_RECIPIENTS = 10
       const raw: string[] = (to || '').split(',').map((s: string) => s.trim()).filter(Boolean)
       const addresses: string[] = [...new Set(raw)]

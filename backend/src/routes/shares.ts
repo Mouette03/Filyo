@@ -202,7 +202,7 @@ export async function shareRoutes(app: FastifyInstance) {
       },
     },
   }, async (req, reply) => {
-    const { to, tokens, lang = 'fr' } = req.body
+    const { to, tokens, lang = 'fr-FR' } = req.body
     const MAX_RECIPIENTS = 10
     const rawAddresses: string[] = (to || '').split(',').map((s: string) => s.trim()).filter(Boolean)
     const addresses: string[] = [...new Set(rawAddresses)]

@@ -5,8 +5,8 @@ import type { Lang } from '../stores/useI18nStore'
 
 // ↓ Ajouter une entrée ici pour chaque nouvelle langue supportée
 export const LANGUAGES: { code: Lang; label: string; flag: string }[] = [
-  { code: 'fr', label: 'Français', flag: '🇫🇷' },
-  { code: 'en', label: 'English',  flag: '🇬🇧' },
+  { code: 'fr-FR', label: 'Français', flag: '🇫🇷' },
+  { code: 'en-GB', label: 'English',  flag: '🇬🇧' },
 ]
 
 export default function LanguageSwitcher() {

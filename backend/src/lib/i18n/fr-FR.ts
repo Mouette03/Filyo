@@ -2,7 +2,7 @@
  * French email translation strings.
  * Each key supports `{{variable}}` interpolation via the `t()` helper.
  */
-export const fr = {
+export const frFR = {
   email: {
     forgotPassword: {
       subject: '[{{appName}}] Réinitialisation de votre mot de passe',

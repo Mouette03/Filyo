@@ -1,12 +1,12 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
-export type Lang = 'fr' | 'en'
+export type Lang = 'fr-FR' | 'en-GB'
 
-/** Détecte la langue préférée du navigateur ; retourne 'fr' ou 'en'. */
+/** Détecte la langue préférée du navigateur ; retourne 'fr-FR' ou 'en-GB'. */
 function detectBrowserLang(): Lang {
-  const nav = (navigator.language || 'fr').slice(0, 2).toLowerCase()
-  return nav === 'fr' ? 'fr' : 'en'
+  const nav = (navigator.language || 'fr-FR').slice(0, 2).toLowerCase()
+  return nav === 'fr' ? 'fr-FR' : 'en-GB'
 }
 
 interface I18nState {
