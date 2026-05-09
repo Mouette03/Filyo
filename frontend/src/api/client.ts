@@ -2,6 +2,7 @@ import axios from 'axios'
 import toast from 'react-hot-toast'
 import { fr, en } from '../i18n'
 import { useI18nStore } from '../stores/useI18nStore'
+import type { Lang } from '../stores/useI18nStore'
 import { useAuthStore } from '../stores/useAuthStore'
 
 const api = axios.create({
@@ -20,7 +21,7 @@ api.interceptors.response.use(
     if (err.response?.status === 401 && SESSION_ENDING_CODES.includes(code) && useAuthStore.getState().isAuthenticated) {
       if (code === 'ACCOUNT_DISABLED') {
         const lang = useI18nStore.getState().lang
-        const dict = lang === 'en' ? en : fr
+        const dict = lang === 'en-GB' ? en : fr
         toast.error(dict['toast.accountDisabled'])
       }
       useAuthStore.getState().logout()
@@ -104,10 +105,10 @@ export const getReceivedFileDlToken = (requestId: string, fileId: string) =>
   api.post<{ dlToken: string }>(`/upload-requests/${requestId}/received/${fileId}/dl-token`)
 
 // ---- Envoi email ----
-export const sendShareByEmail = (to: string, tokens: string[], lang: string = 'fr') =>
+export const sendShareByEmail = (to: string, tokens: string[], lang: Lang = 'en-GB') =>
   api.post('/shares/send-email', { to, tokens, lang })
 
-export const sendRequestByEmail = (id: string, to: string, lang: string = 'fr') =>
+export const sendRequestByEmail = (id: string, to: string, lang: Lang = 'en-GB') =>
   api.post(`/upload-requests/${id}/send-email`, { to, lang })
 
 // ---- Expiration fichier ----
@@ -136,7 +137,7 @@ export const updateCleanupSetting = (cleanupAfterDays: number | null) =>
 export const updateCleanupPreference = (cleanupAfterDays: number | null) =>
   api.patch('/auth/cleanup-preference', { cleanupAfterDays })
 
-export const forgotPassword = (email: string, lang: string = 'fr') =>
+export const forgotPassword = (email: string, lang: Lang = 'en-GB') =>
   api.post('/auth/forgot-password', { email, lang })
 
 export const resetPassword = (token: string, password: string) =>

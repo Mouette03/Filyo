@@ -2,7 +2,7 @@
  * French email translation strings.
  * Each key supports `{{variable}}` interpolation via the `t()` helper.
  */
-export const fr = {
+export const frFR = {
   email: {
     forgotPassword: {
       subject: '[{{appName}}] Réinitialisation de votre mot de passe',
@@ -35,11 +35,13 @@ export const fr = {
     },
     uploadRequest: {
       subject: '[{{appName}}] Demande de dépôt : {{title}}',
-      text: 'Bonjour,\n\nVous êtes invité(e) à déposer des fichiers : "{{title}}".\n\n{{message}}Lien de dépôt :\n{{depositUrl}}\n\nEnvoyé via {{appName}}.',
+      text: 'Bonjour,\n\nVous êtes invité(e) à déposer des fichiers : "{{title}}".\n\n{{message}}Lien de dépôt :\n{{depositUrl}}\n{{expiry}}\n\nEnvoyé via {{appName}}.',
       htmlSubtitle: 'Demande de dépôt de fichiers',
       htmlBody: 'Vous êtes invité(e) à déposer des fichiers :',
       htmlButton: 'Déposer des fichiers',
       sentBy: 'Envoyé par {{name}}',
+      expiresOn: 'Expire le {{date}}',
+      noExpiry: 'Sans expiration',
     },
   },
 }

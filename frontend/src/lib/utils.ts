@@ -80,7 +80,7 @@ export async function copyToClipboard(text: string): Promise<void> {
 }
 
 /** Returns a countdown string like "2j 4h" / "3h 20m" / "45m" until expiresAt. Returns null if already expired or no date. */
-export function formatCountdown(expiresAt: string | Date | null | undefined, lang = 'fr'): string | null {
+export function formatCountdown(expiresAt: string | Date | null | undefined, lang = 'en-GB'): string | null {
   if (!expiresAt) return null
   const diff = new Date(expiresAt).getTime() - Date.now()
   if (diff <= 0) return null
@@ -88,7 +88,7 @@ export function formatCountdown(expiresAt: string | Date | null | undefined, lan
   const h = Math.floor(totalMin / 60)
   const d = Math.floor(h / 24)
   const m = totalMin % 60
-  const dUnit = lang === 'fr' ? 'j' : 'd'
+  const dUnit = lang === 'fr-FR' ? 'j' : 'd'
   if (d > 0) return `${d}${dUnit} ${h % 24}h`
   if (h > 0) return `${h}h ${m}m`
   return `${m}m`

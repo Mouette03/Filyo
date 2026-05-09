@@ -5,14 +5,19 @@ import { nanoid } from 'nanoid'
 import { prisma } from '../lib/prisma'
 import { getAppSettings } from '../lib/appSettings'
 import { createSmtpTransport } from '../lib/smtp'
-import { t, escapeHtml } from '../lib/i18n'
+import { t, escapeHtml, normalizeLang } from '../lib/i18n'
 import { createDlToken, consumeDlToken } from '../lib/dlTokens'
 import path from 'path'
 import { UPLOAD_DIR } from '../lib/config'
 import { EMAIL_DARK_CSS, mimeEmoji, formatFileSize, getEmailLogoSrc } from '../lib/emailHelpers'
 
+/** Formate une date d'expiration pour les emails selon la langue. */
+function formatExpiry(date: Date, lang: string): string {
+  return date.toLocaleString(lang, { dateStyle: 'short', timeStyle: 'short' })
+}
+
 /** Retourne le nom d'affichage d'un fichier en tenant compte de hideFilenames. */
-function getDisplayName(originalName: string, hideFilenames: boolean, lang = 'fr'): string {
+function getDisplayName(originalName: string, hideFilenames: boolean, lang = 'en-GB'): string {
   if (!hideFilenames) return originalName
   const ext = originalName.includes('.') ? originalName.split('.').pop() : ''
   const base = t(lang, 'email.share.hiddenFile')
@@ -197,7 +202,8 @@ export async function shareRoutes(app: FastifyInstance) {
       },
     },
   }, async (req, reply) => {
-    const { to, tokens, lang = 'fr' } = req.body
+    const { to, tokens, lang: rawLang } = req.body
+    const lang = normalizeLang(rawLang)
     const MAX_RECIPIENTS = 10
     const rawAddresses: string[] = (to || '').split(',').map((s: string) => s.trim()).filter(Boolean)
     const addresses: string[] = [...new Set(rawAddresses)]
@@ -272,7 +278,7 @@ export async function shareRoutes(app: FastifyInstance) {
         return `${name} (${formatFileSize(s.file.size, lang)})`
       }).join('\n')
       const expiry = shares[0].expiresAt
-        ? t(lang, 'email.share.expiresOn', { date: new Date(shares[0].expiresAt).toLocaleDateString(lang === 'en' ? 'en-GB' : 'fr-FR') })
+        ? t(lang, 'email.share.expiresOn', { date: formatExpiry(new Date(shares[0].expiresAt), lang) })
         : t(lang, 'email.share.noExpiry')
 
       filesHtml = `
@@ -290,7 +296,7 @@ export async function shareRoutes(app: FastifyInstance) {
         const displayName = getDisplayName(s.file.originalName, s.file.hideFilenames, lang)
         const size = formatFileSize(s.file.size, lang)
         const expiry = s.expiresAt
-          ? t(lang, 'email.share.expiresOn', { date: new Date(s.expiresAt).toLocaleDateString(lang === 'en' ? 'en-GB' : 'fr-FR') })
+          ? t(lang, 'email.share.expiresOn', { date: formatExpiry(new Date(s.expiresAt), lang) })
           : t(lang, 'email.share.noExpiry')
         const ctaBtn = shares.length === 1
           ? `<a href="${safeUrl}" style="display:inline-block;background:#5c6bfa;color:#ffffff;padding:10px 20px;border-radius:9px;text-decoration:none;font-weight:600;font-size:14px;margin-top:10px">${t(lang, 'email.share.downloadBtn')}</a>`

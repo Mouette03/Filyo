@@ -35,9 +35,9 @@ export function mimeEmoji(mime: string): string {
 }
 
 /** Formate une taille en octets en chaîne lisible. */
-export function formatFileSize(bytes: bigint | number, lang = 'fr'): string {
+export function formatFileSize(bytes: bigint | number, lang = 'en-GB'): string {
   const n = typeof bytes === 'bigint' ? Number(bytes) : bytes
-  const fr = lang === 'fr'
+  const fr = lang === 'fr-FR'
   if (n < 1024) return `${n} ${fr ? 'o' : 'B'}`
   if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} ${fr ? 'Ko' : 'KB'}`
   if (n < 1024 * 1024 * 1024) return `${(n / 1024 / 1024).toFixed(1)} ${fr ? 'Mo' : 'MB'}`

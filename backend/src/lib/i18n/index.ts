@@ -1,13 +1,23 @@
-import { en } from './en'
-import { fr } from './fr'
+import { enGB } from './en-GB'
+import { frFR } from './fr-FR'
 
 /** Union type of all supported locale codes. */
-export type SupportedLang = 'fr' | 'en'
+export type SupportedLang = 'fr-FR' | 'en-GB'
 
-type Translations = typeof fr
+type Translations = typeof frFR
 
 /** Registry mapping locale codes to their translation dictionaries. */
-const translations: Record<string, Translations> = { en, fr }
+const translations: Record<string, Translations> = { 'en-GB': enGB, 'fr-FR': frFR }
+
+const SUPPORTED: SupportedLang[] = ['fr-FR', 'en-GB']
+
+/**
+ * Normalise une valeur `lang` inconnue (issue du body HTTP) en un code locale valide.
+ * Retombe sur 'en-GB' si la valeur est absente ou non supportée.
+ */
+export function normalizeLang(raw: unknown): SupportedLang {
+  return (SUPPORTED as string[]).includes(raw as string) ? raw as SupportedLang : 'en-GB'
+}
 
 /**
  * Escapes special HTML characters in a string to prevent injection in email bodies.
@@ -34,7 +44,7 @@ export function escapeHtml(str: string): string {
  * // => '[Filyo] Reset your password'
  */
 export function t(lang: string, key: string, vars: Record<string, string | number> = {}): string {
-  const dict = translations[lang] ?? translations['fr']
+  const dict = translations[lang] ?? translations['en-GB']
   const value = key.split('.').reduce((obj: any, k) => obj?.[k], dict)
   if (typeof value !== 'string') return key
   return value.replace(/\{\{(\w+)\}\}/g, (_, k) => String(vars[k] ?? `{{${k}}}`))

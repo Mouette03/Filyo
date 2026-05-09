@@ -1,4 +1,4 @@
-export const en = {
+export const enGB = {
   // ── Navigation ──────────────────────────────────────────────
   'nav.send': 'Send',
   'nav.reverseShare': 'Reverse Share',

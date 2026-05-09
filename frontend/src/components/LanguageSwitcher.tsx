@@ -5,8 +5,8 @@ import type { Lang } from '../stores/useI18nStore'
 
 // ↓ Ajouter une entrée ici pour chaque nouvelle langue supportée
 export const LANGUAGES: { code: Lang; label: string; flag: string }[] = [
-  { code: 'fr', label: 'Français', flag: '🇫🇷' },
-  { code: 'en', label: 'English',  flag: '🇬🇧' },
+  { code: 'fr-FR', label: 'Français', flag: '🇫🇷' },
+  { code: 'en-GB', label: 'English',  flag: '🇬🇧' },
 ]
 
 export default function LanguageSwitcher() {
@@ -34,7 +34,7 @@ export default function LanguageSwitcher() {
         className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-white/50 hover:text-white hover:bg-white/5 transition-colors"
       >
         <span className="text-base leading-none">{current.flag}</span>
-        <span className="hidden sm:inline uppercase tracking-wide">{current.code}</span>
+        <span className="hidden sm:inline uppercase tracking-wide">{current.code.slice(0, 2).toUpperCase()}</span>
         <ChevronDown
           size={12}
           className={`transition-transform duration-150 ${open ? 'rotate-180' : ''}`}

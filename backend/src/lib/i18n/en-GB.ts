@@ -2,7 +2,7 @@
  * English email translation strings.
  * Each key supports `{{variable}}` interpolation via the `t()` helper.
  */
-export const en = {
+export const enGB = {
   email: {
     forgotPassword: {
       subject: '[{{appName}}] Reset your password',
@@ -35,11 +35,13 @@ export const en = {
     },
     uploadRequest: {
       subject: '[{{appName}}] File deposit request: {{title}}',
-      text: 'Hello,\n\nYou have been invited to deposit files: "{{title}}".\n\n{{message}}Deposit link:\n{{depositUrl}}\n\nSent via {{appName}}.',
+      text: 'Hello,\n\nYou have been invited to deposit files: "{{title}}".\n\n{{message}}Deposit link:\n{{depositUrl}}\n{{expiry}}\n\nSent via {{appName}}.',
       htmlSubtitle: 'File deposit request',
       htmlBody: 'You have been invited to deposit files:',
       htmlButton: 'Deposit files',
       sentBy: 'Sent by {{name}}',
+      expiresOn: 'Expires {{date}}',
+      noExpiry: 'No expiry',
     },
   },
 }
