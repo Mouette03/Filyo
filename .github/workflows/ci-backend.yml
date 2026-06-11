@@ -90,6 +90,10 @@ jobs:
         working-directory: backend
         run: npm install
 
+      - name: Prisma generate
+        working-directory: backend
+        run: npx prisma generate
+
       - name: Build
         working-directory: backend
         run: npm run build
@@ -114,6 +118,10 @@ jobs:
       - name: Install (if cache miss)
         working-directory: backend
         run: npm install
+
+      - name: Prisma generate
+        working-directory: backend
+        run: npx prisma generate
 
       - name: Run Zod tests
         working-directory: backend
