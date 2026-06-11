@@ -16,6 +16,16 @@ chown -R node:node /data
 
 export NPM_CONFIG_UPDATE_NOTIFIER=false
 
+# Prisma v7 : regénérer le client avec la DATABASE_URL réelle (driver adapter selection)
+set +e
+gosu node npx prisma generate
+GENERATE_EXIT=$?
+set -e
+
+if [ "$GENERATE_EXIT" -ne 0 ]; then
+  echo "WARNING: prisma generate failed (exit: $GENERATE_EXIT) — continuing"
+fi
+
 set +e
 gosu node npx prisma migrate deploy
 PRISMA_EXIT=$?

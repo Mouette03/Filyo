@@ -1,5 +1,6 @@
 {
   "name": "filyo-backend",
+  "type": "module",
   "engines": {
     "node": ">=24.0.0",
     "npm": ">=11.0.0"
@@ -8,7 +9,7 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "prisma generate && tsc",
+    "build": "tsc",
     "start": "node dist/index.js",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
@@ -24,8 +25,13 @@
     "@fastify/jwt": "^9.0.0",
     "@fastify/multipart": "^9.0.0",
     "@fastify/static": "^9.1.1",
-    "@prisma/client": "^6.19.2",
-    "prisma": "^6.19.2",
+    "@prisma/client": "^7",
+    "@prisma/adapter-better-sqlite3": "^7",
+    "@prisma/adapter-mysql2": "^7",
+    "better-sqlite3": "^11",
+    "mysql2": "^3",
+    "prisma": "^7",
+    "dotenv": "^16",
     "fastify": "^5.8.3",
     "fs-extra": "^11.2.0",
     "mime-types": "^2.1.35",
@@ -38,6 +44,7 @@
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
+    "@types/better-sqlite3": "^7",
     "@types/fs-extra": "^11.0.4",
     "@types/mime-types": "^2.1.4",
     "@types/nodemailer": "^7.0.11",

@@ -18,7 +18,8 @@ RUN npm run build
 # ── Stage 2 : Build du backend TypeScript ───────────────────────
 FROM --platform=$BUILDPLATFORM node:24-alpine AS backend-builder
 
-RUN apk add --no-cache openssl
+# python3/make/g++ nécessaires pour compiler better-sqlite3 (module natif)
+RUN apk add --no-cache openssl python3 make g++
 
 WORKDIR /app/backend
 COPY backend/package*.json ./
@@ -31,13 +32,14 @@ RUN if [ "$DB_PROVIDER" = "mariadb" ]; then \
       cp -r prisma/migrations-mariadb/. prisma/migrations/; \
     fi
 
-RUN npm run build
+# Génère le client Prisma v7 dans src/generated/prisma, puis compile TS
+RUN npm run db:generate && npm run build
 
 # ── Stage 3 : Image de production ───────────────────────────────
 FROM node:24-slim AS runner
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        dumb-init openssl gosu wget \
+        dumb-init openssl gosu wget python3 make g++ \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -45,6 +47,7 @@ WORKDIR /app
 COPY --from=backend-builder /app/backend/dist            ./dist
 COPY --from=backend-builder /app/backend/prisma          ./prisma
 COPY --from=backend-builder /app/backend/package.json    ./package.json
+COPY --from=backend-builder /app/backend/prisma.config.ts ./prisma.config.ts
 
 ARG DB_PROVIDER=sqlite
 RUN npm install --omit=dev --silent \

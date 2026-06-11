@@ -1,6 +1,7 @@
-// This is your Prisma schema file
+// This is your Prisma schema file (MariaDB variant)
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -18,8 +19,8 @@ model User {
   avatarUrl      String?
   createdAt      DateTime        @default(now())
   lastLogin      DateTime?
-  cleanupAfterDays   Int?          // préférence perso : null=jamais, 0=à expiration, N=N jours après
-  storageQuotaBytes  BigInt?       // null=illimité
+  cleanupAfterDays   Int?
+  storageQuotaBytes  BigInt?
   resetToken         String?
   resetTokenExpiry   DateTime?
   files          File[]
@@ -37,13 +38,13 @@ model AppSettings {
   smtpUser          String?
   smtpPass          String?
   smtpSecure        Boolean  @default(true)
-  uploaderNameReq   String   @default("optional")  // hidden | optional | required
+  uploaderNameReq   String   @default("optional")
   uploaderEmailReq  String   @default("optional")
   uploaderMsgReq    String   @default("optional")
   allowRegistration Boolean  @default(false)
-  cleanupAfterDays  Int?     // max autorisé : null=désactivé, 0=dès expiration, N=N jours max après expiration
-  maxFileSizeBytes  BigInt?  // null=illimité
-  proxyUploadEnabled   Boolean  @default(false)  // mode upload proxy-compatible
+  cleanupAfterDays  Int?
+  maxFileSizeBytes  BigInt?
+  proxyUploadEnabled   Boolean  @default(false)
   updatedAt         DateTime @updatedAt
 }
 
@@ -81,7 +82,6 @@ model Share {
   active    Boolean  @default(true)
 }
 
-// Partage inversé : lien pour recevoir des fichiers d'un tiers
 model UploadRequest {
   id            String         @id @default(cuid())
   token         String         @unique
@@ -89,7 +89,7 @@ model UploadRequest {
   message       String?
   password         String?
   createdAt        DateTime       @default(now())
-  expiresAt        DateTime?
+  expiresAt        DateTime?      
   maxFiles         Int?
   maxSizeBytes     BigInt?
   active           Boolean        @default(true)
@@ -112,5 +112,3 @@ model ReceivedFile {
   message         String?
   uploadedAt      DateTime      @default(now())
 }
-
-

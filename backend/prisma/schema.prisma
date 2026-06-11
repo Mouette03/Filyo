@@ -1,6 +1,7 @@
 // This is your Prisma schema file
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -112,5 +113,3 @@ model ReceivedFile {
   message         String?
   uploadedAt      DateTime      @default(now())
 }
-
-
