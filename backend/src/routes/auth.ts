@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs'
 import path from 'path'
 import fs from 'fs-extra'
 import { nanoid } from 'nanoid'
+import { Issuer, generators } from 'openid-client'
 import { prisma } from '../lib/prisma'
 import { z } from 'zod'
 import { UPLOAD_DIR } from '../lib/config'
@@ -13,14 +14,47 @@ import { EMAIL_DARK_CSS, getEmailLogoSrc } from '../lib/emailHelpers'
 
 const AVATAR_DIR = path.join(UPLOAD_DIR, 'avatars')
 
+// ─── OIDC CONFIG ────────────────────────────────────────────────────────────
+// OIDC est désactivé par défaut. Il est actif uniquement si OIDC_ISSUER_URL
+// et OIDC_CLIENT_ID sont définis dans les variables d'environnement.
+
+const OIDC_ENABLED =
+  Boolean(process.env.OIDC_ISSUER_URL) && Boolean(process.env.OIDC_CLIENT_ID)
+
+const OIDC_ISSUER_URL     = process.env.OIDC_ISSUER_URL    ?? ''
+const OIDC_CLIENT_ID      = process.env.OIDC_CLIENT_ID     ?? ''
+const OIDC_CLIENT_SECRET  = process.env.OIDC_CLIENT_SECRET ?? ''
+const OIDC_REDIRECT_URI   = process.env.OIDC_REDIRECT_URI  ?? ''
+const OIDC_SCOPE          = process.env.OIDC_SCOPE         ?? 'openid email profile'
+const OIDC_AUTO_REGISTER  = (process.env.OIDC_AUTO_REGISTER ?? 'auto_register') === 'auto_register'
+const OIDC_DEFAULT_ROLE   = process.env.OIDC_DEFAULT_ROLE  ?? 'USER'
+const OIDC_PROVIDER_NAME  = process.env.OIDC_PROVIDER_NAME ?? 'oidc'
+
+// Client OIDC mis en cache au démarrage (une seule découverte .well-known)
+let oidcClient: InstanceType<import('openid-client').Issuer['Client']> | null = null
+
+async function getOidcClient() {
+  if (oidcClient) return oidcClient
+  const issuer = await Issuer.discover(OIDC_ISSUER_URL)
+  oidcClient = new issuer.Client({
+    client_id:     OIDC_CLIENT_ID,
+    client_secret: OIDC_CLIENT_SECRET,
+    redirect_uris: [OIDC_REDIRECT_URI],
+    response_types: ['code'],
+  })
+  return oidcClient
+}
+
+// ─── ZOD SCHEMAS ────────────────────────────────────────────────────────────
+
 const loginSchema = z.object({
-  email: z.string().email(),
+  email:    z.string().email(),
   password: z.string().min(1)
 })
 
 const registerSchema = z.object({
-  email: z.string().email(),
-  name: z.string().min(1),
+  email:    z.string().email(),
+  name:     z.string().min(1),
   password: z.string().min(8)
 })
 
@@ -30,22 +64,60 @@ const profileSchema = z.object({
 
 const changePasswordSchema = z.object({
   currentPassword: z.string().min(1),
-  newPassword: z.string().min(8)
+  newPassword:     z.string().min(8)
 })
 
 const cleanupPreferenceSchema = z.object({
   cleanupAfterDays: z.number().int().nonnegative().nullable()
 })
 
-/**
- * Registers authentication-related HTTP endpoints under /api/auth on the provided Fastify instance.
- *
- * The registered routes cover setup, login, registration, profile and avatar management, password change,
- * password reset (forgot/reset), and user cleanup preferences. Handlers perform validation and interact with
- * persistence, authentication, file storage, and email delivery as appropriate.
- */
+const oidcLinkConfirmSchema = z.object({
+  password:  z.string().min(1),
+  linkToken: z.string().min(1),
+})
+
+// ─── HELPER : émet le cookie JWT Filyo ──────────────────────────────────────
+
+function issueSessionCookie(
+  app: FastifyInstance,
+  reply: import('fastify').FastifyReply,
+  user: { id: string; email: string; name: string; role: string; avatarUrl: string | null }
+) {
+  const token = app.jwt.sign(
+    { id: user.id, email: user.email, name: user.name, role: user.role },
+    { expiresIn: '7d' }
+  )
+  reply.setCookie('token', token, {
+    httpOnly: true,
+    secure:   process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+    path:     '/',
+    maxAge:   60 * 60 * 24 * 7,
+  })
+  return { user: { id: user.id, email: user.email, name: user.name, role: user.role, avatarUrl: user.avatarUrl ?? null } }
+}
+
+// ─── STATE STORE OIDC (anti-CSRF, TTL 5 min) ────────────────────────────────
+
+interface OidcStateData {
+  codeVerifier: string
+  expiresAt:    number
+  pendingLink?: { email: string; sub: string; provider: string; name: string }
+}
+const oidcStateStore = new Map<string, OidcStateData>()
+
+function pruneOidcStates() {
+  const now = Date.now()
+  for (const [k, v] of oidcStateStore.entries()) {
+    if (v.expiresAt < now) oidcStateStore.delete(k)
+  }
+}
+
+// ─── ROUTES ──────────────────────────────────────────────────────────────────
+
 export async function authRoutes(app: FastifyInstance) {
-  // GET /api/auth/setup — vérifie si le premier utilisateur doit être créé
+
+  // GET /api/auth/setup
   app.get('/setup', async (_req, reply) => {
     const count = await prisma.user.count()
     return reply.send({ setupNeeded: count === 0 })
@@ -64,6 +136,16 @@ export async function authRoutes(app: FastifyInstance) {
       return reply.code(401).send({ code: 'INVALID_CREDENTIALS' })
     }
 
+    // Compte OIDC-only : pas de mot de passe local
+    if (!user.password) {
+      req.log.warn({ email: body.data.email }, 'Login attempt on OIDC-only account')
+      return reply.code(403).send({
+        code:     'OIDC_ONLY_ACCOUNT',
+        message:  "Ce compte utilise la connexion SSO. Le mot de passe est géré par votre fournisseur d'identité.",
+        provider: user.oidcProvider ?? null,
+      })
+    }
+
     const ok = await bcrypt.compare(body.data.password, user.password)
     if (!ok) {
       req.log.warn({ email: body.data.email }, 'Login attempt failed')
@@ -72,20 +154,7 @@ export async function authRoutes(app: FastifyInstance) {
 
     await prisma.user.update({ where: { id: user.id }, data: { lastLogin: new Date() } })
     req.log.info({ userId: user.id, email: user.email }, 'Login successful')
-
-    const token = app.jwt.sign(
-      { id: user.id, email: user.email, name: user.name, role: user.role },
-      { expiresIn: '7d' }
-    )
-
-    reply.setCookie('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-      path: '/',
-      maxAge: 60 * 60 * 24 * 7 // 7 jours
-    })
-    return reply.send({ user: { id: user.id, email: user.email, name: user.name, role: user.role, avatarUrl: user.avatarUrl ?? null } })
+    return reply.send(issueSessionCookie(app, reply, user))
   })
 
   // POST /api/auth/logout
@@ -94,26 +163,28 @@ export async function authRoutes(app: FastifyInstance) {
     return reply.send({ ok: true })
   })
 
-  // GET /api/auth/me — vérifier le token
+  // GET /api/auth/me
   app.get('/me', { onRequest: [app.authenticate] }, async (req) => {
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
-      select: { id: true, email: true, name: true, role: true, avatarUrl: true, createdAt: true, lastLogin: true, cleanupAfterDays: true }
+      select: {
+        id: true, email: true, name: true, role: true, avatarUrl: true,
+        createdAt: true, lastLogin: true, cleanupAfterDays: true,
+        oidcProvider: true,
+      }
     })
     if (!user) throw { statusCode: 401, code: 'NOT_FOUND' }
     return user
   })
 
-  // POST /api/auth/register — premier utilisateur OU admin connecté
+  // POST /api/auth/register
   app.post('/register', async (req, reply) => {
     const body = registerSchema.safeParse(req.body)
     if (!body.success) return reply.code(400).send({ code: 'INVALID_DATA' })
 
     const count = await prisma.user.count()
-    // Le 1er utilisateur est toujours admin
     const role = count === 0 ? 'ADMIN' : 'USER'
 
-    // Si ce n'est pas le premier, vérifier que l'appelant est admin OU que l'inscription libre est activée
     let isAdmin = false
     if (count > 0) {
       try {
@@ -133,12 +204,10 @@ export async function authRoutes(app: FastifyInstance) {
     const existing = await prisma.user.findUnique({ where: { email: body.data.email } })
     if (existing) return reply.code(409).send({ code: 'EMAIL_TAKEN' })
 
-    // Quota par défaut uniquement pour les auto-inscriptions (inscription libre sans admin)
-    // isAdmin est déjà calculé dans le bloc count > 0 ci-dessus
     const isPublicRegistration = count > 0 && !isAdmin
-    const _rawQuota = (process.env.REGISTER_DEFAULT_QUOTA ?? '500MB').trim()
-    const _gbMatch = _rawQuota.match(/^(\d+(?:\.\d+)?)\s*GB$/i)
-    const _mbMatch = _rawQuota.match(/^(\d+(?:\.\d+)?)\s*MB?$/i)
+    const _rawQuota    = (process.env.REGISTER_DEFAULT_QUOTA ?? '500MB').trim()
+    const _gbMatch     = _rawQuota.match(/^(\d+(?:\.\d+)?)\s*GB$/i)
+    const _mbMatch     = _rawQuota.match(/^(\d+(?:\.\d+)?)\s*MB?$/i)
     const _defaultQuotaMB = _gbMatch
       ? parseFloat(_gbMatch[1]) * 1024
       : _mbMatch ? parseFloat(_mbMatch[1]) : NaN
@@ -157,7 +226,171 @@ export async function authRoutes(app: FastifyInstance) {
     return reply.code(201).send(user)
   })
 
-  // POST /api/auth/avatar — uploader son avatar
+  // ─── ROUTES OIDC ───────────────────────────────────────────────────────────
+
+  // GET /api/auth/oidc/config
+  app.get('/oidc/config', async (_req, reply) => {
+    return reply.send({
+      enabled:   OIDC_ENABLED,
+      issuerUrl: OIDC_ENABLED ? OIDC_ISSUER_URL : null,
+      clientId:  OIDC_ENABLED ? OIDC_CLIENT_ID  : null,
+    })
+  })
+
+  // GET /api/auth/oidc/login
+  app.get('/oidc/login', async (req, reply) => {
+    if (!OIDC_ENABLED) return reply.code(404).send({ code: 'OIDC_DISABLED' })
+
+    pruneOidcStates()
+    const client        = await getOidcClient()
+    const state         = generators.state()
+    const codeVerifier  = generators.codeVerifier()
+    const codeChallenge = generators.codeChallenge(codeVerifier)
+
+    oidcStateStore.set(state, {
+      codeVerifier,
+      expiresAt: Date.now() + 5 * 60 * 1000,
+    })
+
+    const authUrl = client.authorizationUrl({
+      scope:                 OIDC_SCOPE,
+      state,
+      code_challenge:        codeChallenge,
+      code_challenge_method: 'S256',
+    })
+
+    return reply.redirect(authUrl)
+  })
+
+  // GET /api/auth/oidc/callback
+  app.get('/oidc/callback', async (req, reply) => {
+    if (!OIDC_ENABLED) return reply.code(404).send({ code: 'OIDC_DISABLED' })
+
+    pruneOidcStates()
+    const client  = await getOidcClient()
+    const params  = client.callbackParams(req.raw)
+    const state   = params.state as string
+
+    const stateData = oidcStateStore.get(state)
+    if (!stateData || stateData.expiresAt < Date.now()) {
+      return reply.redirect('/?error=OIDC_STATE_EXPIRED')
+    }
+    oidcStateStore.delete(state)
+
+    let tokenSet: import('openid-client').TokenSet
+    try {
+      tokenSet = await client.oauthCallback(OIDC_REDIRECT_URI, params, {
+        state,
+        code_verifier: stateData.codeVerifier,
+      })
+    } catch (err: any) {
+      req.log.error({ err: err.message }, 'OIDC token exchange failed')
+      return reply.redirect('/?error=OIDC_CALLBACK_FAILED')
+    }
+
+    const claims       = tokenSet.claims()
+    const sub          = claims.sub
+    const email        = (claims.email as string | undefined)?.toLowerCase().trim()
+    const name         = (claims.name as string | undefined) ?? email ?? sub
+    const emailVerified = claims.email_verified === true
+
+    if (!email) return reply.redirect('/?error=OIDC_NO_EMAIL')
+
+    // 1. Compte déjà lié par sub → connexion directe
+    const byOidc = await prisma.user.findUnique({ where: { oidcSub: sub } })
+    if (byOidc) {
+      if (!byOidc.active) return reply.redirect('/?error=OIDC_ACCOUNT_DISABLED')
+      await prisma.user.update({ where: { id: byOidc.id }, data: { lastLogin: new Date() } })
+      req.log.info({ userId: byOidc.id }, 'OIDC login (existing link)')
+      issueSessionCookie(app, reply, byOidc)
+      return reply.redirect('/')
+    }
+
+    // 2. Email existant → liaison explicite requise
+    const byEmail = await prisma.user.findUnique({ where: { email } })
+    if (byEmail) {
+      if (!emailVerified) return reply.redirect('/?error=OIDC_EMAIL_NOT_VERIFIED')
+      const linkToken = generators.state()
+      oidcStateStore.set(linkToken, {
+        codeVerifier: '',
+        expiresAt: Date.now() + 5 * 60 * 1000,
+        pendingLink: { email, sub, provider: OIDC_PROVIDER_NAME, name },
+      })
+      req.log.info({ email }, 'OIDC link required for existing account')
+      return reply.redirect(`/oidc-link?token=${linkToken}`)
+    }
+
+    // 3. Email inconnu → création automatique si OIDC_AUTO_REGISTER
+    if (!OIDC_AUTO_REGISTER) return reply.redirect('/?error=OIDC_REGISTRATION_DISABLED')
+
+    const count = await prisma.user.count()
+    const role  = count === 0 ? 'ADMIN' : OIDC_DEFAULT_ROLE
+
+    const isPublicRegistration = count > 0
+    const _rawQuota    = (process.env.REGISTER_DEFAULT_QUOTA ?? '500MB').trim()
+    const _gbMatch     = _rawQuota.match(/^(\d+(?:\.\d+)?)\s*GB$/i)
+    const _mbMatch     = _rawQuota.match(/^(\d+(?:\.\d+)?)\s*MB?$/i)
+    const _defaultQuotaMB = _gbMatch
+      ? parseFloat(_gbMatch[1]) * 1024
+      : _mbMatch ? parseFloat(_mbMatch[1]) : NaN
+    const defaultQuotaBytes = Number.isFinite(_defaultQuotaMB) && _defaultQuotaMB > 0
+      ? BigInt(Math.round(_defaultQuotaMB * 1024 * 1024))
+      : null
+    const storageQuotaBytes = isPublicRegistration ? defaultQuotaBytes : null
+
+    const newUser = await prisma.user.create({
+      data: {
+        email,
+        name,
+        password:     null,
+        role,
+        oidcSub:      sub,
+        oidcProvider: OIDC_PROVIDER_NAME,
+        storageQuotaBytes,
+      }
+    })
+
+    req.log.info({ userId: newUser.id, email, role }, 'OIDC user created')
+    await prisma.user.update({ where: { id: newUser.id }, data: { lastLogin: new Date() } })
+    issueSessionCookie(app, reply, newUser)
+    return reply.redirect('/')
+  })
+
+  // POST /api/auth/oidc/link — confirme la liaison compte local + OIDC
+  app.post('/oidc/link', {
+    config: { rateLimit: { max: 5, timeWindow: '1 minute' } }
+  }, async (req, reply) => {
+    if (!OIDC_ENABLED) return reply.code(404).send({ code: 'OIDC_DISABLED' })
+
+    const parsed = oidcLinkConfirmSchema.safeParse(req.body)
+    if (!parsed.success) return reply.code(400).send({ code: 'INVALID_DATA' })
+
+    pruneOidcStates()
+    const stateData = oidcStateStore.get(parsed.data.linkToken)
+    if (!stateData || stateData.expiresAt < Date.now() || !stateData.pendingLink) {
+      return reply.code(400).send({ code: 'OIDC_LINK_TOKEN_EXPIRED' })
+    }
+
+    const { email, sub, provider } = stateData.pendingLink
+    const user = await prisma.user.findUnique({ where: { email } })
+    if (!user || !user.active) return reply.code(401).send({ code: 'INVALID_CREDENTIALS' })
+    if (!user.password) return reply.code(403).send({ code: 'OIDC_ONLY_ACCOUNT' })
+
+    const ok = await bcrypt.compare(parsed.data.password, user.password)
+    if (!ok) return reply.code(401).send({ code: 'INVALID_CREDENTIALS' })
+
+    oidcStateStore.delete(parsed.data.linkToken)
+    await prisma.user.update({
+      where: { id: user.id },
+      data:  { oidcSub: sub, oidcProvider: provider, lastLogin: new Date() },
+    })
+    req.log.info({ userId: user.id, provider }, 'OIDC account linked')
+    return reply.send(issueSessionCookie(app, reply, user))
+  })
+
+  // ─── ROUTES PROFIL ─────────────────────────────────────────────────────────
+
+  // POST /api/auth/avatar
   app.post('/avatar', { onRequest: [app.authenticate] }, async (req, reply) => {
     await fs.ensureDir(AVATAR_DIR)
     const current = await prisma.user.findUnique({ where: { id: req.user.id }, select: { avatarUrl: true } })
@@ -169,14 +402,11 @@ export async function authRoutes(app: FastifyInstance) {
     if (!data) return reply.code(400).send({ code: 'NO_FILE' })
     const ext = path.extname(data.filename || '.jpg').toLowerCase()
     const allowed = ['.png', '.jpg', '.jpeg', '.webp', '.gif']
-    if (!allowed.includes(ext)) {
-      return reply.code(400).send({ code: 'INVALID_FORMAT' })
-    }
+    if (!allowed.includes(ext)) return reply.code(400).send({ code: 'INVALID_FORMAT' })
+
     const filename = `avatar_${req.user.id}_${nanoid(6)}${ext}`
     const filePath = path.join(AVATAR_DIR, filename)
-    
-    // Server-side protection: limit avatar to 3 MB and stream to disk
-    const MAX_BYTES = 3 * 1024 * 1024 // 3 MB
+    const MAX_BYTES = 3 * 1024 * 1024
     const ws = fs.createWriteStream(filePath)
     let received = 0
     try {
@@ -202,14 +432,13 @@ export async function authRoutes(app: FastifyInstance) {
       await fs.remove(filePath).catch(() => {})
       throw err
     }
-    
     const avatarUrl = `/uploads/avatars/${filename}`
     await prisma.user.update({ where: { id: req.user.id }, data: { avatarUrl } })
     req.log.debug({ userId: req.user.id }, 'Avatar updated')
     return { avatarUrl }
   })
 
-  // DELETE /api/auth/avatar — supprimer son avatar
+  // DELETE /api/auth/avatar
   app.delete('/avatar', { onRequest: [app.authenticate] }, async (req, reply) => {
     const user = await prisma.user.findUnique({ where: { id: req.user.id }, select: { avatarUrl: true } })
     if (user?.avatarUrl) {
@@ -221,14 +450,13 @@ export async function authRoutes(app: FastifyInstance) {
     return { success: true }
   })
 
-  // PATCH /api/auth/profile — mettre à jour son nom
+  // PATCH /api/auth/profile
   app.patch('/profile', { onRequest: [app.authenticate] }, async (req, reply) => {
     const parsed = profileSchema.safeParse(req.body)
     if (!parsed.success) return reply.code(400).send({ code: 'INVALID_NAME' })
-    const { name } = parsed.data
     const updated = await prisma.user.update({
       where: { id: req.user.id },
-      data: { name: name },
+      data:  { name: parsed.data.name },
       select: { id: true, email: true, name: true, role: true, avatarUrl: true }
     })
     req.log.debug({ userId: req.user.id }, 'Profile updated')
@@ -239,55 +467,67 @@ export async function authRoutes(app: FastifyInstance) {
   app.post('/change-password', { onRequest: [app.authenticate] }, async (req, reply) => {
     const parsed = changePasswordSchema.safeParse(req.body)
     if (!parsed.success) return reply.code(400).send({ code: 'INVALID_DATA' })
-    const { currentPassword, newPassword } = parsed.data
+
     const user = await prisma.user.findUnique({ where: { id: req.user.id } })
     if (!user) return reply.code(404).send({ code: 'NOT_FOUND' })
-    const ok = await bcrypt.compare(currentPassword, user.password)
+
+    if (!user.password) {
+      return reply.code(403).send({
+        code:     'OIDC_MANAGED_ACCOUNT',
+        message:  "Le mot de passe de ce compte est géré par votre fournisseur d'identité SSO.",
+        provider: user.oidcProvider ?? null,
+      })
+    }
+
+    const ok = await bcrypt.compare(parsed.data.currentPassword, user.password)
     if (!ok) return reply.code(400).send({ code: 'WRONG_PASSWORD' })
-    const hashed = await bcrypt.hash(newPassword, 12)
+    const hashed = await bcrypt.hash(parsed.data.newPassword, 12)
     await prisma.user.update({ where: { id: req.user.id }, data: { password: hashed } })
     req.log.info({ userId: req.user.id }, 'Password changed')
     return { success: true }
   })
 
-  // PATCH /api/auth/cleanup-preference — préférence de nettoyage automatique
+  // PATCH /api/auth/cleanup-preference
   app.patch('/cleanup-preference', { onRequest: [app.authenticate] }, async (req, reply) => {
     const parsed = cleanupPreferenceSchema.safeParse(req.body)
     if (!parsed.success) return reply.code(400).send({ code: 'INVALID_DATA' })
     const { cleanupAfterDays } = parsed.data
 
-    // Valider contre le maximum admin
     if (cleanupAfterDays != null) {
       const settings = await getAppSettings()
       const adminMax = settings.cleanupAfterDays ?? null
-      if (adminMax == null) {
-        return reply.code(403).send({ code: 'CLEANUP_DISABLED' })
-      }
+      if (adminMax == null) return reply.code(403).send({ code: 'CLEANUP_DISABLED' })
       if (cleanupAfterDays < 0 || cleanupAfterDays > adminMax) {
         return reply.code(400).send({ code: 'CLEANUP_EXCEEDS_MAX', max: adminMax })
       }
     }
 
-    await prisma.user.update({
-      where: { id: req.user.id },
-      data: { cleanupAfterDays }
-    })
+    await prisma.user.update({ where: { id: req.user.id }, data: { cleanupAfterDays } })
     req.log.debug({ userId: req.user.id, cleanupAfterDays }, 'Cleanup preference updated')
     return { cleanupAfterDays }
   })
 
-  // POST /api/auth/forgot-password — demander un lien de réinitialisation
+  // POST /api/auth/forgot-password
   app.post('/forgot-password', {
     config: { rateLimit: { max: 5, timeWindow: '5 minutes' } }
   }, async (req, reply) => {
     const body = req.body as Record<string, unknown>
     const email = typeof body?.email === 'string' ? body.email.trim() : null
-    const lang = normalizeLang(body?.lang)
-    // Toujours répondre 200 pour ne pas révéler l'existence d'un compte
+    const lang  = normalizeLang(body?.lang)
     if (!email) return reply.send({ success: true })
 
     const user = await prisma.user.findUnique({ where: { email } })
     if (!user) return reply.send({ success: true })
+
+    // Compte OIDC-only : pas de reset local
+    if (!user.password) {
+      req.log.info({ email }, 'Forgot-password attempt on OIDC-only account — ignored')
+      return reply.code(403).send({
+        code:     'OIDC_MANAGED_ACCOUNT',
+        message:  "Ce compte utilise la connexion SSO. La réinitialisation du mot de passe est gérée par votre fournisseur d'identité.",
+        provider: user.oidcProvider ?? null,
+      })
+    }
 
     const settings = await getAppSettings()
     if (!settings.smtpHost || !settings.smtpFrom) {
@@ -295,18 +535,14 @@ export async function authRoutes(app: FastifyInstance) {
     }
     const emailLogoSrc = getEmailLogoSrc(settings, UPLOAD_DIR)
 
-    // Générer le token (1h de validité)
-    const token = nanoid(40)
+    const token  = nanoid(40)
     const expiry = new Date(Date.now() + 60 * 60 * 1000)
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { resetToken: token, resetTokenExpiry: expiry }
-    })
+    await prisma.user.update({ where: { id: user.id }, data: { resetToken: token, resetTokenExpiry: expiry } })
 
-    const siteUrl = settings.siteUrl || `${req.protocol}://${req.hostname}`
-    const resetUrl = `${siteUrl}/reset-password?token=${token}`
-    const appName = settings.appName || 'Filyo'
-    const safeAppName = escapeHtml(appName)
+    const siteUrl   = settings.siteUrl || `${req.protocol}://${req.hostname}`
+    const resetUrl  = `${siteUrl}/reset-password?token=${token}`
+    const appName   = settings.appName || 'Filyo'
+    const safeAppName  = escapeHtml(appName)
     const safeUserName = escapeHtml(user.name)
     const safeResetUrl = escapeHtml(encodeURI(resetUrl))
 
@@ -314,10 +550,10 @@ export async function authRoutes(app: FastifyInstance) {
 
     try {
       await transporter.sendMail({
-        from: `"${appName}" <${settings.smtpFrom}>`,
-        to: user.email,
+        from:    `"${appName}" <${settings.smtpFrom}>`,
+        to:      user.email,
         subject: t(lang, 'email.forgotPassword.subject', { appName }),
-        text: t(lang, 'email.forgotPassword.text', { name: user.name, resetUrl, appName }),
+        text:    t(lang, 'email.forgotPassword.text', { name: user.name, resetUrl, appName }),
         html: `<!DOCTYPE html><html lang="${lang}">
 <head>
 <meta charset="UTF-8">
@@ -351,16 +587,16 @@ export async function authRoutes(app: FastifyInstance) {
     return reply.send({ success: true })
   })
 
-  // GET /api/auth/quota — quota et usage de l'utilisateur connecté
+  // GET /api/auth/quota
   app.get('/quota', { onRequest: [app.authenticate] }, async (req) => {
     const user = await prisma.user.findUnique({
-      where: { id: req.user.id },
+      where:  { id: req.user.id },
       select: { storageQuotaBytes: true }
     })
     const [filesAgg, receivedAgg] = await Promise.all([
       prisma.file.aggregate({ _sum: { size: true }, where: { userId: req.user.id } }),
       prisma.receivedFile.aggregate({
-        _sum: { size: true },
+        _sum:  { size: true },
         where: { uploadRequest: { userId: req.user.id } }
       })
     ])
@@ -373,7 +609,7 @@ export async function authRoutes(app: FastifyInstance) {
     }
   })
 
-  // POST /api/auth/reset-password — appliquer le nouveau mot de passe
+  // POST /api/auth/reset-password
   app.post('/reset-password', async (req, reply) => {
     const { token, password } = req.body as { token?: string; password?: string }
     if (!token || !password || password.length < 8) {
@@ -385,10 +621,15 @@ export async function authRoutes(app: FastifyInstance) {
     })
     if (!user) return reply.code(400).send({ code: 'INVALID_RESET_TOKEN' })
 
+    // Sécurité : les comptes OIDC-only ne peuvent pas reset leur mot de passe ici
+    if (!user.password && user.oidcSub) {
+      return reply.code(403).send({ code: 'OIDC_MANAGED_ACCOUNT' })
+    }
+
     const hashed = await bcrypt.hash(password, 12)
     await prisma.user.update({
       where: { id: user.id },
-      data: { password: hashed, resetToken: null, resetTokenExpiry: null }
+      data:  { password: hashed, resetToken: null, resetTokenExpiry: null }
     })
     req.log.info({ userId: user.id }, 'Password reset')
     return reply.send({ success: true })

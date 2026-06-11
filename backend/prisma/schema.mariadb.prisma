@@ -1,4 +1,4 @@
-// This is your Prisma schema file
+// This is your Prisma schema file (MariaDB)
 generator client {
   provider = "prisma-client-js"
 }
@@ -12,7 +12,7 @@ model User {
   id             String          @id @default(cuid())
   email          String          @unique
   name           String
-  password       String
+  password       String?         @db.VarChar(255) // null pour les comptes OIDC-only
   role           String          @default("USER") // USER | ADMIN
   active         Boolean         @default(true)
   avatarUrl      String?
@@ -22,6 +22,8 @@ model User {
   storageQuotaBytes  BigInt?       // null=illimité
   resetToken         String?
   resetTokenExpiry   DateTime?
+  oidcSub            String?     @unique @db.VarChar(255)
+  oidcProvider       String?     @db.VarChar(100)
   files          File[]
   uploadRequests UploadRequest[]
 }
@@ -43,7 +45,7 @@ model AppSettings {
   allowRegistration Boolean  @default(false)
   cleanupAfterDays  Int?     // max autorisé : null=désactivé, 0=dès expiration, N=N jours max après expiration
   maxFileSizeBytes  BigInt?  // null=illimité
-  proxyUploadEnabled   Boolean  @default(false)  // mode upload proxy-compatible
+  proxyUploadEnabled   Boolean  @default(false)
   updatedAt         DateTime @updatedAt
 }
 
@@ -89,7 +91,7 @@ model UploadRequest {
   message       String?
   password         String?
   createdAt        DateTime       @default(now())
-  expiresAt        DateTime?
+  expiresAt        DateTime?      
   maxFiles         Int?
   maxSizeBytes     BigInt?
   active           Boolean        @default(true)
@@ -112,5 +114,3 @@ model ReceivedFile {
   message         String?
   uploadedAt      DateTime      @default(now())
 }
-
-

@@ -12,7 +12,7 @@ model User {
   id             String          @id @default(cuid())
   email          String          @unique
   name           String
-  password       String
+  password       String?         // null pour les comptes OIDC-only
   role           String          @default("USER") // USER | ADMIN
   active         Boolean         @default(true)
   avatarUrl      String?
@@ -22,6 +22,8 @@ model User {
   storageQuotaBytes  BigInt?       // null=illimité
   resetToken         String?
   resetTokenExpiry   DateTime?
+  oidcSub            String?     @unique  // identifiant "sub" côté provider OIDC
+  oidcProvider       String?              // ex: "keycloak", "authelia", "google"
   files          File[]
   uploadRequests UploadRequest[]
 }
@@ -112,5 +114,3 @@ model ReceivedFile {
   message         String?
   uploadedAt      DateTime      @default(now())
 }
-
-
