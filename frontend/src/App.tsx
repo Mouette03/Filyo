@@ -13,6 +13,7 @@ import LoginPage from './pages/LoginPage'
 import UsersPage from './pages/UsersPage'
 import SettingsPage from './pages/SettingsPage'
 import ProfilePage from './pages/ProfilePage'
+import OidcCallbackPage from './pages/OidcCallbackPage'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 
@@ -68,6 +69,9 @@ export default function App() {
       <Routes>
         {/* Page de connexion */}
         <Route path="/login" element={<LoginPage />} />
+
+        {/* Callback OIDC — public, le backend gère le cookie */}
+        <Route path="/oidc/callback" element={<OidcCallbackPage />} />
 
         {/* Pages publiques sans layout */}
         <Route path="/s/:token" element={<SharePage />} />

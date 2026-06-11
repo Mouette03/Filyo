@@ -1,14 +1,19 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowDownUp, Eye, EyeOff, LogIn, Mail, UserPlus } from 'lucide-react'
+import { ArrowDownUp, Eye, EyeOff, LogIn, Mail, UserPlus, ShieldCheck } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { login, getSettings, checkSetup, registerUser, forgotPassword } from '../api/client'
+import { login, getSettings, checkSetup, registerUser, forgotPassword, getOidcConfig } from '../api/client'
 import { useAuthStore } from '../stores/useAuthStore'
 import { useAppSettingsStore } from '../stores/useAppSettingsStore'
 import { useT } from '../i18n'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 
 type Mode = 'login' | 'register' | 'forgot'
+
+interface OidcConfig {
+  enabled: boolean
+  providerName?: string
+}
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -22,6 +27,7 @@ export default function LoginPage() {
   const [forgotEmail, setForgotEmail] = useState('')
   const [loadingForgot, setLoadingForgot] = useState(false)
   const [forgotSent, setForgotSent] = useState(false)
+  const [oidc, setOidc] = useState<OidcConfig>({ enabled: false })
   const { setAuth, isAuthenticated } = useAuthStore()
   const { setSettings, settings } = useAppSettingsStore()
   const navigate = useNavigate()
@@ -32,9 +38,10 @@ export default function LoginPage() {
     checkSetup().then(r => {
       const needed = r.data.setupNeeded
       setSetupNeeded(needed)
-      // Ne rediriger que si authentifié ET setup déjà fait
       if (!needed && isAuthenticated) navigate('/')
     }).catch(() => setSetupNeeded(false))
+    // Récupérer la config OIDC — silencieux si désactivé
+    getOidcConfig().then(r => setOidc(r.data)).catch(() => {})
   }, [isAuthenticated, navigate])
 
   const resetForm = () => {
@@ -53,7 +60,8 @@ export default function LoginPage() {
       navigate('/')
     } catch (err: any) {
       const code = err.response?.data?.code
-      if (code === 'INVALID_CREDENTIALS') toast.error(t('error.invalidCredentials'))
+      if (code === 'OIDC_ONLY_ACCOUNT') toast.error('Ce compte utilise la connexion SSO. Utilisez le bouton ci-dessous.')
+      else if (code === 'INVALID_CREDENTIALS') toast.error(t('error.invalidCredentials'))
       else if (err.response?.status === 429) toast.error(t('toast.tooManyRequests'))
       else toast.error(t('toast.incorrectCredentials'))
     } finally {
@@ -114,10 +122,16 @@ export default function LoginPage() {
       const code = err.response?.data?.code
       if (err.response?.status === 429) toast.error(t('toast.tooManyRequestsForgot'))
       else if (code === 'SMTP_NOT_CONFIGURED') toast.error(t('toast.smtpNotConfigured'))
+      else if (code === 'OIDC_MANAGED_ACCOUNT') toast.error('Ce compte est géré par le SSO. Réinitialisez votre mot de passe sur votre provider.')
       else toast.error(t('toast.sendError'))
     } finally {
       setLoadingForgot(false)
     }
+  }
+
+  const handleOidcLogin = () => {
+    // Redirige directement vers le backend qui gère le flow OIDC
+    window.location.href = '/api/auth/oidc/login'
   }
 
   if (setupNeeded === null) {
@@ -149,6 +163,25 @@ export default function LoginPage() {
       </p>
     </div>
   )
+
+  // ── Bouton SSO réutilisable ────────────────────────────────────────────────
+  const oidcButton = oidc.enabled && !setupNeeded ? (
+    <>
+      <div className="flex items-center gap-2 my-2">
+        <div className="flex-1 h-px" style={{ background: 'var(--glass-border)' }} />
+        <span className="text-xs [color:var(--text-40)]">ou</span>
+        <div className="flex-1 h-px" style={{ background: 'var(--glass-border)' }} />
+      </div>
+      <button
+        type="button"
+        onClick={handleOidcLogin}
+        className="btn-secondary w-full flex items-center justify-center gap-2 text-sm"
+      >
+        <ShieldCheck size={15} />
+        {oidc.providerName ? `Connexion via ${oidc.providerName}` : 'Connexion SSO'}
+      </button>
+    </>
+  ) : null
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4">
@@ -282,6 +315,7 @@ export default function LoginPage() {
                 <UserPlus size={15} /> {t('login.registerLinkBtn')}
               </button>
             )}
+            {oidcButton}
           </form>
 
         ) : (
@@ -327,6 +361,7 @@ export default function LoginPage() {
               className="btn-secondary w-full flex items-center justify-center gap-2 text-sm">
               <LogIn size={15} /> {t('login.alreadyAccount')}
             </button>
+            {oidcButton}
           </form>
         )}
 

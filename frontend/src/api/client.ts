@@ -16,7 +16,6 @@ api.interceptors.response.use(
   r => r,
   err => {
     const code = err.response?.data?.code
-    // Déconnecter si le token est invalide/expiré ou si l'utilisateur n'existe plus — pas sur un mauvais mot de passe applicatif
     const SESSION_ENDING_CODES = ['INVALID_TOKEN', 'NOT_FOUND', 'ACCOUNT_DISABLED']
     if (err.response?.status === 401 && SESSION_ENDING_CODES.includes(code) && useAuthStore.getState().isAuthenticated) {
       if (code === 'ACCOUNT_DISABLED') {
@@ -49,6 +48,12 @@ export const uploadAvatar = (form: FormData) =>
 export const deleteAvatar = () => api.delete('/auth/avatar')
 export const updateProfile = (data: { name: string }) => api.patch('/auth/profile', data)
 export const getMyQuota = () => api.get<{ storageQuotaBytes: string | null; storageUsedBytes: string }>('/auth/quota')
+
+// ---- OIDC ----
+export const getOidcConfig = () =>
+  api.get<{ enabled: boolean; issuerUrl?: string; clientId?: string; providerName?: string }>('/auth/oidc/config')
+export const linkOidcAccount = (password: string) =>
+  api.post('/auth/oidc/link', { password })
 
 // ---- Utilisateurs (admin) ----
 export const listUsers = () => api.get('/users')
@@ -159,4 +164,3 @@ export const updateMaxFileSize = (maxFileSizeBytes: number | null) =>
   api.patch('/settings/max-file-size', { maxFileSizeBytes })
 
 export default api
-
