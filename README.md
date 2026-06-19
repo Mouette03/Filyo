@@ -126,6 +126,17 @@ labels:
 | `TUS_EXPIRY` | `1h` | How long an interrupted TUS upload can be resumed after it stalls. Accepts `30m` or `2h` format. Once expired, the server rejects any resume attempt; the partial file is then physically deleted on the next `CLEANUP_INTERVAL` run. Default: 1 h. |
 | `CLEANUP_INTERVAL` | `1h` | Interval between scheduled cleanup runs (expired files + incomplete TUS uploads). Accepts `30m` or `2h` format. Default: 1 h. |
 | `REGISTER_DEFAULT_QUOTA` | `500MB` | Default storage quota assigned to users who self-register (open registration). Accepts `500MB` or `2GB` format. Set to `0` or leave empty to assign no quota by default. Has no effect on accounts created by an admin (quota set manually). |
+| `OIDC_ISSUER_URL` | – | OIDC issuer URL (e.g. `https://accounts.google.com`). Must be set (together with `OIDC_CLIENT_ID`) to enable SSO. |
+| `OIDC_CLIENT_ID` | – | OIDC client ID. Must be set (together with `OIDC_ISSUER_URL`) to enable SSO. |
+| `OIDC_CLIENT_SECRET` | – | OIDC client secret. Required for confidential clients (Google, Authentik, etc.). |
+| `OIDC_REDIRECT_URI` | – | OIDC callback URL — must match exactly what is registered with the provider. |
+| `OIDC_SCOPE` | `openid email profile` | OIDC scopes to request. |
+| `OIDC_PROVIDER_NAME` | `oidc` | Provider name shown on the SSO button (e.g. "Google", "Authentik"). |
+| `OIDC_AUTO_REGISTER` | `auto_register` | Set to `manual` to disable automatic account creation — users must link an existing local account. |
+| `OIDC_DEFAULT_ROLE` | `USER` | Role assigned to new SSO users (`USER` or `ADMIN`). The very first account is always `ADMIN` regardless of this setting. |
+
+> [!IMPORTANT]
+> SSO is **only enabled** when both `OIDC_ISSUER_URL` and `OIDC_CLIENT_ID` are defined. If one of them is missing, the SSO button is not shown and all OIDC endpoints return a 404.
 
 > [!NOTE]
 > Any SMTP password saved through the settings form is stored **encrypted** in the database (AES-256-GCM, key derived from `JWT_SECRET`).
@@ -345,6 +356,17 @@ labels:
 | `TUS_EXPIRY` | `1h` | Durée pendant laquelle un upload TUS interrompu peut être repris. Accepte le format `30m` ou `2h`. Une fois expiré, le serveur refuse toute tentative de reprise ; le fichier partiel est ensuite supprimé physiquement au prochain passage de `CLEANUP_INTERVAL`. Défaut : 1 h. |
 | `CLEANUP_INTERVAL` | `1h` | Intervalle entre chaque passage du job de nettoyage (fichiers expirés + uploads TUS incomplets). Accepte le format `30m` ou `2h`. Défaut : 1 h. |
 | `REGISTER_DEFAULT_QUOTA` | `500MB` | Quota de stockage par défaut attribué aux utilisateurs qui s'auto-inscrivent (inscription libre). Accepte le format `500MB` ou `2GB`. Mettre `0` ou laisser vide pour n'attribuer aucun quota par défaut. Sans effet sur les comptes créés par un administrateur (quota défini manuellement). |
+| `OIDC_ISSUER_URL` | – | URL du fournisseur OIDC (ex. `https://accounts.google.com`). Doit être définie (avec `OIDC_CLIENT_ID`) pour activer le SSO. |
+| `OIDC_CLIENT_ID` | – | Client ID OIDC. Doit être défini (avec `OIDC_ISSUER_URL`) pour activer le SSO. |
+| `OIDC_CLIENT_SECRET` | – | Client secret OIDC. Requis pour les clients confidentiels (Google, Authentik, etc.). |
+| `OIDC_REDIRECT_URI` | – | URL de callback OIDC — doit correspondre exactement à celle enregistrée chez le fournisseur. |
+| `OIDC_SCOPE` | `openid email profile` | Scopes OIDC à demander. |
+| `OIDC_PROVIDER_NAME` | `oidc` | Nom du fournisseur affiché sur le bouton SSO (ex. "Google", "Authentik"). |
+| `OIDC_AUTO_REGISTER` | `auto_register` | Mettre `manual` pour désactiver la création automatique de compte — les utilisateurs doivent lier un compte local existant. |
+| `OIDC_DEFAULT_ROLE` | `USER` | Rôle attribué aux nouveaux utilisateurs SSO (`USER` ou `ADMIN`). Le tout premier compte est toujours `ADMIN` quoi qu'il arrive. |
+
+> [!IMPORTANT]
+> Le SSO est **activé uniquement** si `OIDC_ISSUER_URL` ET `OIDC_CLIENT_ID` sont tous les deux définis. Si l'un des deux manque, le bouton SSO n'apparaît pas et les endpoints OIDC retournent une 404.
 
 > [!NOTE]
 > Tout mot de passe SMTP enregistré via le formulaire de réglages est stocké **chiffré** en base de données (AES-256-GCM, clé dérivée de `JWT_SECRET`).
