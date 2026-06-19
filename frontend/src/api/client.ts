@@ -52,8 +52,8 @@ export const getMyQuota = () => api.get<{ storageQuotaBytes: string | null; stor
 // ---- OIDC ----
 export const getOidcConfig = () =>
   api.get<{ enabled: boolean; issuerUrl?: string; clientId?: string; providerName?: string }>('/auth/oidc/config')
-export const linkOidcAccount = (password: string) =>
-  api.post('/auth/oidc/link', { password })
+export const linkOidcAccount = (password: string, linkToken: string) =>
+  api.post('/auth/oidc/link', { password, linkToken })
 
 // ---- Utilisateurs (admin) ----
 export const listUsers = () => api.get('/users')

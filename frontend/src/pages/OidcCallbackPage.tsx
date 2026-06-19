@@ -29,6 +29,7 @@ export default function OidcCallbackPage() {
   const success = params.get('success') === '1'
   const linkNeeded = params.get('link') === '1'
   const linkEmail = params.get('email') ?? ''
+  const linkToken = params.get('token') ?? ''
   const errorCode = params.get('error')
 
   const [password, setPassword] = useState('')
@@ -88,7 +89,7 @@ export default function OidcCallbackPage() {
       e.preventDefault()
       setLoading(true)
       try {
-        await linkOidcAccount(password)
+        await linkOidcAccount(password, linkToken)
         const r = await getMe()
         setAuth(r.data)
         toast.success('Compte lié avec succès !')

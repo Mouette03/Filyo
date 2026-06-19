@@ -317,7 +317,7 @@ export async function authRoutes(app: FastifyInstance) {
         pendingLink: { email, sub, provider: OIDC_PROVIDER_NAME, name },
       })
       req.log.info({ email }, 'OIDC link required for existing account')
-      return reply.redirect(`/oidc-link?token=${linkToken}`)
+      return reply.redirect(`/oidc/callback?link=1&email=${encodeURIComponent(email)}&token=${linkToken}`)
     }
 
     // 3. Email inconnu → création automatique si OIDC_AUTO_REGISTER
