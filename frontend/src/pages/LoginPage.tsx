@@ -60,7 +60,7 @@ export default function LoginPage() {
       navigate('/')
     } catch (err: any) {
       const code = err.response?.data?.code
-      if (code === 'OIDC_ONLY_ACCOUNT') toast.error('Ce compte utilise la connexion SSO. Utilisez le bouton ci-dessous.')
+      if (code === 'OIDC_ONLY_ACCOUNT') toast.error(t('error.oidcOnlyAccount'))
       else if (code === 'INVALID_CREDENTIALS') toast.error(t('error.invalidCredentials'))
       else if (err.response?.status === 429) toast.error(t('toast.tooManyRequests'))
       else toast.error(t('toast.incorrectCredentials'))
@@ -122,7 +122,7 @@ export default function LoginPage() {
       const code = err.response?.data?.code
       if (err.response?.status === 429) toast.error(t('toast.tooManyRequestsForgot'))
       else if (code === 'SMTP_NOT_CONFIGURED') toast.error(t('toast.smtpNotConfigured'))
-      else if (code === 'OIDC_MANAGED_ACCOUNT') toast.error('Ce compte est géré par le SSO. Réinitialisez votre mot de passe sur votre provider.')
+      else if (code === 'OIDC_MANAGED_ACCOUNT') toast.error(t('error.oidcManagedAccount'))
       else toast.error(t('toast.sendError'))
     } finally {
       setLoadingForgot(false)
@@ -169,7 +169,7 @@ export default function LoginPage() {
     <>
       <div className="flex items-center gap-2 my-2">
         <div className="flex-1 h-px" style={{ background: 'var(--glass-border)' }} />
-        <span className="text-xs [color:var(--text-40)]">ou</span>
+        <span className="text-xs [color:var(--text-40)]">{t('login.or')}</span>
         <div className="flex-1 h-px" style={{ background: 'var(--glass-border)' }} />
       </div>
       <button
@@ -178,7 +178,7 @@ export default function LoginPage() {
         className="btn-secondary w-full flex items-center justify-center gap-2 text-sm"
       >
         <ShieldCheck size={15} />
-        {oidc.providerName ? `Connexion via ${oidc.providerName}` : 'Connexion SSO'}
+        {oidc.providerName ? t('login.oidcLoginWith', { provider: oidc.providerName }) : t('login.oidcLoginGeneric')}
       </button>
     </>
   ) : null

@@ -46,28 +46,28 @@ export default function OidcCallbackPage() {
         navigate('/')
       })
       .catch(() => {
-        toast.error(t('error.oidcFailed') ?? 'Erreur OIDC')
+        toast.error(t('error.oidcFailed'))
         navigate('/login')
       })
   }, [success]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Cas erreur directe ────────────────────────────────────────────────────
   if (errorCode) {
-    const msg: Record<string, string> = {
-      oidc_disabled: 'OIDC non configuré',
-      invalid_state: 'Session expirée, veuillez réessayer',
-      account_disabled: 'Compte désactivé',
-      email_required: 'L\'adresse email est requise dans le token OIDC',
-      registration_disabled: 'L\'inscription automatique est désactivée',
-      server_error: 'Erreur serveur OIDC',
+    const key: Record<string, string> = {
+      oidc_disabled: 'oidc.errorDisabled',
+      invalid_state: 'oidc.errorInvalidState',
+      account_disabled: 'oidc.errorAccountDisabled',
+      email_required: 'oidc.errorEmailRequired',
+      registration_disabled: 'oidc.errorRegistrationDisabled',
+      server_error: 'oidc.errorServerError',
     }
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
         <div className="card max-w-sm w-full space-y-4 text-center">
-          <p className="text-red-400 font-semibold text-lg">Échec de la connexion SSO</p>
-          <p className="text-sm [color:var(--text-50)]">{msg[errorCode] ?? errorCode}</p>
+          <p className="text-red-400 font-semibold text-lg">{t('oidc.failed')}</p>
+          <p className="text-sm [color:var(--text-50)]">{t(key[errorCode] ?? 'oidc.errorServerError')}</p>
           <button onClick={() => navigate('/login')} className="btn-secondary w-full flex items-center justify-center gap-2">
-            <LogIn size={15} /> Retour à la connexion
+            <LogIn size={15} /> {t('oidc.backToLogin')}
           </button>
         </div>
       </div>
@@ -92,12 +92,12 @@ export default function OidcCallbackPage() {
         await linkOidcAccount(password, linkToken)
         const r = await getMe()
         setAuth(r.data)
-        toast.success('Compte lié avec succès !')
+        toast.success(t('oidc.linkSuccess'))
         navigate('/')
       } catch (err: any) {
         const code = err.response?.data?.code
-        if (code === 'INVALID_PASSWORD') toast.error('Mot de passe incorrect')
-        else toast.error('Erreur lors de la liaison du compte')
+        if (code === 'INVALID_PASSWORD') toast.error(t('oidc.linkPasswordIncorrect'))
+        else toast.error(t('oidc.linkFailed'))
       } finally {
         setLoading(false)
       }
@@ -110,16 +110,13 @@ export default function OidcCallbackPage() {
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center shadow-xl shadow-brand-500/30 mb-3">
               <Link2 size={24} className="text-white" />
             </div>
-            <h1 className="text-2xl font-bold tracking-tight [color:var(--text-base)]">Lier votre compte</h1>
-            <p className="[color:var(--text-50)] text-sm mt-1 text-center">
-              Un compte local existe déjà avec l&apos;adresse <strong className="[color:var(--text-base)]">{linkEmail}</strong>.<br />
-              Entrez votre mot de passe pour confirmer la liaison.
-            </p>
+            <h1 className="text-2xl font-bold tracking-tight [color:var(--text-base)]">{t('oidc.linkTitle')}</h1>
+            <p className="[color:var(--text-50)] text-sm mt-1 text-center" dangerouslySetInnerHTML={{ __html: t('oidc.linkDescription', { email: linkEmail }) }} />
           </div>
           <form onSubmit={handleLink} className="card space-y-4">
             <div>
               <label htmlFor="link-password" className="text-xs [color:var(--text-50)] mb-1.5 block font-medium uppercase tracking-wider">
-                Mot de passe actuel
+                {t('oidc.linkCurrentPassword')}
               </label>
               <div className="relative">
                 <input
@@ -143,11 +140,11 @@ export default function OidcCallbackPage() {
               {loading
                 ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 : <Link2 size={16} />}
-              Confirmer la liaison
+              {t('oidc.linkConfirm')}
             </button>
             <button type="button" onClick={() => navigate('/login')}
               className="btn-secondary w-full flex items-center justify-center gap-2 text-sm">
-              <LogIn size={15} /> Annuler
+              <LogIn size={15} /> {t('login.backToLogin')}
             </button>
           </form>
         </div>
