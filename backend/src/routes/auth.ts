@@ -19,7 +19,9 @@ const AVATAR_DIR = path.join(UPLOAD_DIR, 'avatars')
 // et OIDC_CLIENT_ID sont définis dans les variables d'environnement.
 
 const OIDC_ENABLED =
-  Boolean(process.env.OIDC_ISSUER_URL) && Boolean(process.env.OIDC_CLIENT_ID)
+  Boolean(process.env.OIDC_ISSUER_URL) &&
+  Boolean(process.env.OIDC_CLIENT_ID) &&
+  Boolean(process.env.OIDC_REDIRECT_URI)
 
 const OIDC_ISSUER_URL     = process.env.OIDC_ISSUER_URL    ?? ''
 const OIDC_CLIENT_ID      = process.env.OIDC_CLIENT_ID     ?? ''
@@ -229,9 +231,10 @@ export async function authRoutes(app: FastifyInstance) {
   // GET /api/auth/oidc/config
   app.get('/oidc/config', async (_req, reply) => {
     return reply.send({
-      enabled:   OIDC_ENABLED,
-      issuerUrl: OIDC_ENABLED ? OIDC_ISSUER_URL : null,
-      clientId:  OIDC_ENABLED ? OIDC_CLIENT_ID  : null,
+      enabled:      OIDC_ENABLED,
+      issuerUrl:    OIDC_ENABLED ? OIDC_ISSUER_URL : null,
+      clientId:     OIDC_ENABLED ? OIDC_CLIENT_ID  : null,
+      providerName: OIDC_ENABLED ? OIDC_PROVIDER_NAME : null,
     })
   })
 
