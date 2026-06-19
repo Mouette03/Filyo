@@ -165,7 +165,7 @@ export default function LoginPage() {
   )
 
   // ── Bouton SSO réutilisable ────────────────────────────────────────────────
-  const oidcButton = oidc.enabled && !setupNeeded ? (
+  const oidcButton = oidc.enabled ? (
     <>
       <div className="flex items-center gap-2 my-2">
         <div className="flex-1 h-px" style={{ background: 'var(--glass-border)' }} />
@@ -234,6 +234,7 @@ export default function LoginPage() {
                 : <UserPlus size={16} />}
               {t('login.createAdminBtn')}
             </button>
+            {oidcButton}
           </form>
 
         ) : mode === 'forgot' ? (
