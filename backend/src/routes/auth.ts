@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs'
 import path from 'path'
 import fs from 'fs-extra'
 import { nanoid } from 'nanoid'
-import { Issuer, generators } from 'openid-client'
+import * as oidc from 'openid-client'
 import { prisma } from '../lib/prisma'
 import { z } from 'zod'
 import { UPLOAD_DIR } from '../lib/config'
@@ -30,19 +30,17 @@ const OIDC_AUTO_REGISTER  = (process.env.OIDC_AUTO_REGISTER ?? 'auto_register') 
 const OIDC_DEFAULT_ROLE   = process.env.OIDC_DEFAULT_ROLE  ?? 'USER'
 const OIDC_PROVIDER_NAME  = process.env.OIDC_PROVIDER_NAME ?? 'oidc'
 
-// Client OIDC mis en cache au démarrage (une seule découverte .well-known)
-let oidcClient: InstanceType<import('openid-client').Issuer['Client']> | null = null
+// Configuration OIDC mise en cache au démarrage (une seule découverte .well-known)
+let oidcConfig: oidc.Configuration | null = null
 
-async function getOidcClient() {
-  if (oidcClient) return oidcClient
-  const issuer = await Issuer.discover(OIDC_ISSUER_URL)
-  oidcClient = new issuer.Client({
-    client_id:     OIDC_CLIENT_ID,
-    client_secret: OIDC_CLIENT_SECRET,
-    redirect_uris: [OIDC_REDIRECT_URI],
-    response_types: ['code'],
-  })
-  return oidcClient
+async function getOidcConfig() {
+  if (oidcConfig) return oidcConfig
+  oidcConfig = await oidc.discovery(
+    new URL(OIDC_ISSUER_URL),
+    OIDC_CLIENT_ID,
+    OIDC_CLIENT_SECRET || undefined,
+  )
+  return oidcConfig
 }
 
 // ─── ZOD SCHEMAS ────────────────────────────────────────────────────────────
@@ -242,24 +240,25 @@ export async function authRoutes(app: FastifyInstance) {
     if (!OIDC_ENABLED) return reply.code(404).send({ code: 'OIDC_DISABLED' })
 
     pruneOidcStates()
-    const client        = await getOidcClient()
-    const state         = generators.state()
-    const codeVerifier  = generators.codeVerifier()
-    const codeChallenge = generators.codeChallenge(codeVerifier)
+    const config         = await getOidcConfig()
+    const state          = oidc.randomState()
+    const codeVerifier   = oidc.codeVerifier()
+    const codeChallenge  = oidc.codeChallenge(codeVerifier)
 
     oidcStateStore.set(state, {
       codeVerifier,
       expiresAt: Date.now() + 5 * 60 * 1000,
     })
 
-    const authUrl = client.authorizationUrl({
+    const authUrl = oidc.buildAuthorizationUrl(config, {
+      redirect_uri:          OIDC_REDIRECT_URI,
       scope:                 OIDC_SCOPE,
       state,
       code_challenge:        codeChallenge,
       code_challenge_method: 'S256',
     })
 
-    return reply.redirect(authUrl)
+    return reply.redirect(authUrl.href)
   })
 
   // GET /api/auth/oidc/callback
@@ -267,9 +266,9 @@ export async function authRoutes(app: FastifyInstance) {
     if (!OIDC_ENABLED) return reply.code(404).send({ code: 'OIDC_DISABLED' })
 
     pruneOidcStates()
-    const client  = await getOidcClient()
-    const params  = client.callbackParams(req.raw)
-    const state   = params.state as string
+    const config  = await getOidcConfig()
+    const query   = req.query as Record<string, string>
+    const state   = query.state ?? ''
 
     const stateData = oidcStateStore.get(state)
     if (!stateData || stateData.expiresAt < Date.now()) {
@@ -277,18 +276,18 @@ export async function authRoutes(app: FastifyInstance) {
     }
     oidcStateStore.delete(state)
 
-    let tokenSet: import('openid-client').TokenSet
+    let tokens: Awaited<ReturnType<typeof oidc.authorizationCodeGrant>>
     try {
-      tokenSet = await client.oauthCallback(OIDC_REDIRECT_URI, params, {
-        state,
-        code_verifier: stateData.codeVerifier,
+      tokens = await oidc.authorizationCodeGrant(config, query, {
+        expectedState: state,
+        codeVerifier: stateData.codeVerifier,
       })
     } catch (err: any) {
       req.log.error({ err: err.message }, 'OIDC token exchange failed')
       return reply.redirect('/?error=OIDC_CALLBACK_FAILED')
     }
 
-    const claims       = tokenSet.claims()
+    const claims       = tokens.claims()
     const sub          = claims.sub
     const email        = (claims.email as string | undefined)?.toLowerCase().trim()
     const name         = (claims.name as string | undefined) ?? email ?? sub
@@ -310,7 +309,7 @@ export async function authRoutes(app: FastifyInstance) {
     const byEmail = await prisma.user.findUnique({ where: { email } })
     if (byEmail) {
       if (!emailVerified) return reply.redirect('/?error=OIDC_EMAIL_NOT_VERIFIED')
-      const linkToken = generators.state()
+      const linkToken = oidc.randomState()
       oidcStateStore.set(linkToken, {
         codeVerifier: '',
         expiresAt: Date.now() + 5 * 60 * 1000,
