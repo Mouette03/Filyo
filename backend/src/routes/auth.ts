@@ -242,8 +242,8 @@ export async function authRoutes(app: FastifyInstance) {
     pruneOidcStates()
     const config         = await getOidcConfig()
     const state          = oidc.randomState()
-    const codeVerifier   = oidc.codeVerifier()
-    const codeChallenge  = oidc.codeChallenge(codeVerifier)
+    const codeVerifier   = oidc.randomPKCECodeVerifier()
+    const codeChallenge  = await oidc.calculatePKCECodeChallenge(codeVerifier)
 
     oidcStateStore.set(state, {
       codeVerifier,
