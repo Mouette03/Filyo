@@ -65,6 +65,7 @@
 | **Profile** | Avatar, display name, password change |
 | **Settings** | App name, logo, SMTP, registration, appearance |
 | **Themes** | Dark/Light/Auto + customizable accent colors |
+| **OIDC / SSO** | Single Sign-On via OpenID Connect — Google, Authentik, Keycloak, Dex, or any OIDC-compliant provider. Auto-registration or manual account linking. First user always gets admin role. |
 | **i18n** | Fully translated in French and English |
 | **Docker** | Multi-arch images (amd64 + arm64), SQLite and MariaDB variants |
 | **Per-user storage quota** | Admin can set a storage limit per user (MB/GB); enforced on upload to prevent disk saturation |
@@ -301,6 +302,7 @@ Application de partage de fichiers **auto-hébergée**, sans stockage S3. Design
 | **Profil** | Avatar, nom, changement mot de passe |
 | **Réglages** | Nom app, logo, SMTP, inscription, apparence |
 | **Thèmes** | Sombre/Clair/Auto + couleurs personnalisables |
+| **OIDC / SSO** | Connexion unique (SSO) via OpenID Connect — Google, Authentik, Keycloak, Dex ou tout fournisseur compatible OIDC. Auto-inscription ou liaison manuelle de compte. Le premier utilisateur reçoit toujours le rôle admin. |
 | **i18n** | Français + Anglais |
 | **Docker** | Multi-arch (amd64/arm64), SQLite + MariaDB |
 | **Quota stockage par utilisateur** | L'administrateur peut définir une limite de stockage par utilisateur (MB/GB) ; appliquée lors des uploads pour éviter la saturation du disque |
