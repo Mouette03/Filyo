@@ -44,7 +44,7 @@ declare module 'openid-client' {
 
   export function authorizationCodeGrant(
     config: Configuration,
-    callbackParameters: Record<string, string>,
-    options?: { expectedState?: string; codeVerifier?: string },
+    currentUrl: URL | Request,
+    checks?: { expectedState?: string; pkceCodeVerifier?: string },
   ): Promise<TokenEndpointResponse & TokenEndpointResponseHelpers>
 }
