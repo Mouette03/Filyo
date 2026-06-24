@@ -3,7 +3,7 @@ CREATE TABLE "User" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "email" TEXT NOT NULL,
     "name" TEXT NOT NULL,
-    "password" TEXT NOT NULL,
+    "password" TEXT,
     "role" TEXT NOT NULL DEFAULT 'USER',
     "active" BOOLEAN NOT NULL DEFAULT true,
     "avatarUrl" TEXT,
@@ -12,8 +12,13 @@ CREATE TABLE "User" (
     "cleanupAfterDays" INTEGER,
     "storageQuotaBytes" BIGINT,
     "resetToken" TEXT,
-    "resetTokenExpiry" DATETIME
+    "resetTokenExpiry" DATETIME,
+    "oidcSub" TEXT,
+    "oidcProvider" TEXT
 );
+
+-- CreateIndex
+CREATE UNIQUE INDEX "User_oidcSub_key" ON "User"("oidcSub");
 
 -- CreateTable
 CREATE TABLE "AppSettings" (

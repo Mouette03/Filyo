@@ -2,7 +2,7 @@ CREATE TABLE `User` (
     `id` VARCHAR(191) NOT NULL,
     `email` VARCHAR(191) NOT NULL,
     `name` VARCHAR(191) NOT NULL,
-    `password` VARCHAR(191) NOT NULL,
+    `password` VARCHAR(191) NULL,
     `role` VARCHAR(191) NOT NULL DEFAULT 'USER',
     `active` BOOLEAN NOT NULL DEFAULT true,
     `avatarUrl` VARCHAR(191) NULL,
@@ -12,8 +12,12 @@ CREATE TABLE `User` (
     `storageQuotaBytes` BIGINT NULL,
     `resetToken` VARCHAR(191) NULL,
     `resetTokenExpiry` DATETIME(3) NULL,
+    `oidcSub` VARCHAR(191) NULL,
+    `oidcProvider` VARCHAR(191) NULL,
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE UNIQUE INDEX `User_oidcSub_key` ON `User`(`oidcSub`);
 
 CREATE TABLE `AppSettings` (
     `id` VARCHAR(191) NOT NULL,
