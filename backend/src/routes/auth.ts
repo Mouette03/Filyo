@@ -279,11 +279,15 @@ export async function authRoutes(app: FastifyInstance) {
     }
     oidcStateStore.delete(state)
 
+    // openid-client v6 : le 2e argument doit être une instance de URL (pas un objet query brut)
+    const currentUrl = new URL(OIDC_REDIRECT_URI)
+    currentUrl.search = new URLSearchParams(query).toString()
+
     let tokens: Awaited<ReturnType<typeof oidc.authorizationCodeGrant>>
     try {
-      tokens = await oidc.authorizationCodeGrant(config, query, {
+      tokens = await oidc.authorizationCodeGrant(config, currentUrl, {
         expectedState: state,
-        codeVerifier: stateData.codeVerifier,
+        pkceCodeVerifier: stateData.codeVerifier,
       })
     } catch (err: any) {
       req.log.error({ err: err.message }, 'OIDC token exchange failed')
