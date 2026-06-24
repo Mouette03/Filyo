@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useDropzone } from 'react-dropzone'
-import { Upload, X, Copy, Check, Lock, Clock, Download, Plus, Trash2, Share2, Mail, Send, EyeOff } from 'lucide-react'
+import { Upload, X, Copy, Check, Lock, Clock, Download, Plus, Trash2, Share2, Mail, Send, EyeOff, Eye } from 'lucide-react'
 import toast from 'react-hot-toast'
 import * as tus from 'tus-js-client'
 import { sendShareByEmail, getMyQuota, getTusFileResult } from '../api/client'
@@ -39,6 +39,7 @@ export default function HomePage() {
   const uploadExpiresAtRef = useRef<string | null>(null)
   const tusUploadRef = useRef<tus.Upload | null>(null)
   const [pendingResumes, setPendingResumes] = useState<{ url: string; filename: string; remaining: number; expiry: string }[]>([])
+  const [showPwdText, setShowPwdText] = useState(false)
 
   // Bloquer navigation pendant upload en cours
   useEffect(() => {
@@ -613,15 +614,21 @@ export default function HomePage() {
               <label htmlFor="home-password" className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
                 <Lock size={11} /> {t('home.passwordLabel')}
               </label>
-              <input
-                id="home-password"
-                name="password"
-                type="password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                placeholder={t('common.none')}
-                className="input text-sm py-2"
-              />
+              <div className="relative">
+                <input
+                  id="home-password"
+                  name="password"
+                  type={showPwdText ? 'text' : 'password'}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder={t('common.none')}
+                  className="input text-sm py-2 pr-10"
+                />
+                <button type="button" onClick={() => setShowPwdText(v => !v)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors">
+                  {showPwdText ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+              </div>
             </div>
             <div>
               <label htmlFor="home-expiry" className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
