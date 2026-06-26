@@ -357,14 +357,14 @@ export default function SharePage() {
                         autoFocus
                       />
                       <button type="button" onClick={() => setShowPwdText(v => !v)}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 [color:var(--text-40)] hover:[color:var(--text-70)] transition-colors">
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 z-10 [color:var(--text-40)] hover:[color:var(--text-70)] transition-colors">
                         {showPwdText ? <EyeOff size={15} /> : <Eye size={15} />}
                       </button>
                     </div>
                   </div>
                 )}
 
-                {/* Bouton Tout télécharger */}
+                {/* Bouton Tout télécharger */
                 {info.batchFiles!.filter(bf => bf.shareToken && !downloaded[bf.shareToken]).length > 0 && (
                   <div>
                     <button
@@ -481,14 +481,14 @@ export default function SharePage() {
                         autoFocus
                       />
                       <button type="button" onClick={() => setShowPwdText(v => !v)}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 [color:var(--text-40)] hover:[color:var(--text-70)] transition-colors">
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 z-10 [color:var(--text-40)] hover:[color:var(--text-70)] transition-colors">
                         {showPwdText ? <EyeOff size={15} /> : <Eye size={15} />}
                       </button>
                     </div>
                   </div>
                 )}
 
-                {/* Download button */}
+                {/* Download button */
                 {downloaded[token!] ? (
                   <div className="bg-emerald-500/20 border border-emerald-500/30 rounded-xl px-4 py-3 text-center text-emerald-400 font-medium">
                     {t('share.downloadStarted')}

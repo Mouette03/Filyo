@@ -625,7 +625,7 @@ export default function HomePage() {
                   className="input text-sm py-2 pr-10"
                 />
                 <button type="button" onClick={() => setShowPwdText(v => !v)}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors">
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 z-10 text-white/40 hover:text-white/70 transition-colors">
                   {showPwdText ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
