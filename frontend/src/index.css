@@ -208,6 +208,9 @@
     box-shadow: 0 0 0 3px rgb(var(--brand-500) / 0.15);
   }
   .input::placeholder { color: var(--text-30); }
+  /* Masquer le bouton natif reveal d'Edge/IE */
+  input[type="password"]::-ms-reveal,
+  input[type="password"]::-ms-clear { display: none; }
 
   .card {
     @apply rounded-2xl p-6;

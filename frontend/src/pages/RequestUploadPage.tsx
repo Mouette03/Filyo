@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { useDropzone } from 'react-dropzone'
-import { Upload, ArrowDownUp, AlertTriangle, Clock, Check, Lock, User, Mail, MessageSquare, X } from 'lucide-react'
+import { Upload, ArrowDownUp, AlertTriangle, Clock, Check, Lock, User, Mail, MessageSquare, X, Eye, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'
 import * as tus from 'tus-js-client'
 import { getUploadRequestInfo, getSettings } from '../api/client'
@@ -35,6 +35,7 @@ export default function RequestUploadPage() {
   const [uploaderEmail, setUploaderEmail] = useState('')
   const [message, setMessage] = useState('')
   const [password, setPassword] = useState('')
+  const [showPwdText, setShowPwdText] = useState(false)
   const [progress, setProgress] = useState(0)
   const [progressLabel, setProgressLabel] = useState('')
   const uploadExpiresAtRef = useRef<string | null>(null)
@@ -514,8 +515,15 @@ export default function RequestUploadPage() {
                     <label htmlFor="uploader-password" className="text-xs [color:var(--text-50)] mb-1.5 block flex items-center gap-1">
                       <Lock size={11} /> {t('request.passwordLabel')}
                     </label>
-                    <input id="uploader-password" type="password" value={password} onChange={e => setPassword(e.target.value)}
-                      placeholder={t('request.passwordPlaceholder')} className="input text-sm py-2.5" />
+                    <div className="relative">
+                      <input id="uploader-password" type={showPwdText ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)}
+                        placeholder={t('request.passwordPlaceholder')} className="input text-sm py-2.5 pr-11" />
+                      <button type="button" onClick={() => setShowPwdText(v => !v)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 [color:var(--text-40)] hover:[color:var(--text-70)] transition-colors"
+                        aria-label={showPwdText ? t('common.hidePassword') : t('common.showPassword')}>
+                        {showPwdText ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -526,8 +534,15 @@ export default function RequestUploadPage() {
                 <label htmlFor="uploader-password" className="text-xs [color:var(--text-50)] mb-1.5 block flex items-center gap-1">
                   <Lock size={11} /> {t('request.passwordLabel')}
                 </label>
-                <input id="uploader-password" type="password" value={password} onChange={e => setPassword(e.target.value)}
-                  placeholder={t('request.passwordPlaceholder')} className="input text-sm py-2.5" />
+                <div className="relative">
+                  <input id="uploader-password" type={showPwdText ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)}
+                    placeholder={t('request.passwordPlaceholder')} className="input text-sm py-2.5 pr-11" />
+                  <button type="button" onClick={() => setShowPwdText(v => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 [color:var(--text-40)] hover:[color:var(--text-70)] transition-colors"
+                    aria-label={showPwdText ? t('common.hidePassword') : t('common.showPassword')}>
+                    {showPwdText ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
               </div>
             )}
 

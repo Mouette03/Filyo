@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Copy, Check, Plus, ArrowDownUp, Clock, FileUp, Lock, Hash, Mail, Send } from 'lucide-react'
+import { Copy, Check, Plus, ArrowDownUp, Clock, FileUp, Lock, Hash, Mail, Send, Eye, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { createUploadRequest, sendRequestByEmail } from '../api/client'
 import { copyToClipboard, isValidEmail } from '../lib/utils'
@@ -18,6 +18,7 @@ export default function CreateRequestPage() {
   const [title, setTitle] = useState('')
   const [message, setMessage] = useState('')
   const [password, setPassword] = useState('')
+  const [showPwdText, setShowPwdText] = useState(false)
   const [expiresIn, setExpiresIn] = useState('604800')
   const [maxFiles, setMaxFiles] = useState('')
   const [maxSizeMb, setMaxSizeMb] = useState('')
@@ -148,9 +149,16 @@ export default function CreateRequestPage() {
               <label htmlFor="create-password" className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
                 <Lock size={11} /> {t('create.passwordLabel')}
               </label>
-              <input id="create-password" name="password" type="password" value={password}
-                onChange={e => setPassword(e.target.value)}
-                placeholder={t('create.passwordPlaceholder')} className="input" />
+              <div className="relative">
+                <input id="create-password" name="password" type={showPwdText ? 'text' : 'password'} value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder={t('create.passwordPlaceholder')} className="input pr-11" />
+                <button type="button" onClick={() => setShowPwdText(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors"
+                  aria-label={showPwdText ? t('common.hidePassword') : t('common.showPassword')}>
+                  {showPwdText ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+              </div>
             </div>
 
             {/* Expiry */}
@@ -274,7 +282,7 @@ export default function CreateRequestPage() {
             <p className="text-xs text-white/30 mt-2">{t('create.emailHint')}</p>
           </div>
 
-          <button onClick={() => { setResult(null); setTitle(''); setMessage(''); setPassword(''); setExpiresIn('604800'); setMaxFiles(''); setMaxSizeMb(''); setEmailTo(''); setEmailSent(false) }}
+          <button onClick={() => { setResult(null); setTitle(''); setMessage(''); setPassword(''); setShowPwdText(false); setExpiresIn('604800'); setMaxFiles(''); setMaxSizeMb(''); setEmailTo(''); setEmailSent(false) }}
             className="btn-secondary w-full flex items-center justify-center gap-2">
             <Plus size={16} /> {t('create.anotherLink')}
           </button>

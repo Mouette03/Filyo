@@ -101,7 +101,8 @@ export default function ResetPasswordPage() {
                   minLength={8}
                 />
                 <button type="button" onClick={() => setShowPwd(!showPwd)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors">
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+                  aria-label={showPwd ? t('common.hidePassword') : t('common.showPassword')}>
                   {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
