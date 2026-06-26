@@ -353,11 +353,11 @@ export default function SharePage() {
                         value={password}
                         onChange={e => setPassword(e.target.value)}
                         placeholder={t('share.passwordPlaceholder')}
-                        className="input pr-10"
+                        className="input pr-11"
                         autoFocus
                       />
                       <button type="button" onClick={() => setShowPwdText(v => !v)}
-                        className="absolute inset-y-0 right-0 px-3 flex items-center z-10 [color:var(--text-40)] hover:[color:var(--text-70)] transition-colors">
+                        className="absolute right-3 top-1/2 -translate-y-1/2 [color:var(--text-40)] hover:[color:var(--text-70)] transition-colors">
                         {showPwdText ? <EyeOff size={15} /> : <Eye size={15} />}
                       </button>
                     </div>
@@ -477,11 +477,11 @@ export default function SharePage() {
                         onChange={e => setPassword(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && handleDownloadSingle()}
                         placeholder={t('share.passwordPlaceholder')}
-                        className="input pr-10"
+                        className="input pr-11"
                         autoFocus
                       />
                       <button type="button" onClick={() => setShowPwdText(v => !v)}
-                        className="absolute inset-y-0 right-0 px-3 flex items-center z-10 [color:var(--text-40)] hover:[color:var(--text-70)] transition-colors">
+                        className="absolute right-3 top-1/2 -translate-y-1/2 [color:var(--text-40)] hover:[color:var(--text-70)] transition-colors">
                         {showPwdText ? <EyeOff size={15} /> : <Eye size={15} />}
                       </button>
                     </div>

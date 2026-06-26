@@ -622,10 +622,10 @@ export default function HomePage() {
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   placeholder={t('common.none')}
-                  className="input text-sm py-2 pr-10"
+                  className="input text-sm py-2 pr-11"
                 />
                 <button type="button" onClick={() => setShowPwdText(v => !v)}
-                  className="absolute inset-y-0 right-0 px-3 flex items-center z-10 text-white/40 hover:text-white/70 transition-colors">
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors">
                   {showPwdText ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>

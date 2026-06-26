@@ -16,6 +16,7 @@ export default function LoginPage() {
   const [confirmPwd, setConfirmPwd] = useState('')
   const [name, setName] = useState('')
   const [showPwd, setShowPwd] = useState(false)
+  const [showConfirmPwd, setShowConfirmPwd] = useState(false)
   const [loading, setLoading] = useState(false)
   const [setupNeeded, setSetupNeeded] = useState<boolean | null>(null)
   const [mode, setMode] = useState<Mode>('login')
@@ -38,7 +39,7 @@ export default function LoginPage() {
   }, [isAuthenticated, navigate])
 
   const resetForm = () => {
-    setEmail(''); setPassword(''); setConfirmPwd(''); setName(''); setShowPwd(false)
+    setEmail(''); setPassword(''); setConfirmPwd(''); setName(''); setShowPwd(false); setShowConfirmPwd(false)
     setForgotEmail(''); setForgotSent(false)
   }
 
@@ -190,9 +191,15 @@ export default function LoginPage() {
             </div>
             <div>
               <label htmlFor="setup-confirm-password" className="text-xs [color:var(--text-50)] mb-1.5 block font-medium uppercase tracking-wider">{t('login.confirmPassword')}</label>
-              <input id="setup-confirm-password" name="confirm-password" type={showPwd ? 'text' : 'password'} value={confirmPwd}
-                onChange={e => setConfirmPwd(e.target.value)}
-                placeholder={t('login.confirmPasswordPlaceholder')} className="input" required />
+              <div className="relative">
+                <input id="setup-confirm-password" name="confirm-password" type={showConfirmPwd ? 'text' : 'password'} value={confirmPwd}
+                  onChange={e => setConfirmPwd(e.target.value)}
+                  placeholder={t('login.confirmPasswordPlaceholder')} className="input pr-11" required />
+                <button type="button" onClick={() => setShowConfirmPwd(!showConfirmPwd)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 [color:var(--text-30)] hover:[color:var(--text-60)] transition-colors">
+                  {showConfirmPwd ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
             </div>
             <button type="submit" disabled={loading}
               className="btn-primary w-full flex items-center justify-center gap-2 mt-2">
@@ -311,9 +318,15 @@ export default function LoginPage() {
             </div>
             <div>
               <label htmlFor="register-confirm-password" className="text-xs [color:var(--text-50)] mb-1.5 block font-medium uppercase tracking-wider">{t('login.confirmPassword')}</label>
-              <input id="register-confirm-password" name="confirm-password" type={showPwd ? 'text' : 'password'} value={confirmPwd}
-                onChange={e => setConfirmPwd(e.target.value)}
-                placeholder={t('login.confirmPasswordPlaceholder')} className="input" required />
+              <div className="relative">
+                <input id="register-confirm-password" name="confirm-password" type={showConfirmPwd ? 'text' : 'password'} value={confirmPwd}
+                  onChange={e => setConfirmPwd(e.target.value)}
+                  placeholder={t('login.confirmPasswordPlaceholder')} className="input pr-11" required />
+                <button type="button" onClick={() => setShowConfirmPwd(!showConfirmPwd)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 [color:var(--text-30)] hover:[color:var(--text-60)] transition-colors">
+                  {showConfirmPwd ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
             </div>
             <button type="submit" disabled={loading}
               className="btn-primary w-full flex items-center justify-center gap-2 mt-2">

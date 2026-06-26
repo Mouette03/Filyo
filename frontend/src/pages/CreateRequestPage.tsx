@@ -152,9 +152,9 @@ export default function CreateRequestPage() {
               <div className="relative">
                 <input id="create-password" name="password" type={showPwdText ? 'text' : 'password'} value={password}
                   onChange={e => setPassword(e.target.value)}
-                  placeholder={t('create.passwordPlaceholder')} className="input pr-10" />
+                  placeholder={t('create.passwordPlaceholder')} className="input pr-11" />
                 <button type="button" onClick={() => setShowPwdText(v => !v)}
-                  className="absolute inset-y-0 right-0 px-3 flex items-center z-10 text-white/40 hover:text-white/70 transition-colors">
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors">
                   {showPwdText ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
