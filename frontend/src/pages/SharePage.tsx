@@ -364,7 +364,7 @@ export default function SharePage() {
                   </div>
                 )}
 
-                {/* Bouton Tout télécharger */
+                {/* Bouton Tout télécharger */}
                 {info.batchFiles!.filter(bf => bf.shareToken && !downloaded[bf.shareToken]).length > 0 && (
                   <div>
                     <button
@@ -488,7 +488,7 @@ export default function SharePage() {
                   </div>
                 )}
 
-                {/* Download button */
+                {/* Download button */}
                 {downloaded[token!] ? (
                   <div className="bg-emerald-500/20 border border-emerald-500/30 rounded-xl px-4 py-3 text-center text-emerald-400 font-medium">
                     {t('share.downloadStarted')}
