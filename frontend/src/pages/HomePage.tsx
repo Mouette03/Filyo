@@ -375,6 +375,7 @@ export default function HomePage() {
     setEmailSent(false)
     setFiles([])
     setPassword('')
+    setShowPwdText(false)
     setExpiresIn('86400')
     setMaxDownloads('')
     setHideFilenames(false)
@@ -625,7 +626,8 @@ export default function HomePage() {
                   className="input text-sm py-2 pr-11"
                 />
                 <button type="button" onClick={() => setShowPwdText(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors">
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors"
+                  aria-label={showPwdText ? t('common.hidePassword') : t('common.showPassword')}>
                   {showPwdText ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>

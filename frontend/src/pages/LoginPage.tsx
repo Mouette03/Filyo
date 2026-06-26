@@ -184,7 +184,8 @@ export default function LoginPage() {
                   onChange={e => setPassword(e.target.value)}
                   placeholder={t('login.passwordPlaceholder')} className="input pr-11" required minLength={8} />
                 <button type="button" onClick={() => setShowPwd(!showPwd)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 [color:var(--text-30)] hover:[color:var(--text-60)] transition-colors">
+                  className="absolute right-3 top-1/2 -translate-y-1/2 [color:var(--text-30)] hover:[color:var(--text-60)] transition-colors"
+                  aria-label={showPwd ? t('common.hidePassword') : t('common.showPassword')}>
                   {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
@@ -196,7 +197,8 @@ export default function LoginPage() {
                   onChange={e => setConfirmPwd(e.target.value)}
                   placeholder={t('login.confirmPasswordPlaceholder')} className="input pr-11" required />
                 <button type="button" onClick={() => setShowConfirmPwd(!showConfirmPwd)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 [color:var(--text-30)] hover:[color:var(--text-60)] transition-colors">
+                  className="absolute right-3 top-1/2 -translate-y-1/2 [color:var(--text-30)] hover:[color:var(--text-60)] transition-colors"
+                  aria-label={showConfirmPwd ? t('common.hidePassword') : t('common.showPassword')}>
                   {showConfirmPwd ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
@@ -265,7 +267,8 @@ export default function LoginPage() {
                   onChange={e => setPassword(e.target.value)}
                   placeholder="••••••••" className="input pr-11" required />
                 <button type="button" onClick={() => setShowPwd(!showPwd)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 [color:var(--text-30)] hover:[color:var(--text-60)] transition-colors">
+                  className="absolute right-3 top-1/2 -translate-y-1/2 [color:var(--text-30)] hover:[color:var(--text-60)] transition-colors"
+                  aria-label={showPwd ? t('common.hidePassword') : t('common.showPassword')}>
                   {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
@@ -311,7 +314,8 @@ export default function LoginPage() {
                   onChange={e => setPassword(e.target.value)}
                   placeholder={t('login.passwordPlaceholder')} className="input pr-11" required minLength={8} />
                 <button type="button" onClick={() => setShowPwd(!showPwd)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 [color:var(--text-30)] hover:[color:var(--text-60)] transition-colors">
+                  className="absolute right-3 top-1/2 -translate-y-1/2 [color:var(--text-30)] hover:[color:var(--text-60)] transition-colors"
+                  aria-label={showPwd ? t('common.hidePassword') : t('common.showPassword')}>
                   {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
@@ -323,7 +327,8 @@ export default function LoginPage() {
                   onChange={e => setConfirmPwd(e.target.value)}
                   placeholder={t('login.confirmPasswordPlaceholder')} className="input pr-11" required />
                 <button type="button" onClick={() => setShowConfirmPwd(!showConfirmPwd)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 [color:var(--text-30)] hover:[color:var(--text-60)] transition-colors">
+                  className="absolute right-3 top-1/2 -translate-y-1/2 [color:var(--text-30)] hover:[color:var(--text-60)] transition-colors"
+                  aria-label={showConfirmPwd ? t('common.hidePassword') : t('common.showPassword')}>
                   {showConfirmPwd ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>

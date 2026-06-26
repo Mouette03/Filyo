@@ -154,7 +154,8 @@ export default function CreateRequestPage() {
                   onChange={e => setPassword(e.target.value)}
                   placeholder={t('create.passwordPlaceholder')} className="input pr-11" />
                 <button type="button" onClick={() => setShowPwdText(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors">
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors"
+                  aria-label={showPwdText ? t('common.hidePassword') : t('common.showPassword')}>
                   {showPwdText ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
@@ -281,7 +282,7 @@ export default function CreateRequestPage() {
             <p className="text-xs text-white/30 mt-2">{t('create.emailHint')}</p>
           </div>
 
-          <button onClick={() => { setResult(null); setTitle(''); setMessage(''); setPassword(''); setExpiresIn('604800'); setMaxFiles(''); setMaxSizeMb(''); setEmailTo(''); setEmailSent(false) }}
+          <button onClick={() => { setResult(null); setTitle(''); setMessage(''); setPassword(''); setShowPwdText(false); setExpiresIn('604800'); setMaxFiles(''); setMaxSizeMb(''); setEmailTo(''); setEmailSent(false) }}
             className="btn-secondary w-full flex items-center justify-center gap-2">
             <Plus size={16} /> {t('create.anotherLink')}
           </button>

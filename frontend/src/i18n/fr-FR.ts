@@ -38,6 +38,8 @@ export const frFR = {
   'common.you': 'Vous',
   'common.error': 'Erreur',
   'common.newUpload': 'Nouvel envoi',
+  'common.showPassword': 'Afficher le mot de passe',
+  'common.hidePassword': 'Masquer le mot de passe',
 
   // ── Confirmations ───────────────────────────────────────────
   'confirm.irreversible': 'Cette action est irréversible.',

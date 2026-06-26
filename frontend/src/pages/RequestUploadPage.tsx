@@ -519,7 +519,8 @@ export default function RequestUploadPage() {
                       <input id="uploader-password" type={showPwdText ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)}
                         placeholder={t('request.passwordPlaceholder')} className="input text-sm py-2.5 pr-11" />
                       <button type="button" onClick={() => setShowPwdText(v => !v)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 [color:var(--text-40)] hover:[color:var(--text-70)] transition-colors">
+                        className="absolute right-3 top-1/2 -translate-y-1/2 [color:var(--text-40)] hover:[color:var(--text-70)] transition-colors"
+                        aria-label={showPwdText ? t('common.hidePassword') : t('common.showPassword')}>
                         {showPwdText ? <EyeOff size={15} /> : <Eye size={15} />}
                       </button>
                     </div>
@@ -537,7 +538,8 @@ export default function RequestUploadPage() {
                   <input id="uploader-password" type={showPwdText ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)}
                     placeholder={t('request.passwordPlaceholder')} className="input text-sm py-2.5 pr-11" />
                   <button type="button" onClick={() => setShowPwdText(v => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 [color:var(--text-40)] hover:[color:var(--text-70)] transition-colors">
+                    className="absolute right-3 top-1/2 -translate-y-1/2 [color:var(--text-40)] hover:[color:var(--text-70)] transition-colors"
+                    aria-label={showPwdText ? t('common.hidePassword') : t('common.showPassword')}>
                     {showPwdText ? <EyeOff size={15} /> : <Eye size={15} />}
                   </button>
                 </div>

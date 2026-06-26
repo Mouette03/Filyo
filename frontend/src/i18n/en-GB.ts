@@ -38,6 +38,8 @@ export const enGB = {
   'common.you': 'You',
   'common.error': 'Error',
   'common.newUpload': 'New upload',
+  'common.showPassword': 'Show password',
+  'common.hidePassword': 'Hide password',
 
   // ── Confirmations ────────────────────────────────────────────
   'confirm.irreversible': 'This action is irreversible.',
