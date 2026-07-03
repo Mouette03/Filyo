@@ -1,11 +1,14 @@
 import { frFR } from './fr-FR'
 import { enGB } from './en-GB'
+import { deDE } from './de-DE'
+import { esES } from './es-ES'
+import { itIT } from './it-IT'
 import type { Lang } from '../stores/useI18nStore'
 import { useI18nStore } from '../stores/useI18nStore'
 
 export type TranslationKey = keyof typeof frFR
 
-const translations: Record<Lang, Record<string, string>> = { 'fr-FR': frFR, 'en-GB': enGB }
+const translations: Record<Lang, Record<string, string>> = { 'fr-FR': frFR, 'en-GB': enGB, 'de-DE': deDE, 'es-ES': esES, 'it-IT': itIT }
 
 /**
  * Retourne une fonction de traduction `t(key, vars?)` liée à la langue active.
@@ -30,5 +33,5 @@ export function useT() {
   return { t, lang, setLang }
 }
 
-export { frFR as fr, enGB as en }
+export { frFR as fr, enGB as en, deDE as de, esES as es, itIT as it }
 export type { Lang }

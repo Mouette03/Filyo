@@ -1,15 +1,18 @@
 import { enGB } from './en-GB'
 import { frFR } from './fr-FR'
+import { esES } from './es-ES'
+import { deDE } from './de-DE'
+import { itIT } from './it-IT'
 
 /** Union type of all supported locale codes. */
-export type SupportedLang = 'fr-FR' | 'en-GB'
+export type SupportedLang = 'fr-FR' | 'en-GB' | 'es-ES' | 'de-DE' | 'it-IT'
 
 type Translations = typeof frFR
 
 /** Registry mapping locale codes to their translation dictionaries. */
-const translations: Record<string, Translations> = { 'en-GB': enGB, 'fr-FR': frFR }
+const translations: Record<string, Translations> = { 'en-GB': enGB, 'fr-FR': frFR, 'es-ES': esES, 'de-DE': deDE, 'it-IT': itIT }
 
-const SUPPORTED: SupportedLang[] = ['fr-FR', 'en-GB']
+const SUPPORTED: SupportedLang[] = ['fr-FR', 'en-GB', 'es-ES', 'de-DE', 'it-IT']
 
 /**
  * Normalise une valeur `lang` inconnue (issue du body HTTP) en un code locale valide.
