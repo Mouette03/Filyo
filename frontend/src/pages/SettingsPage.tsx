@@ -338,7 +338,7 @@ export default function SettingsPage() {
         </div>
         {siteUrl && (
           <p className="text-xs text-white/30 mt-2">
-            Exemple : <span className="text-brand-400 font-mono">{siteUrl}/s/xK9mPqR3</span>
+            Exemple : <span className="text-brand-400 font-mono break-all">{siteUrl}/s/xK9mPqR3</span>
           </p>
         )}
         <p className="text-xs text-white/30 mt-1">{t('settings.siteUrlHint')}</p>
@@ -664,14 +664,10 @@ export default function SettingsPage() {
               <p className="text-xs text-white/40 mt-1">{t('settings.smtpPasswordSet')}</p>
             )}
           </div>
-        </div>
-
-        {/* Boutons */}
-        <div className="flex gap-3 flex-wrap">
           <button
             onClick={handleSaveSmtp}
             disabled={savingSmtp}
-            className="btn-primary flex items-center gap-2 py-2.5 px-5"
+            className="btn-primary flex items-center gap-2 py-2.5 px-5 self-end"
           >
             {savingSmtp ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
             {t('common.save')}
@@ -679,7 +675,7 @@ export default function SettingsPage() {
           <button
             onClick={handleTestSmtp}
             disabled={testingSmtp || !smtpHost}
-            className="btn-secondary flex items-center gap-2 py-2.5 px-5 disabled:opacity-40"
+            className="btn-secondary flex items-center gap-2 py-2.5 px-5 disabled:opacity-40 self-end"
           >
             {testingSmtp ? <RefreshCw size={14} className="animate-spin" /> : <Wifi size={14} />}
             {t('settings.smtpTest')}
