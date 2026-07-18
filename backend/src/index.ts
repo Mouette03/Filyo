@@ -54,7 +54,9 @@ const app = Fastify({
       }
     })
   },
-  disableRequestLogging: true,
+  logController: {
+    disableRequestLogging: true,
+  },
   bodyLimit: 10 * 1024 * 1024 * 1024, // 10 GB
   connectionTimeout: UPLOAD_TIMEOUT_MS,
 })
