@@ -266,6 +266,7 @@ export const enGB = {
   'settings.bg.carbon': 'Carbon',
   'settings.siteUrlSection': 'Site address',
   'settings.siteUrlPlaceholder': 'https://filyo.yourdomain.com',
+  'settings.siteUrlExample': 'Example:',
   'settings.siteUrlHint': 'Used to generate share links sent by email.',
   'settings.authSection': 'Authentication',
   'settings.freeReg': 'Open registration',
