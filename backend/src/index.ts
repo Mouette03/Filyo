@@ -1,4 +1,4 @@
-import Fastify, { FastifyRequest, FastifyReply } from 'fastify'
+import Fastify, { FastifyRequest, FastifyReply, LogController } from 'fastify'
 import cors from '@fastify/cors'
 import cookie from '@fastify/cookie'
 import multipart from '@fastify/multipart'
@@ -54,7 +54,9 @@ const app = Fastify({
       }
     })
   },
-  disableRequestLogging: true,
+  logController: new LogController({
+    disableRequestLogging: true,
+  }),
   bodyLimit: 10 * 1024 * 1024 * 1024, // 10 GB
   connectionTimeout: UPLOAD_TIMEOUT_MS,
 })

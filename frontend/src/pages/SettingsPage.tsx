@@ -338,7 +338,7 @@ export default function SettingsPage() {
         </div>
         {siteUrl && (
           <p className="text-xs text-white/30 mt-2">
-            {t('settings.siteUrlExample')} <span className="text-brand-400 font-mono">{siteUrl}/s/xK9mPqR3</span>
+            {t('settings.siteUrlExample')} <span className="text-brand-400 font-mono break-all">{siteUrl}/s/xK9mPqR3</span>
           </p>
         )}
         <p className="text-xs text-white/30 mt-1">{t('settings.siteUrlHint')}</p>
@@ -664,26 +664,26 @@ export default function SettingsPage() {
               <p className="text-xs text-white/40 mt-1">{t('settings.smtpPasswordSet')}</p>
             )}
           </div>
-        </div>
-
-        {/* Boutons */}
-        <div className="flex gap-3 flex-wrap">
-          <button
-            onClick={handleSaveSmtp}
-            disabled={savingSmtp}
-            className="btn-primary flex items-center gap-2 py-2.5 px-5"
-          >
-            {savingSmtp ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
-            {t('common.save')}
-          </button>
-          <button
-            onClick={handleTestSmtp}
-            disabled={testingSmtp || !smtpHost}
-            className="btn-secondary flex items-center gap-2 py-2.5 px-5 disabled:opacity-40"
-          >
-            {testingSmtp ? <RefreshCw size={14} className="animate-spin" /> : <Wifi size={14} />}
-            {t('settings.smtpTest')}
-          </button>
+          <div className="flex items-end">
+            <button
+              onClick={handleSaveSmtp}
+              disabled={savingSmtp}
+              className="btn-primary flex items-center gap-2 py-2.5 px-5"
+            >
+              {savingSmtp ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
+              {t('common.save')}
+            </button>
+          </div>
+          <div className="flex items-end">
+            <button
+              onClick={handleTestSmtp}
+              disabled={testingSmtp || !smtpHost}
+              className="btn-secondary flex items-center gap-2 py-2.5 px-5 disabled:opacity-40"
+            >
+              {testingSmtp ? <RefreshCw size={14} className="animate-spin" /> : <Wifi size={14} />}
+              {t('settings.smtpTest')}
+            </button>
+          </div>
         </div>
         <p className="text-xs text-white/30 mt-3">{t('settings.smtpTestHint')}</p>
       </div>
