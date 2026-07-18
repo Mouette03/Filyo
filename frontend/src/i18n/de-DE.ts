@@ -266,6 +266,7 @@ export const deDE = {
   'settings.bg.carbon': 'Carbon',
   'settings.siteUrlSection': 'Seitenadresse',
   'settings.siteUrlPlaceholder': 'https://filyo.deinedomain.de',
+  'settings.siteUrlExample': 'Beispiel:',
   'settings.siteUrlHint': 'Wird verwendet, um per E-Mail gesendete Share-Links zu generieren.',
   'settings.authSection': 'Authentifizierung',
   'settings.freeReg': 'Offene Registrierung',

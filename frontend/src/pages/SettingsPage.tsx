@@ -338,7 +338,7 @@ export default function SettingsPage() {
         </div>
         {siteUrl && (
           <p className="text-xs text-white/30 mt-2">
-            Exemple : <span className="text-brand-400 font-mono">{siteUrl}/s/xK9mPqR3</span>
+            {t('settings.siteUrlExample')} <span className="text-brand-400 font-mono">{siteUrl}/s/xK9mPqR3</span>
           </p>
         )}
         <p className="text-xs text-white/30 mt-1">{t('settings.siteUrlHint')}</p>

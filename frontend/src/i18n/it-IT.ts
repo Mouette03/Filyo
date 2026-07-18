@@ -266,6 +266,7 @@ export const itIT = {
   'settings.bg.carbon': 'Carbonio',
   'settings.siteUrlSection': 'Indirizzo sito',
   'settings.siteUrlPlaceholder': 'https://filyo.tuodominio.com',
+  'settings.siteUrlExample': 'Esempio:',
   'settings.siteUrlHint': 'Utilizzato per generare i link di condivisione inviati via email.',
   'settings.authSection': 'Autenticazione',
   'settings.freeReg': 'Registrazione aperta',

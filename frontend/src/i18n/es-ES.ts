@@ -266,6 +266,7 @@ export const esES = {
   'settings.bg.carbon': 'Carbón',
   'settings.siteUrlSection': 'Dirección del sitio',
   'settings.siteUrlPlaceholder': 'https://filyo.tudominio.com',
+  'settings.siteUrlExample': 'Ejemplo:',
   'settings.siteUrlHint': 'Se usa para generar los enlaces compartidos enviados por correo.',
   'settings.authSection': 'Autenticación',
   'settings.freeReg': 'Registro abierto',

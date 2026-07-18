@@ -266,6 +266,7 @@ export const frFR = {
   'settings.bg.carbon': 'Carbone',
   'settings.siteUrlSection': 'Adresse du site',
   'settings.siteUrlPlaceholder': 'https://filyo.mondomaine.fr',
+  'settings.siteUrlExample': 'Exemple :',
   'settings.siteUrlHint': 'Utilisée pour générer les liens de partage envoyés par email.',
   'settings.authSection': 'Authentification',
   'settings.freeReg': 'Inscription libre',
