@@ -28,7 +28,7 @@
 > **Why Filyo?**
 > I created this application because I couldn't find a simple file-sharing tool that suited my needs. So, I decided to build my own, with the help of AI.
 
-**Self-hosted** file-sharing app, no S3 storage. Dark glassmorphism design, bilingual interface (FR/EN), and **reverse sharing** feature.
+**Self-hosted** file-sharing app, no S3 storage. Dark glassmorphism design, multilingual interface (FR / EN / DE / ES / IT), and **reverse sharing** feature.
 
 ---
 
@@ -65,7 +65,7 @@
 | **Profile** | Avatar, display name, password change |
 | **Settings** | App name, logo, SMTP, registration, appearance |
 | **Themes** | Dark/Light/Auto + customizable accent colors |
-| **i18n** | Fully translated in French and English |
+| **i18n** | Fully translated in French, English, German, Spanish and Italian |
 | **Docker** | Multi-arch images (amd64 + arm64), SQLite and MariaDB variants |
 | **Per-user storage quota** | Admin can set a storage limit per user (MB/GB); enforced on upload to prevent disk saturation |
 | **Encrypted SMTP password** | SMTP password stored encrypted in the database (AES-256-GCM, key derived from `JWT_SECRET`) |
@@ -201,10 +201,10 @@ In the default Docker image, frontend and backend share the same origin (port 30
 
 - **Lint + type-check** (push/PR)
 - **Multi-arch build** → `ghcr.io/mouette03/filyo`
-- Tags: `latest`, `sha-xxxx`, `v1.0.3(-mariadb)`
+- Tags: `latest`, `sha-xxxx`, `v1.2.9(-mariadb)`
 
 ```bash
-docker pull ghcr.io/mouette03/filyo:v1.0.3
+docker pull ghcr.io/mouette03/filyo:v1.2.9
 ```
 
 ---
@@ -253,7 +253,7 @@ docker pull ghcr.io/mouette03/filyo:v1.0.3
 > **Pourquoi Filyo ?**
 > J'ai créé cette application car je n'ai pas trouvé d'outil de partage de fichiers simple qui me convenait. J'ai donc décidé de la développer moi-même, avec l'aide de l'IA.
 
-Application de partage de fichiers **auto-hébergée**, sans stockage S3. Design glassmorphism sombre, interface bilingue (FR/EN), et fonctionnalité de **partage inversé**.
+Application de partage de fichiers **auto-hébergée**, sans stockage S3. Design glassmorphism sombre, interface multilingue (FR / EN / DE / ES / IT), et fonctionnalité de **partage inversé**.
 
 ---
 
@@ -290,7 +290,7 @@ Application de partage de fichiers **auto-hébergée**, sans stockage S3. Design
 | **Profil** | Avatar, nom, changement mot de passe |
 | **Réglages** | Nom app, logo, SMTP, inscription, apparence |
 | **Thèmes** | Sombre/Clair/Auto + couleurs personnalisables |
-| **i18n** | Français + Anglais |
+| **i18n** | Français + Anglais + Allemand + Espagnol + Italien |
 | **Docker** | Multi-arch (amd64/arm64), SQLite + MariaDB |
 | **Quota stockage par utilisateur** | L'administrateur peut définir une limite de stockage par utilisateur (MB/GB) ; appliquée lors des uploads pour éviter la saturation du disque |
 | **Chiffrement mot de passe SMTP** | Mot de passe SMTP chiffré en base (AES-256-GCM, clé dérivée de `JWT_SECRET`) |
@@ -418,10 +418,10 @@ Dans l'image Docker par défaut, le frontend et le backend partagent la même or
 
 - **Lint + type-check** (push/PR)
 - **Build multi-arch** → `ghcr.io/mouette03/filyo`
-- Tags : `latest`, `sha-xxxx`, `v1.0.3(-mariadb)`
+- Tags : `latest`, `sha-xxxx`, `v1.2.9(-mariadb)`
 
 ```bash
-docker pull ghcr.io/mouette03/filyo:v1.0.3
+docker pull ghcr.io/mouette03/filyo:v1.2.9
 ```
 
 ---
