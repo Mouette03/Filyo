@@ -6,9 +6,9 @@ import { FileStore } from '@tus/file-store'
 import { nanoid } from 'nanoid'
 import mime from 'mime-types'
 import bcrypt from 'bcryptjs'
-import { prisma } from './prisma'
-import { UPLOAD_DIR } from './config'
-import { getAppSettings } from './appSettings'
+import { prisma } from './prisma.js'
+import { UPLOAD_DIR } from './config.js'
+import { getAppSettings } from './appSettings.js'
 import type { FastifyInstance } from 'fastify'
 
 // ── Types ─────────────────────────────────────────────────────────────────────

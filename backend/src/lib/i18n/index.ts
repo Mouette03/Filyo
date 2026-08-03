@@ -1,8 +1,8 @@
-import { enGB } from './en-GB'
-import { frFR } from './fr-FR'
-import { esES } from './es-ES'
-import { deDE } from './de-DE'
-import { itIT } from './it-IT'
+import { enGB } from './en-GB.js'
+import { frFR } from './fr-FR.js'
+import { esES } from './es-ES.js'
+import { deDE } from './de-DE.js'
+import { itIT } from './it-IT.js'
 
 /** Union type of all supported locale codes. */
 export type SupportedLang = 'fr-FR' | 'en-GB' | 'es-ES' | 'de-DE' | 'it-IT'

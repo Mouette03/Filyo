@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify'
 import bcrypt from 'bcryptjs'
-import { prisma } from '../lib/prisma'
+import { prisma } from '../lib/prisma.js'
 
 // Toutes ces routes nécessitent d'être connecté en tant qu'ADMIN
 export async function userRoutes(app: FastifyInstance) {
