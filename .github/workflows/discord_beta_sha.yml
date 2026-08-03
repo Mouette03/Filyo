@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      models: read
+      copilot-requests: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -67,16 +67,28 @@ jobs:
       - name: Résumer les commits avec l'IA
         id: summary
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
           COMMITS: ${{ steps.commits.outputs.raw }}
         run: |
+          # Copilot : PAT dédié prioritaire, sinon GITHUB_TOKEN (permission copilot-requests: write)
+          AUTH_TOKEN="${COPILOT_GITHUB_TOKEN:-$GITHUB_TOKEN}"
           PROMPT="Voici une liste de commits git pour une release bêta. Fais un résumé clair et lisible en français, groupé par thème (nouveautés, corrections, etc.), avec des emojis. Maximum 10 lignes. Commits :\n${COMMITS}"
-          BODY=$(jq -n --arg content "$PROMPT" '{"model":"gpt-4o-mini","messages":[{"role":"user","content":$content}],"max_tokens":400}')
-          RESPONSE=$(curl -s https://models.inference.ai.azure.com/chat/completions \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
+          BODY=$(jq -n --arg content "$PROMPT" '{"model":"gpt-4.1-mini","messages":[{"role":"user","content":$content}],"max_tokens":400}')
+          RESPONSE=$(curl -sS -w "\n%{http_code}" https://api.githubcopilot.com/chat/completions \
+            -H "Authorization: Bearer $AUTH_TOKEN" \
             -H "Content-Type: application/json" \
+            -H "Copilot-Integration-Id: copilot-developer-cli" \
             -d "$BODY")
-          SUMMARY=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // "Résumé indisponible"')
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          RESP_BODY=$(echo "$RESPONSE" | sed '$d')
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "Erreur API Copilot ($HTTP_CODE) : $RESP_BODY"
+            SUMMARY="Résumé indisponible (erreur API $HTTP_CODE). Vérifiez l'abonnement Copilot et le secret COPILOT_GITHUB_TOKEN."
+          else
+            SUMMARY=$(echo "$RESP_BODY" | jq -r '.choices[0].message.content // "Résumé indisponible"')
+          fi
           DELIM=$(openssl rand -hex 16)
           echo "summary<<$DELIM" >> $GITHUB_OUTPUT
           echo "$SUMMARY" >> $GITHUB_OUTPUT

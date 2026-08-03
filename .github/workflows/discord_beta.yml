@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      models: read
+      copilot-requests: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -79,22 +79,34 @@ jobs:
       - name: Résumer les commits avec l'IA
         id: summary
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
           COMMITS: ${{ steps.commits.outputs.raw }}
         run: |
+          # Copilot : PAT dédié prioritaire, sinon GITHUB_TOKEN (permission copilot-requests: write)
+          AUTH_TOKEN="${COPILOT_GITHUB_TOKEN:-$GITHUB_TOKEN}"
+
           printf "%s" "$COMMITS" > /tmp/commits.txt
 
           PROMPT=$(printf 'Tu es un assistant technique pour lapplication Filyo (partage de fichiers). Voici les commits git au format "COMMIT: message | FILES: fichiers modifiés".\n\nCorrespondances fichiers → fonctionnalités :\n- SharePage.tsx / share → Page de partage de fichiers\n- DashboardPage.tsx / dashboard → Tableau de bord\n- DownloadPage.tsx / download → Page de téléchargement\n- index.css / App.tsx → Interface globale / thème\n- routes/files → API fichiers backend\n- routes/user / UserPage → Gestion utilisateurs\n- SettingsPage / settings → Page paramètres\n- prisma / schema → Base de données\n- package.json → Dépendances\n- .github / workflow / .yml → CI/CD (à mettre EN DERNIER ou ignorer)\n- ClockButton / clock → Composant horloge\n- NavBar / nav → Barre de navigation\n\nConsignes :\n1. Groupe les changements par thème avec emojis : 🆕 Nouveautés, 🐛 Corrections, ⚡ Améliorations\n2. Pour chaque ligne, écris la FONCTIONNALITÉ impactée (déduis-la des fichiers), pas juste le message du commit\n3. Regroupe les commits qui touchent la même fonctionnalité\n4. Les changements CI/CD (.github, .yml) vont dans une section séparée 🔧 CI/CD tout à la fin, en 1-2 lignes max\n5. Maximum 15 lignes, sois précis et concret\n6. Ne jamais écrire de phrases génériques comme "divers bugs" ou "améliorations générales"\n\nCommits :\n%s' "$(cat /tmp/commits.txt)")
 
           BODY=$(jq -n --arg content "$PROMPT" \
-            '{"model":"gpt-4o-mini","messages":[{"role":"user","content":$content}],"max_tokens":700}')
+            '{"model":"gpt-4.1-mini","messages":[{"role":"user","content":$content}],"max_tokens":700}')
 
-          RESPONSE=$(curl -s https://models.inference.ai.azure.com/chat/completions \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
+          RESPONSE=$(curl -sS -w "\n%{http_code}" https://api.githubcopilot.com/chat/completions \
+            -H "Authorization: Bearer $AUTH_TOKEN" \
             -H "Content-Type: application/json" \
+            -H "Copilot-Integration-Id: copilot-developer-cli" \
             -d "$BODY")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          RESP_BODY=$(echo "$RESPONSE" | sed '$d')
 
-          SUMMARY=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // "Résumé indisponible"')
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "Erreur API Copilot ($HTTP_CODE) : $RESP_BODY"
+            SUMMARY="Résumé indisponible (erreur API $HTTP_CODE). Vérifiez l'abonnement Copilot et le secret COPILOT_GITHUB_TOKEN."
+          else
+            SUMMARY=$(echo "$RESP_BODY" | jq -r '.choices[0].message.content // "Résumé indisponible"')
+          fi
 
           DELIMITER="DELIM_$(openssl rand -hex 8)"
           echo "summary<<${DELIMITER}" >> $GITHUB_OUTPUT
