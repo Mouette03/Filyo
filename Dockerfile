@@ -49,8 +49,7 @@ COPY --from=backend-builder /app/backend/package.json    ./package.json
 COPY --from=backend-builder /app/backend/prisma.config.ts ./prisma.config.ts
 
 ARG DB_PROVIDER=sqlite
-RUN npm install --omit=dev --silent \
-    && npx prisma generate
+RUN npm install --omit=dev --silent
 
 COPY --from=frontend-builder /app/frontend/dist          ./public
 

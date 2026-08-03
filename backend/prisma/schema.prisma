@@ -1,7 +1,7 @@
 // This is your Prisma schema file
 generator client {
   provider = "prisma-client"
-  output   = "../generated/prisma"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
