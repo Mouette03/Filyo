@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams } from 'react-router'
 import { Download, Lock, AlertTriangle, ArrowDownUp, Clock, Shield, EyeOff, Eye, Package } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { getShareInfo, getShareDlToken, getSettings } from '../api/client'

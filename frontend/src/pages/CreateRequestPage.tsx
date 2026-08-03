@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import { Copy, Check, Plus, ArrowDownUp, Clock, FileUp, Lock, Hash, Mail, Send, Eye, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { createUploadRequest, sendRequestByEmail } from '../api/client'

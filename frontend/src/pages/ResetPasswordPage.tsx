@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router'
 import { Eye, EyeOff, KeyRound, LogIn, ShieldAlert } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { resetPassword } from '../api/client'

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import { ArrowDownUp, Eye, EyeOff, LogIn, Mail, UserPlus } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { login, getSettings, checkSetup, registerUser, forgotPassword } from '../api/client'
