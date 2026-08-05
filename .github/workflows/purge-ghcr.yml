@@ -2,6 +2,15 @@ name: Purge versions GHCR non taguées
 
 on:
   workflow_dispatch:
+    inputs:
+      action:
+        description: "Lecture seule (dry-run) ou suppression réelle"
+        required: true
+        type: choice
+        options:
+          - dry-run
+          - supprimer
+        default: dry-run
 
 permissions:
   contents: read
@@ -32,6 +41,7 @@ jobs:
           echo "Nombre de versions non taguées à purger : $UNTAGGED"
 
       - name: Purger les versions non taguées
+        if: github.event.inputs.action == 'supprimer'
         uses: actions/delete-package-versions@v5
         with:
           package-name: ${{ env.GHCR_PACKAGE }}
