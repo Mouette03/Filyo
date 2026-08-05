@@ -16,7 +16,22 @@ jobs:
           BASE_NAME=$(basename "${{ github.repository }}")
           echo "GHCR_PACKAGE=$(echo "$BASE_NAME" | tr 'A-Z' 'a-z')" >> "$GITHUB_ENV"
 
-      - name: Purger les versions non taguées (supprimées/restantes)
+      - name: Lister les versions non taguées (dry-run)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "=== Versions taguées (conservées) ==="
+          gh api "/user/packages/container/$GHCR_PACKAGE/versions" --paginate \
+            --jq '.[] | select(.metadata.container.tags != null and (.metadata.container.tags | length) > 0) | {id, name, tags: .metadata.container.tags}' \
+            | head -30
+
+          echo ""
+          echo "=== Versions non taguées (supprimées) ==="
+          UNTAGGED=$(gh api "/user/packages/container/$GHCR_PACKAGE/versions" --paginate \
+            --jq '[.[] | select(.metadata.container.tags == null or (.metadata.container.tags | length) == 0)] | length')
+          echo "Nombre de versions non taguées à purger : $UNTAGGED"
+
+      - name: Purger les versions non taguées
         uses: actions/delete-package-versions@v5
         with:
           package-name: ${{ env.GHCR_PACKAGE }}
