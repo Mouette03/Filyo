@@ -1,4 +1,4 @@
-name: Purge versions GHCR supprimées
+name: Purge versions GHCR non taguées
 
 on:
   workflow_dispatch:
@@ -12,34 +12,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Déterminer le nom du package container
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           BASE_NAME=$(basename "${{ github.repository }}")
-          echo "GHCR_PACKAGE_NAME=$(echo "$BASE_NAME" | tr 'A-Z' 'a-z')" >> "$GITHUB_ENV"
+          echo "GHCR_PACKAGE=$(echo "$BASE_NAME" | tr 'A-Z' 'a-z')" >> "$GITHUB_ENV"
 
-      - name: Purger les versions supprimées (deleted) de chaque paquet
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          if [ -z "$GHCR_PACKAGE_NAME" ]; then
-            echo "Impossible de déduire le nom du package."
-            exit 1
-          fi
-
-          echo "Package cible : $GHCR_PACKAGE_NAME"
-
-          echo "=== Toutes les versions (diagnostic) ==="
-          gh api "/user/packages/container/$GHCR_PACKAGE_NAME/versions" --paginate \
-            --jq '.[] | {id, name, state}'
-
-          DELETED=$(gh api "/user/packages/container/$GHCR_PACKAGE_NAME/versions" --paginate \
-            --jq '[.[] | select(.state == "deleted") | .id]')
-
-          COUNT=$(echo "$DELETED" | jq 'length')
-          echo "Versions supprimées à purger : $COUNT"
-
-          for ID in $(echo "$DELETED" | jq -r '.[]'); do
-            echo "  Purge version $ID"
-            gh api -X DELETE "/user/packages/container/$GHCR_PACKAGE_NAME/versions/$ID"
-          done
+      - name: Purger les versions non taguées (supprimées/restantes)
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: ${{ env.GHCR_PACKAGE }}
+          package-type: container
+          delete-only-untagged-versions: 'true'
+          min-versions-to-keep: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
