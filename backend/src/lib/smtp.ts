@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer'
-import { decrypt } from './crypto'
+import { decrypt } from './crypto.js'
 
 interface SmtpConfig {
   smtpHost: string | null

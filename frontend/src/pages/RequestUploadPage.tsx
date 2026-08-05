@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams } from 'react-router'
 import { useDropzone } from 'react-dropzone'
 import { Upload, ArrowDownUp, AlertTriangle, Clock, Check, Lock, User, Mail, MessageSquare, X, Eye, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'

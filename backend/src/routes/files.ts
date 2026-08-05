@@ -1,7 +1,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import fs from 'fs-extra'
-import { prisma } from '../lib/prisma'
-import { createFilesTusServer, getTusFileResult } from '../lib/tus'
+import { prisma } from '../lib/prisma.js'
+import { createFilesTusServer, getTusFileResult } from '../lib/tus.js'
 
 export async function fileRoutes(app: FastifyInstance) {
   const auth = { onRequest: [app.authenticate] }

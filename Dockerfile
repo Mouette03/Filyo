@@ -29,6 +29,7 @@ ARG DB_PROVIDER=sqlite
 RUN if [ "$DB_PROVIDER" = "mariadb" ]; then \
       cp prisma/schema.mariadb.prisma prisma/schema.prisma; \
       cp -r prisma/migrations-mariadb/. prisma/migrations/; \
+      cp src/lib/prisma.mariadb.ts src/lib/prisma.ts; \
     fi
 
 RUN npm run build
@@ -45,10 +46,10 @@ WORKDIR /app
 COPY --from=backend-builder /app/backend/dist            ./dist
 COPY --from=backend-builder /app/backend/prisma          ./prisma
 COPY --from=backend-builder /app/backend/package.json    ./package.json
+COPY --from=backend-builder /app/backend/prisma.config.ts ./prisma.config.ts
 
 ARG DB_PROVIDER=sqlite
-RUN npm install --omit=dev --silent \
-    && npx prisma generate
+RUN npm install --omit=dev --silent
 
 COPY --from=frontend-builder /app/frontend/dist          ./public
 

@@ -1,4 +1,4 @@
-import { prisma } from './prisma'
+import { prisma } from './prisma.js'
 
 /**
  * Retourne les paramètres de l'application, en créant le singleton s'il n'existe pas encore.

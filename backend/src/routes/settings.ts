@@ -3,11 +3,11 @@ import path from 'path'
 import fs from 'fs-extra'
 import { nanoid } from 'nanoid'
 import sharp from 'sharp'
-import { prisma } from '../lib/prisma'
-import { UPLOAD_DIR } from '../lib/config'
-import { getAppSettings } from '../lib/appSettings'
-import { TUS_EXPIRY_MS } from '../lib/tus'
-import { encrypt, decrypt } from '../lib/crypto'
+import { prisma } from '../lib/prisma.js'
+import { UPLOAD_DIR } from '../lib/config.js'
+import { getAppSettings } from '../lib/appSettings.js'
+import { TUS_EXPIRY_MS } from '../lib/tus.js'
+import { encrypt, decrypt } from '../lib/crypto.js'
 
 const ENC_KEY = process.env.JWT_SECRET || null
 

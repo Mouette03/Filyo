@@ -1,9 +1,9 @@
 import fs from 'fs-extra'
 import path from 'path'
-import { prisma } from './prisma'
-import { UPLOAD_DIR } from './config'
-import { getAppSettings } from './appSettings'
-export { cleanupExpiredTusUploads } from './tus'
+import { prisma } from './prisma.js'
+import { UPLOAD_DIR } from './config.js'
+import { getAppSettings } from './appSettings.js'
+export { cleanupExpiredTusUploads } from './tus.js'
 
 /**
  * Nettoyage planifié automatique.

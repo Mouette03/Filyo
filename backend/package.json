@@ -1,5 +1,6 @@
 {
   "name": "filyo-backend",
+  "type": "module",
   "engines": {
     "node": ">=24.0.0",
     "npm": ">=11.0.0"
@@ -21,11 +22,14 @@
     "@fastify/cors": "^11.3.0",
     "@fastify/helmet": "^12.0.0",
     "@fastify/rate-limit": "^10.0.0",
-    "@fastify/jwt": "^9.0.0",
+    "@fastify/jwt": "^10.0.0",
     "@fastify/multipart": "^9.0.0",
     "@fastify/static": "^10.1.2",
-    "@prisma/client": "^6.19.2",
-    "prisma": "^6.19.2",
+    "@prisma/client": "^7.9.1",
+    "@prisma/adapter-better-sqlite3": "^7.9.1",
+    "@prisma/adapter-mariadb": "^7.9.1",
+    "prisma": "^7.9.1",
+    "dotenv": "^17.4.2",
     "fastify": "^5.11.0",
     "fs-extra": "^11.4.0",
     "mime-types": "^2.1.35",

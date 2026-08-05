@@ -1,10 +1,10 @@
 import { FastifyInstance } from 'fastify'
-import { prisma } from '../lib/prisma'
+import { prisma } from '../lib/prisma.js'
 import fs from 'fs-extra'
 import path from 'path'
 import { execSync } from 'child_process'
-import { runForceCleanup } from '../lib/cleanup'
-import { UPLOAD_DIR } from '../lib/config'
+import { runForceCleanup } from '../lib/cleanup.js'
+import { UPLOAD_DIR } from '../lib/config.js'
 
 function getDiskSpace(dir: string): { total: string; used: string; free: string; totalBytes: number; usedBytes: number; freeBytes: number } {
   try {
