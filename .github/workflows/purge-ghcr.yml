@@ -1,0 +1,45 @@
+name: Purge versions GHCR supprimées
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  purge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Lister les paquets container
+        id: packages
+        run: |
+          echo "GHCR_PACKAGES=$(gh api "/user/packages?package_type=container" --paginate --jq '.[].name' | paste -sd ',' -)" >> "$GITHUB_ENV"
+
+      - name: Purger les versions supprimées (deleted) de chaque paquet
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -z "$GHCR_PACKAGES" ]; then
+            echo "Aucun paquet container trouvé."
+            exit 0
+          fi
+
+          IFS=',' read -ra NAMES <<< "$GHCR_PACKAGES"
+          for PACKAGE in "${NAMES[@]}"; do
+            echo "=== Paquet : $PACKAGE ==="
+            DELETED=$(gh api "/user/packages/container/$PACKAGE/versions" --paginate \
+              --jq '[.[] | select(.state == "deleted") | .id]')
+
+            COUNT=$(echo "$DELETED" | jq 'length')
+            echo "Versions supprimées à purger : $COUNT"
+
+            for ID in $(echo "$DELETED" | jq -r '.[]'); do
+              echo "  Purge version $ID"
+              gh api -X DELETE "/user/packages/container/$PACKAGE/versions/$ID"
+            done
+          done
+
+      - name: Récapitulatif final
+        run: |
+          echo "Paquets concernés : ${GHCR_PACKAGES:-aucun}"
