@@ -29,6 +29,10 @@ jobs:
 
           echo "Package cible : $GHCR_PACKAGE_NAME"
 
+          echo "=== Toutes les versions (diagnostic) ==="
+          gh api "/user/packages/container/$GHCR_PACKAGE_NAME/versions" --paginate \
+            --jq '.[] | {id, name, state}'
+
           DELETED=$(gh api "/user/packages/container/$GHCR_PACKAGE_NAME/versions" --paginate \
             --jq '[.[] | select(.state == "deleted") | .id]')
 
