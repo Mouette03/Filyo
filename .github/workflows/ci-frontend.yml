@@ -36,7 +36,7 @@ jobs:
 
       - name: Full audit report
         working-directory: frontend
-        run: npm audit || true
+        run: npm audit || echo "::warning::npm audit failed or found issues, see logs above"
 
       - name: Cache node_modules
         uses: actions/cache@v4

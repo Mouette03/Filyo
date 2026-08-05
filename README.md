@@ -166,6 +166,9 @@ Filyo stores the JWT in an **HttpOnly cookie** (named `token`) so it is never ac
 
 ### Development (Vite + backend on separate ports)
 
+> [!NOTE]
+> Always set `DATABASE_URL` in `backend/.env` before running `npm run db:migrate` locally — without it, Prisma silently falls back to a local `dev.db` SQLite file instead of failing loudly.
+
 Vite (port 5173) proxies API calls to the backend (port 3001). The `vite.config.ts` proxy handles this automatically — cookies are sent because both are treated as same-origin.
 
 ```ts
@@ -382,6 +385,9 @@ Filyo stocke le JWT dans un **cookie HttpOnly** (nommé `token`) afin qu'il ne s
 | **Développement** (`NODE_ENV=development`) | `false` | `Lax` |
 
 ### Développement (Vite + backend sur des ports séparés)
+
+> [!NOTE]
+> Définissez toujours `DATABASE_URL` dans `backend/.env` avant de lancer `npm run db:migrate` en local — sans ça, Prisma retombe silencieusement sur un fichier SQLite local `dev.db` au lieu d'échouer clairement.
 
 Vite (port 5173) proxifie les appels API vers le backend (port 3001). Le proxy `vite.config.ts` gère cela automatiquement — les cookies sont envoyés car les deux sont traités comme étant de la même origine.
 
