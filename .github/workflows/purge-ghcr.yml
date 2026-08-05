@@ -12,14 +12,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Lister les paquets container
-        id: packages
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "GHCR_PACKAGES=$(gh api "/user/packages?package_type=container" --paginate --jq '.[].name' | paste -sd ',' -)" >> "$GITHUB_ENV"
+          REPO="${{ github.repository }}"
+          echo "GHCR_PACKAGES=$(gh api "/repos/$REPO/packages?package_type=container" --paginate --jq '.[].name' | paste -sd ',' -)" >> "$GITHUB_ENV"
 
       - name: Purger les versions supprimées (deleted) de chaque paquet
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          REPO="${{ github.repository }}"
           if [ -z "$GHCR_PACKAGES" ]; then
             echo "Aucun paquet container trouvé."
             exit 0
@@ -28,7 +31,7 @@ jobs:
           IFS=',' read -ra NAMES <<< "$GHCR_PACKAGES"
           for PACKAGE in "${NAMES[@]}"; do
             echo "=== Paquet : $PACKAGE ==="
-            DELETED=$(gh api "/user/packages/container/$PACKAGE/versions" --paginate \
+            DELETED=$(gh api "/repos/$REPO/packages/container/$PACKAGE/versions" --paginate \
               --jq '[.[] | select(.state == "deleted") | .id]')
 
             COUNT=$(echo "$DELETED" | jq 'length')
@@ -36,7 +39,7 @@ jobs:
 
             for ID in $(echo "$DELETED" | jq -r '.[]'); do
               echo "  Purge version $ID"
-              gh api -X DELETE "/user/packages/container/$PACKAGE/versions/$ID"
+              gh api -X DELETE "/repos/$REPO/packages/container/$PACKAGE/versions/$ID"
             done
           done
 
