@@ -15,23 +15,21 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          REPO="${{ github.repository }}"
-          BASE_NAME=$(basename "$REPO")
+          BASE_NAME=$(basename "${{ github.repository }}")
           echo "GHCR_PACKAGE_NAME=$(echo "$BASE_NAME" | tr 'A-Z' 'a-z')" >> "$GITHUB_ENV"
 
       - name: Purger les versions supprimées (deleted) de chaque paquet
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          REPO="${{ github.repository }}"
-          echo "Package cible : $GHCR_PACKAGE_NAME"
-
           if [ -z "$GHCR_PACKAGE_NAME" ]; then
             echo "Impossible de déduire le nom du package."
             exit 1
           fi
 
-          DELETED=$(gh api "/repos/$REPO/packages/container/$GHCR_PACKAGE_NAME/versions" --paginate \
+          echo "Package cible : $GHCR_PACKAGE_NAME"
+
+          DELETED=$(gh api "/user/packages/container/$GHCR_PACKAGE_NAME/versions" --paginate \
             --jq '[.[] | select(.state == "deleted") | .id]')
 
           COUNT=$(echo "$DELETED" | jq 'length')
@@ -39,5 +37,5 @@ jobs:
 
           for ID in $(echo "$DELETED" | jq -r '.[]'); do
             echo "  Purge version $ID"
-            gh api -X DELETE "/repos/$REPO/packages/container/$GHCR_PACKAGE_NAME/versions/$ID"
+            gh api -X DELETE "/user/packages/container/$GHCR_PACKAGE_NAME/versions/$ID"
           done
