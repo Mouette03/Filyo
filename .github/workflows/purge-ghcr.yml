@@ -11,38 +11,32 @@ jobs:
   purge:
     runs-on: ubuntu-latest
     steps:
-      - name: Lister les paquets container
+      - name: Déterminer le nom du package container
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           REPO="${{ github.repository }}"
-          echo "GHCR_PACKAGES=$(gh api "/repos/$REPO/packages?package_type=container" --paginate --jq '.[].name' | paste -sd ',' -)" >> "$GITHUB_ENV"
+          echo "GHCR_PACKAGE_NAME=$(echo "$REPO" | tr 'A-Z' 'a-z')" >> "$GITHUB_ENV"
 
       - name: Purger les versions supprimées (deleted) de chaque paquet
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           REPO="${{ github.repository }}"
-          if [ -z "$GHCR_PACKAGES" ]; then
-            echo "Aucun paquet container trouvé."
-            exit 0
+          echo "Package cible : $GHCR_PACKAGE_NAME"
+
+          if [ -z "$GHCR_PACKAGE_NAME" ]; then
+            echo "Impossible de déduire le nom du package."
+            exit 1
           fi
 
-          IFS=',' read -ra NAMES <<< "$GHCR_PACKAGES"
-          for PACKAGE in "${NAMES[@]}"; do
-            echo "=== Paquet : $PACKAGE ==="
-            DELETED=$(gh api "/repos/$REPO/packages/container/$PACKAGE/versions" --paginate \
-              --jq '[.[] | select(.state == "deleted") | .id]')
+          DELETED=$(gh api "/repos/$REPO/packages/container/$GHCR_PACKAGE_NAME/versions" --paginate \
+            --jq '[.[] | select(.state == "deleted") | .id]')
 
-            COUNT=$(echo "$DELETED" | jq 'length')
-            echo "Versions supprimées à purger : $COUNT"
+          COUNT=$(echo "$DELETED" | jq 'length')
+          echo "Versions supprimées à purger : $COUNT"
 
-            for ID in $(echo "$DELETED" | jq -r '.[]'); do
-              echo "  Purge version $ID"
-              gh api -X DELETE "/repos/$REPO/packages/container/$PACKAGE/versions/$ID"
-            done
+          for ID in $(echo "$DELETED" | jq -r '.[]'); do
+            echo "  Purge version $ID"
+            gh api -X DELETE "/repos/$REPO/packages/container/$GHCR_PACKAGE_NAME/versions/$ID"
           done
-
-      - name: Récapitulatif final
-        run: |
-          echo "Paquets concernés : ${GHCR_PACKAGES:-aucun}"
