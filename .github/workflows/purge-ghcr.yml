@@ -16,7 +16,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           REPO="${{ github.repository }}"
-          echo "GHCR_PACKAGE_NAME=$(echo "$REPO" | tr 'A-Z' 'a-z')" >> "$GITHUB_ENV"
+          BASE_NAME=$(basename "$REPO")
+          echo "GHCR_PACKAGE_NAME=$(echo "$BASE_NAME" | tr 'A-Z' 'a-z')" >> "$GITHUB_ENV"
 
       - name: Purger les versions supprimées (deleted) de chaque paquet
         env:
