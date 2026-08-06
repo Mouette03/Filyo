@@ -260,7 +260,7 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
       const transporter = createSmtpTransport(settings)
       const messageBlock = request.message ? request.message + '\n\n' : ''
       const expiryDate = request.expiresAt
-        ? t(lang, 'email.uploadRequest.expiresOn', { date: new Date(request.expiresAt).toLocaleString(lang, { dateStyle: 'short', timeStyle: 'short' }) })
+        ? t(lang, 'email.uploadRequest.expiresOn', { date: new Date(request.expiresAt).toLocaleString(lang, { dateStyle: 'short', timeStyle: 'short', timeZone: 'UTC' }) + ' UTC' })
         : t(lang, 'email.uploadRequest.noExpiry')
       const subject = t(lang, 'email.uploadRequest.subject', { appName, title: request.title })
       const bodyText = t(lang, 'email.uploadRequest.text', { title: request.title, message: messageBlock, depositUrl, appName, expiry: expiryDate })

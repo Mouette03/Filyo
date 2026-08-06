@@ -11,9 +11,9 @@ import path from 'path'
 import { UPLOAD_DIR } from '../lib/config.js'
 import { EMAIL_DARK_CSS, mimeEmoji, formatFileSize, getEmailLogoSrc } from '../lib/emailHelpers.js'
 
-/** Formate une date d'expiration pour les emails selon la langue. */
+/** Formate une date d'expiration pour les emails selon la langue, en UTC. */
 function formatExpiry(date: Date, lang: string): string {
-  return date.toLocaleString(lang, { dateStyle: 'short', timeStyle: 'short' })
+  return date.toLocaleString(lang, { dateStyle: 'short', timeStyle: 'short', timeZone: 'UTC' }) + ' UTC'
 }
 
 /** Retourne le nom d'affichage d'un fichier en tenant compte de hideFilenames. */
