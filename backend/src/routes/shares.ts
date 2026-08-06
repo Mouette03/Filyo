@@ -375,7 +375,7 @@ export async function shareRoutes(app: FastifyInstance) {
 
     const smtpPort = settings.smtpPort ?? 587
     const smtpSecureLabel = smtpPort === 465 ? 'ssl/tls' : smtpPort === 587 ? 'starttls' : 'plain'
-    req.log.info({ host: settings.smtpHost, port: smtpPort, secure: smtpSecureLabel }, 'SMTP: tentative envoi')
+    req.log.info({ host: settings.smtpHost, port: smtpPort, secure: smtpSecureLabel }, 'SMTP: send attempt')
     const transporter = createSmtpTransport(settings)
 
     try {
