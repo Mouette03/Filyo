@@ -373,7 +373,9 @@ export async function shareRoutes(app: FastifyInstance) {
     const linkLabel = t(lang, shares.length === 1 ? 'email.share.linkLabelSingle' : 'email.share.linkLabelMulti')
     const greetingText = t(lang, 'email.share.textBody', { linkLabel, files: filesText, appName })
 
-    req.log.info({ host: settings.smtpHost, port: settings.smtpPort ?? 587, secure: (settings.smtpPort ?? 587) === 465 }, 'SMTP: tentative envoi')
+    const smtpPort = settings.smtpPort ?? 587
+    const smtpSecureLabel = smtpPort === 465 ? 'ssl/tls' : smtpPort === 587 ? 'starttls' : 'plain'
+    req.log.info({ host: settings.smtpHost, port: smtpPort, secure: smtpSecureLabel }, 'SMTP: tentative envoi')
     const transporter = createSmtpTransport(settings)
 
     try {
