@@ -24,6 +24,53 @@ function getDisplayName(originalName: string, hideFilenames: boolean, lang = 'en
   return ext ? `${base}.${ext}` : base
 }
 
+interface FileWithShares {
+  id: string
+  originalName: string
+  mimeType: string
+  size: bigint
+  hideFilenames: boolean
+  batchToken: string | null
+  uploadedAt: Date
+  shares: Array<{
+    token: string
+    downloads: number
+    maxDownloads: number | null
+  }>
+}
+
+interface ShareWithFile {
+  id: string
+  token: string
+  label: string | null
+  expiresAt: Date | null
+  downloads: number
+  maxDownloads: number | null
+  active: boolean
+  password: string | null
+  fileId: string
+  file: {
+    id: string
+    originalName: string
+    mimeType: string
+    size: bigint
+    path: string
+    hideFilenames: boolean
+    batchToken: string | null
+    userId: string
+  }
+}
+
+interface BatchFileEntry {
+  shareToken: string
+  fileId: string
+  filename: string
+  mimeType: string
+  size: string
+  downloads: number
+  maxDownloads: number | null
+}
+
 /**
  * Registers share-related routes: public share info, password-protected download,
  * and authenticated email sending with optional batch support.
@@ -49,7 +96,7 @@ export async function shareRoutes(app: FastifyInstance) {
     }
 
     // Récupère tous les fichiers du lot si batchToken existe
-    let batchFiles: any[] = []
+    let batchFiles: BatchFileEntry[] = []
     if (share.file.batchToken) {
       const allInBatch = await prisma.file.findMany({
         where: { batchToken: share.file.batchToken },
@@ -60,10 +107,10 @@ export async function shareRoutes(app: FastifyInstance) {
           }
         },
         orderBy: { uploadedAt: 'asc' }
-      })
+      }) as FileWithShares[]
       batchFiles = allInBatch
-        .filter((f: any) => f.shares.length > 0 && f.shares[0]?.token)
-        .map((f: any) => {
+        .filter((f) => f.shares.length > 0 && f.shares[0]?.token)
+        .map((f) => {
           const sh = f.shares[0]
           return {
             shareToken: sh.token,
@@ -78,7 +125,7 @@ export async function shareRoutes(app: FastifyInstance) {
 
       // Tous les fichiers du lot ont atteint leur limite → page expirée
       const allLimited = batchFiles.length > 0 && batchFiles.every(
-        (bf: any) => bf.maxDownloads !== null && bf.downloads >= bf.maxDownloads
+        (bf) => bf.maxDownloads !== null && bf.downloads >= bf.maxDownloads!
       )
       if (allLimited) {
         return reply.code(410).send({ code: 'SHARE_LIMIT_REACHED' })
@@ -109,7 +156,7 @@ export async function shareRoutes(app: FastifyInstance) {
       rateLimit: {
         max: 3,
         timeWindow: '1 minute',
-        keyGenerator: (req) => `${req.ip}:${(req.params as any).token}`,
+        keyGenerator: (req) => `${req.ip}:${(req.params as { token: string }).token}`,
       },
     },
   }, async (req, reply) => {
@@ -229,7 +276,7 @@ export async function shareRoutes(app: FastifyInstance) {
     let shares = await prisma.share.findMany({
       where: { token: { in: tokens } },
       include: { file: true }
-    })
+    }) as ShareWithFile[]
     if (shares.length === 0) return reply.code(404).send({ code: 'SHARES_NOT_FOUND' })
 
     // Si 1 seul token envoyé mais que son fichier appartient à un lot, étendre au lot complet
@@ -238,22 +285,22 @@ export async function shareRoutes(app: FastifyInstance) {
         where: { batchToken: shares[0].file.batchToken },
         include: { shares: { orderBy: { createdAt: 'asc' }, take: 1 } },
         orderBy: { uploadedAt: 'asc' }
-      })
+      }) as FileWithShares[]
       // Récupérer tous les partages du lot
       const batchShareTokens = batchFiles
-        .filter((f: any) => f.shares.length > 0)
-        .map((f: any) => f.shares[0].token)
+        .filter((f) => f.shares.length > 0)
+        .map((f) => f.shares[0].token)
       if (batchShareTokens.length > 1) {
         shares = await prisma.share.findMany({
           where: { token: { in: batchShareTokens } },
           include: { file: true },
           orderBy: { file: { uploadedAt: 'asc' } }
-        })
+        }) as ShareWithFile[]
       }
     }
 
     // Détecter si tous les fichiers appartiennent au même lot → 1 seul lien
-    const batchTokens = new Set(shares.map((s: any) => s.file.batchToken).filter(Boolean))
+    const batchTokens = new Set(shares.map((s) => s.file.batchToken).filter(Boolean))
     const isSingleBatch = batchTokens.size === 1 && shares.length > 1
 
     const appName = settings.appName || 'Filyo'
@@ -265,15 +312,15 @@ export async function shareRoutes(app: FastifyInstance) {
     if (isSingleBatch) {
       // Un seul lien pour tout le lot, affiche la liste des noms dans l'email
       const batchUrl = `${baseUrl}/s/${shares[0].token}`
-      const totalSize = shares.reduce((acc: number, s: any) => acc + Number(s.file.size), 0)
+      const totalSize = shares.reduce((acc: number, s: ShareWithFile) => acc + Number(s.file.size), 0)
       const totalSizeStr = formatFileSize(totalSize, lang)
       const safeBatchUrl = escapeHtml(encodeURI(batchUrl))
-      const fileListHtml = shares.map((s: any) => {
+      const fileListHtml = shares.map((s: ShareWithFile) => {
         const name = escapeHtml(getDisplayName(s.file.originalName, s.file.hideFilenames, lang))
         const size = formatFileSize(s.file.size, lang)
         return `<li style="color:#555;font-size:13px;padding:3px 0" class="fi">${mimeEmoji(s.file.mimeType)} ${name} <span style="color:#bbb;font-size:11px" class="fs">(${size})</span></li>`
       }).join('')
-      const fileListText = shares.map((s: any) => {
+      const fileListText = shares.map((s: ShareWithFile) => {
         const name = s.file.hideFilenames ? `- ${t(lang, 'email.share.hiddenName')}` : `- ${s.file.originalName}`
         return `${name} (${formatFileSize(s.file.size, lang)})`
       }).join('\n')
@@ -290,7 +337,7 @@ export async function shareRoutes(app: FastifyInstance) {
         </td></tr>`
       filesText = t(lang, 'email.share.filesLabel') + '\n' + fileListText + `\n\n${batchUrl}\n${totalSizeStr} total · ${expiry}`
     } else {
-      filesHtml = shares.map((s: any) => {
+      filesHtml = shares.map((s: ShareWithFile) => {
         const url = `${baseUrl}/s/${s.token}`
         const safeUrl = escapeHtml(encodeURI(url))
         const displayName = getDisplayName(s.file.originalName, s.file.hideFilenames, lang)
@@ -309,7 +356,7 @@ export async function shareRoutes(app: FastifyInstance) {
             ${ctaBtn}
           </td></tr>`
       }).join('')
-      filesText = shares.map((s: any) => {
+      filesText = shares.map((s: ShareWithFile) => {
         const displayName = s.file.hideFilenames ? t(lang, 'email.share.hiddenName') : s.file.originalName
         const size = formatFileSize(s.file.size, lang)
         return `- ${displayName} (${size})\n  ${baseUrl}/s/${s.token}`
@@ -360,9 +407,10 @@ export async function shareRoutes(app: FastifyInstance) {
 </body>
 </html>`
       })
-    } catch (err: any) {
-      req.log.error({ err: err.message }, 'SMTP sendMail failed')
-      return reply.code(502).send({ code: 'EMAIL_SEND_FAILED', detail: err.message })
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
+      req.log.error({ err: message }, 'SMTP sendMail failed')
+      return reply.code(502).send({ code: 'EMAIL_SEND_FAILED', detail: message })
     }
 
     req.log.info({ to, count: tokens.length }, 'Share email sent')

@@ -13,6 +13,31 @@ import { createDlToken, consumeDlToken } from '../lib/dlTokens.js'
 import { EMAIL_DARK_CSS, getEmailLogoSrc } from '../lib/emailHelpers.js'
 import { createRequestsTusServer } from '../lib/tus.js'
 
+interface UploadRequestRecord {
+  id: string
+  token: string
+  title: string
+  message: string | null
+  password: string | null
+  expiresAt: Date | null
+  maxFiles: number | null
+  maxSizeBytes: bigint | null
+  active: boolean
+  userId: string
+  createdAt: Date
+  _count?: { receivedFiles: number }
+}
+
+interface ReceivedFileRecord {
+  id: string
+  originalName: string
+  mimeType: string
+  size: bigint
+  path: string
+  uploadedAt: Date
+  uploadRequestId: string
+}
+
 /**
  * Register HTTP routes under `/api/upload-requests` to create, manage and consume upload requests and their files.
  *
@@ -86,11 +111,11 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
       where: { userId: req.user.id },
       orderBy: { createdAt: 'desc' },
       include: { _count: { select: { receivedFiles: true } } }
-    })
-    return requests.map((r: any) => ({
+    }) as UploadRequestRecord[]
+    return requests.map((r) => ({
       ...r,
       maxSizeBytes: r.maxSizeBytes?.toString(),
-      filesCount: r._count.receivedFiles
+      filesCount: r._count?.receivedFiles
     }))
   })
 
@@ -178,8 +203,8 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
     const files = await prisma.receivedFile.findMany({
       where: { uploadRequestId: req.params.id },
       orderBy: { uploadedAt: 'desc' }
-    })
-    return files.map((f: any) => ({ ...f, size: f.size.toString() }))
+    }) as ReceivedFileRecord[]
+    return files.map((f) => ({ ...f, size: f.size.toString() }))
   })
 
   // PATCH /api/upload-requests/:id/toggle (proprietaire ou admin)
@@ -302,9 +327,10 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
 </body>
 </html>`
         })
-      } catch (err: any) {
-        req.log.error({ err: err.message }, 'Upload request email failed')
-        return reply.code(502).send({ code: 'EMAIL_SEND_FAILED', detail: err.message })
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err)
+        req.log.error({ err: message }, 'Upload request email failed')
+        return reply.code(502).send({ code: 'EMAIL_SEND_FAILED', detail: message })
       }
       req.log.info({ id: req.params.id, recipientCount: addresses.length }, 'Upload request email sent')
       return { success: true }
@@ -317,7 +343,7 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
     const request = await prisma.uploadRequest.findFirst({ where })
     if (!request) return reply.code(403).send({ code: 'FORBIDDEN' })
 
-    const files = await prisma.receivedFile.findMany({ where: { uploadRequestId: request.id } })
+    const files = await prisma.receivedFile.findMany({ where: { uploadRequestId: request.id } }) as ReceivedFileRecord[]
     for (const f of files) {
       await fs.remove(f.path).catch(() => {})
     }
