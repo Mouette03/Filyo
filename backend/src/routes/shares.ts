@@ -83,15 +83,22 @@ export async function shareRoutes(app: FastifyInstance) {
       where: { token: req.params.token },
       include: { file: { include: { shares: true } } }
     })
-    if (!share) return reply.code(404).send({ code: 'SHARE_NOT_FOUND' })
-    if (!share.active) return reply.code(410).send({ code: 'SHARE_INACTIVE' })
-
+    if (!share) {
+      req.log.debug({ token: req.params.token }, 'Share info: not found')
+      return reply.code(404).send({ code: 'SHARE_NOT_FOUND' })
+    }
+    if (!share.active) {
+      req.log.debug({ token: req.params.token }, 'Share info: inactive')
+      return reply.code(410).send({ code: 'SHARE_INACTIVE' })
+    }
     if (share.expiresAt && share.expiresAt < new Date()) {
+      req.log.debug({ token: req.params.token, expiredAt: share.expiresAt }, 'Share info: expired')
       return reply.code(410).send({ code: 'SHARE_EXPIRED' })
     }
     // Pour un lot, on laisse la page charger si au moins un fichier est encore téléchargeable.
     // On retourne 410 seulement si tous les fichiers du lot ont atteint leur limite individuelle.
     if (share.maxDownloads && share.downloads >= share.maxDownloads && !share.file.batchToken) {
+      req.log.debug({ token: req.params.token, downloads: share.downloads, max: share.maxDownloads }, 'Share info: limit reached')
       return reply.code(410).send({ code: 'SHARE_LIMIT_REACHED' })
     }
 
@@ -128,6 +135,7 @@ export async function shareRoutes(app: FastifyInstance) {
         (bf) => bf.maxDownloads !== null && bf.downloads >= bf.maxDownloads!
       )
       if (allLimited) {
+        req.log.debug({ token: req.params.token, batchToken: share.file.batchToken }, 'Share info: batch limit reached')
         return reply.code(410).send({ code: 'SHARE_LIMIT_REACHED' })
       }
     }
@@ -375,7 +383,10 @@ export async function shareRoutes(app: FastifyInstance) {
 
     const smtpPort = settings.smtpPort ?? 587
     const smtpSecureLabel = smtpPort === 465 ? 'ssl/tls' : smtpPort === 587 ? 'starttls' : 'plain'
-    req.log.info({ host: settings.smtpHost, port: smtpPort, secure: smtpSecureLabel }, 'SMTP: send attempt')
+    req.log.info(
+      { host: settings.smtpHost, port: smtpPort, secure: smtpSecureLabel, recipientCount: addresses.length },
+      'SMTP: send attempt'
+    )
     const transporter = createSmtpTransport(settings)
 
     try {
