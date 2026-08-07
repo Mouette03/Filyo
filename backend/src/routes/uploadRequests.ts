@@ -126,17 +126,21 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
       where: { token: req.params.token }
     })
     if (!request) {
+      req.log.debug({ token: req.params.token }, 'Upload request info: not found')
       return reply.code(404).send({ code: 'REQUEST_NOT_FOUND' })
     }
     if (!request.active) {
+      req.log.debug({ token: req.params.token }, 'Upload request info: inactive')
       return reply.code(410).send({ code: 'REQUEST_INACTIVE' })
     }
     if (request.expiresAt && request.expiresAt < new Date()) {
+      req.log.debug({ token: req.params.token, expiredAt: request.expiresAt }, 'Upload request info: expired')
       return reply.code(410).send({ code: 'REQUEST_EXPIRED' })
     }
     if (request.maxFiles) {
       const receivedCount = await prisma.receivedFile.count({ where: { uploadRequestId: request.id } })
       if (receivedCount >= request.maxFiles) {
+        req.log.debug({ token: req.params.token, count: receivedCount, max: request.maxFiles }, 'Upload request info: limit reached')
         return reply.code(410).send({ code: 'REQUEST_LIMIT_REACHED' })
       }
     }
@@ -162,6 +166,7 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
 
     if (entry.onDownload) await entry.onDownload()
 
+    req.log.info({ filename: entry.filename, size: entry.size.toString(), mimeType: entry.mimeType }, 'Received file streamed via dl-token')
     const stream = fs.createReadStream(entry.path)
     reply.header('Content-Type', entry.mimeType)
     reply.header('Content-Disposition', `attachment; filename="${encodeURIComponent(entry.filename)}"`)
@@ -239,7 +244,7 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
         where: { id: req.params.id },
         data: { expiresAt, ...(shouldReactivate ? { active: true } : {}) }
       })
-      req.log.info({ id: req.params.id, active: shouldReactivate || undefined }, 'Upload request expiry updated')
+      req.log.info({ id: req.params.id, active: shouldReactivate }, 'Upload request expiry updated')
       return { expiresAt, active: shouldReactivate ? true : request.active }
     }
   )
@@ -286,7 +291,7 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
       const smtpPort = settings.smtpPort ?? 587
       const smtpSecureLabel = smtpPort === 465 ? 'ssl/tls' : smtpPort === 587 ? 'starttls' : 'plain'
       req.log.info(
-        { host: settings.smtpHost, port: smtpPort, secure: smtpSecureLabel },
+        { host: settings.smtpHost, port: smtpPort, secure: smtpSecureLabel, recipientCount: addresses.length },
         'SMTP: send attempt'
       )
       const messageBlock = request.message ? request.message + '\n\n' : ''
@@ -334,8 +339,8 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
 </html>`
         })
       } catch (err: unknown) {
+        req.log.error({ err }, 'Upload request email failed')
         const message = err instanceof Error ? err.message : String(err)
-        req.log.error({ err: message }, 'Upload request email failed')
         return reply.code(502).send({ code: 'EMAIL_SEND_FAILED', detail: message })
       }
       req.log.info({ id: req.params.id, recipientCount: addresses.length }, 'Upload request email sent')
