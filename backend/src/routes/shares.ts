@@ -410,8 +410,8 @@ export async function shareRoutes(app: FastifyInstance) {
 </html>`
       })
     } catch (err: unknown) {
+      req.log.error({ err }, 'SMTP sendMail failed')
       const message = err instanceof Error ? err.message : String(err)
-      req.log.error({ err: message }, 'SMTP sendMail failed')
       return reply.code(502).send({ code: 'EMAIL_SEND_FAILED', detail: message })
     }
 
