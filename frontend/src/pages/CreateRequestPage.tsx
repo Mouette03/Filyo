@@ -178,7 +178,7 @@ export default function CreateRequestPage() {
 
             {/* Max size */}
             <div>
-              <label htmlFor="create-max-size" className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
+              <label htmlFor="create-max-size" className="text-xs text-white/50 mb-1.5 flex items-center gap-1 sm:min-h-8">
                 <FileUp size={11} /> {t('create.maxSizeLabel')}
                 {globalMaxMb && (
                   <span className="ml-1 text-white/30">({t('create.maxSizeAdminCap', { max: String(globalMaxMb) })})</span>
@@ -199,7 +199,7 @@ export default function CreateRequestPage() {
 
             {/* Max files */}
             <div>
-              <label htmlFor="create-max-files" className="text-xs text-white/50 mb-1.5 block flex items-center gap-1">
+              <label htmlFor="create-max-files" className="text-xs text-white/50 mb-1.5 flex items-center gap-1 sm:min-h-8">
                 <Hash size={11} /> {t('create.maxFilesLabel')}
               </label>
               <input id="create-max-files" name="maxFiles" type="number" min="1" value={maxFiles}

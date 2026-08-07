@@ -60,18 +60,18 @@ export async function authRoutes(app: FastifyInstance) {
 
     const user = await prisma.user.findUnique({ where: { email: body.data.email } })
     if (!user || !user.active) {
-      req.log.warn({ email: body.data.email }, 'Login attempt failed')
+      req.log.warn({ email: body.data.email, ip: req.ip }, 'Login attempt failed')
       return reply.code(401).send({ code: 'INVALID_CREDENTIALS' })
     }
 
     const ok = await bcrypt.compare(body.data.password, user.password)
     if (!ok) {
-      req.log.warn({ email: body.data.email }, 'Login attempt failed')
+      req.log.warn({ email: body.data.email, ip: req.ip }, 'Login attempt failed')
       return reply.code(401).send({ code: 'INVALID_CREDENTIALS' })
     }
 
     await prisma.user.update({ where: { id: user.id }, data: { lastLogin: new Date() } })
-    req.log.info({ userId: user.id, email: user.email }, 'Login successful')
+    req.log.info({ userId: user.id, email: user.email, ip: req.ip }, 'Login successful')
 
     const token = app.jwt.sign(
       { id: user.id, email: user.email, name: user.name, role: user.role },
@@ -153,7 +153,7 @@ export async function authRoutes(app: FastifyInstance) {
       select: { id: true, email: true, name: true, role: true, createdAt: true }
     })
 
-    req.log.info({ email: user.email, role: user.role }, 'User created')
+    req.log.info({ email: user.email, role: user.role, ip: req.ip }, 'User created')
     return reply.code(201).send(user)
   })
 
@@ -347,7 +347,7 @@ export async function authRoutes(app: FastifyInstance) {
       return reply.code(502).send({ code: 'EMAIL_SEND_FAILED', detail: err.message })
     }
 
-    req.log.info({ userId: user.id }, 'Password reset email sent')
+    req.log.info({ userId: user.id, ip: req.ip }, 'Password reset email sent')
     return reply.send({ success: true })
   })
 
@@ -390,7 +390,7 @@ export async function authRoutes(app: FastifyInstance) {
       where: { id: user.id },
       data: { password: hashed, resetToken: null, resetTokenExpiry: null }
     })
-    req.log.info({ userId: user.id }, 'Password reset')
+    req.log.info({ userId: user.id, ip: req.ip }, 'Password reset')
     return reply.send({ success: true })
   })
 }
