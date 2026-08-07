@@ -10,7 +10,7 @@ import { createDlToken, consumeDlToken } from '../lib/dlTokens.js'
 import path from 'path'
 import { UPLOAD_DIR } from '../lib/config.js'
 import { EMAIL_DARK_CSS, mimeEmoji, formatFileSize, getEmailLogoSrc } from '../lib/emailHelpers.js'
-import { maskToken } from '../lib/utils.js'
+import { maskToken, maskEmail } from '../lib/utils.js'
 
 /** Formate une date d'expiration pour les emails selon la langue, en UTC. */
 function formatExpiry(date: Date, lang: string): string {
@@ -427,7 +427,7 @@ export async function shareRoutes(app: FastifyInstance) {
       return reply.code(502).send({ code: 'EMAIL_SEND_FAILED', detail: message })
     }
 
-    req.log.info({ to: addresses.join(', '), tokens: tokens.map(maskToken) }, 'Share email sent')
+    req.log.info({ to: addresses.map(maskEmail).join(', '), tokens: tokens.map(maskToken) }, 'Share email sent')
     return { success: true }
   })
 }
