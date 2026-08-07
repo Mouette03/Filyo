@@ -8,3 +8,12 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 export function isValidEmail(email: string): boolean {
   return EMAIL_REGEX.test(email.trim())
 }
+
+/**
+ * Tronque un token pour un affichage sûr dans les logs (8 premiers caractères + ellipse).
+ * @param token - Le token complet à masquer.
+ * @returns Le token tronqué, ex. "a1b2c3d4…".
+ */
+export function maskToken(token: string): string {
+  return token.substring(0, 8) + '…'
+}
