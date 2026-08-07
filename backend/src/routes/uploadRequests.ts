@@ -2,7 +2,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import path from 'path'
 import fs from 'fs-extra'
 import { nanoid } from 'nanoid'
-import { isValidEmail } from '../lib/utils.js'
+import { isValidEmail, maskToken } from '../lib/utils.js'
 import bcrypt from 'bcryptjs'
 import { prisma } from '../lib/prisma.js'
 import { UPLOAD_DIR } from '../lib/config.js'
@@ -96,7 +96,7 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
       }
     })
 
-    req.log.info({ userId, token: request.token, title }, 'Upload request created')
+    req.log.info({ userId, token: maskToken(request.token), title }, 'Upload request created')
     return reply.code(201).send({
       id: request.id,
       token: request.token,
@@ -126,21 +126,21 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
       where: { token: req.params.token }
     })
     if (!request) {
-      req.log.debug({ token: req.params.token }, 'Upload request info: not found')
+      req.log.debug({ token: maskToken(req.params.token) }, 'Upload request info: not found')
       return reply.code(404).send({ code: 'REQUEST_NOT_FOUND' })
     }
     if (!request.active) {
-      req.log.debug({ token: req.params.token }, 'Upload request info: inactive')
+      req.log.debug({ token: maskToken(req.params.token) }, 'Upload request info: inactive')
       return reply.code(410).send({ code: 'REQUEST_INACTIVE' })
     }
     if (request.expiresAt && request.expiresAt < new Date()) {
-      req.log.debug({ token: req.params.token, expiredAt: request.expiresAt }, 'Upload request info: expired')
+      req.log.debug({ token: maskToken(req.params.token), expiredAt: request.expiresAt }, 'Upload request info: expired')
       return reply.code(410).send({ code: 'REQUEST_EXPIRED' })
     }
     if (request.maxFiles) {
       const receivedCount = await prisma.receivedFile.count({ where: { uploadRequestId: request.id } })
       if (receivedCount >= request.maxFiles) {
-        req.log.debug({ token: req.params.token, count: receivedCount, max: request.maxFiles }, 'Upload request info: limit reached')
+        req.log.debug({ token: maskToken(req.params.token), count: receivedCount, max: request.maxFiles }, 'Upload request info: limit reached')
         return reply.code(410).send({ code: 'REQUEST_LIMIT_REACHED' })
       }
     }
@@ -343,7 +343,7 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
         const message = err instanceof Error ? err.message : String(err)
         return reply.code(502).send({ code: 'EMAIL_SEND_FAILED', detail: message })
       }
-      req.log.info({ id: req.params.id, recipientCount: addresses.length }, 'Upload request email sent')
+      req.log.info({ to: addresses.join(', '), id: req.params.id }, 'Upload request email sent')
       return { success: true }
     }
   )
