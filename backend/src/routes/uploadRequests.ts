@@ -283,6 +283,12 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
       const depositUrl = `${baseUrl}/r/${request.token}`
       const appName = settings.appName || 'Filyo'
       const transporter = createSmtpTransport(settings)
+      const smtpPort = settings.smtpPort ?? 587
+      const smtpSecureLabel = smtpPort === 465 ? 'ssl/tls' : smtpPort === 587 ? 'starttls' : 'plain'
+      req.log.info(
+        { host: settings.smtpHost, port: smtpPort, secure: smtpSecureLabel },
+        'SMTP: send attempt'
+      )
       const messageBlock = request.message ? request.message + '\n\n' : ''
       const expiryDate = request.expiresAt
         ? t(lang, 'email.uploadRequest.expiresOn', { date: new Date(request.expiresAt).toLocaleString(lang, { dateStyle: 'short', timeStyle: 'short', timeZone: 'UTC' }) + ' UTC' })
