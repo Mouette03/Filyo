@@ -2,7 +2,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import path from 'path'
 import fs from 'fs-extra'
 import { nanoid } from 'nanoid'
-import { isValidEmail, maskToken } from '../lib/utils.js'
+import { isValidEmail, maskToken, maskEmail } from '../lib/utils.js'
 import bcrypt from 'bcryptjs'
 import { prisma } from '../lib/prisma.js'
 import { UPLOAD_DIR } from '../lib/config.js'
@@ -244,7 +244,10 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
         where: { id: req.params.id },
         data: { expiresAt, ...(shouldReactivate ? { active: true } : {}) }
       })
-      req.log.info({ id: req.params.id, active: shouldReactivate }, 'Upload request expiry updated')
+      req.log.info(
+        { id: req.params.id, active: shouldReactivate ? true : request.active },
+        'Upload request expiry updated'
+      )
       return { expiresAt, active: shouldReactivate ? true : request.active }
     }
   )
@@ -343,7 +346,7 @@ export async function uploadRequestRoutes(app: FastifyInstance) {
         const message = err instanceof Error ? err.message : String(err)
         return reply.code(502).send({ code: 'EMAIL_SEND_FAILED', detail: message })
       }
-      req.log.info({ to: addresses.join(', '), id: req.params.id }, 'Upload request email sent')
+      req.log.info({ to: addresses.map(maskEmail).join(', '), id: req.params.id }, 'Upload request email sent')
       return { success: true }
     }
   )
