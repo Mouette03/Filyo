@@ -10,6 +10,7 @@ import { createDlToken, consumeDlToken } from '../lib/dlTokens.js'
 import path from 'path'
 import { UPLOAD_DIR } from '../lib/config.js'
 import { EMAIL_DARK_CSS, mimeEmoji, formatFileSize, getEmailLogoSrc } from '../lib/emailHelpers.js'
+import { maskToken } from '../lib/utils.js'
 
 /** Formate une date d'expiration pour les emails selon la langue, en UTC. */
 function formatExpiry(date: Date, lang: string): string {
@@ -84,21 +85,21 @@ export async function shareRoutes(app: FastifyInstance) {
       include: { file: { include: { shares: true } } }
     })
     if (!share) {
-      req.log.debug({ token: req.params.token }, 'Share info: not found')
+      req.log.debug({ token: maskToken(req.params.token) }, 'Share info: not found')
       return reply.code(404).send({ code: 'SHARE_NOT_FOUND' })
     }
     if (!share.active) {
-      req.log.debug({ token: req.params.token }, 'Share info: inactive')
+      req.log.debug({ token: maskToken(req.params.token) }, 'Share info: inactive')
       return reply.code(410).send({ code: 'SHARE_INACTIVE' })
     }
     if (share.expiresAt && share.expiresAt < new Date()) {
-      req.log.debug({ token: req.params.token, expiredAt: share.expiresAt }, 'Share info: expired')
+      req.log.debug({ token: maskToken(req.params.token), expiredAt: share.expiresAt }, 'Share info: expired')
       return reply.code(410).send({ code: 'SHARE_EXPIRED' })
     }
     // Pour un lot, on laisse la page charger si au moins un fichier est encore téléchargeable.
     // On retourne 410 seulement si tous les fichiers du lot ont atteint leur limite individuelle.
     if (share.maxDownloads && share.downloads >= share.maxDownloads && !share.file.batchToken) {
-      req.log.debug({ token: req.params.token, downloads: share.downloads, max: share.maxDownloads }, 'Share info: limit reached')
+      req.log.debug({ token: maskToken(req.params.token), downloads: share.downloads, max: share.maxDownloads }, 'Share info: limit reached')
       return reply.code(410).send({ code: 'SHARE_LIMIT_REACHED' })
     }
 
@@ -135,7 +136,7 @@ export async function shareRoutes(app: FastifyInstance) {
         (bf) => bf.maxDownloads !== null && bf.downloads >= bf.maxDownloads!
       )
       if (allLimited) {
-        req.log.debug({ token: req.params.token, batchToken: share.file.batchToken }, 'Share info: batch limit reached')
+        req.log.debug({ token: maskToken(req.params.token), batchToken: maskToken(share.file.batchToken) }, 'Share info: batch limit reached')
         return reply.code(410).send({ code: 'SHARE_LIMIT_REACHED' })
       }
     }
@@ -201,7 +202,7 @@ export async function shareRoutes(app: FastifyInstance) {
           prisma.share.update({ where: { id: share.id }, data: { downloads: { increment: 1 } } }),
           prisma.file.update({ where: { id: share.fileId }, data: { downloads: { increment: 1 } } })
         ])
-        req.log.info({ token: req.params.token, filename: share.file.originalName }, 'File downloaded via dl-token')
+        req.log.info({ token: maskToken(req.params.token), filename: share.file.originalName }, 'File downloaded via dl-token')
       }
     })
 
@@ -222,7 +223,7 @@ export async function shareRoutes(app: FastifyInstance) {
       where: { token: req.params.token },
       data: { active: !share.active }
     })
-    req.log.debug({ token: req.params.token, active: updated.active }, 'Share toggled')
+    req.log.debug({ token: maskToken(req.params.token), active: updated.active }, 'Share toggled')
     return { active: updated.active }
   })
 
@@ -426,7 +427,7 @@ export async function shareRoutes(app: FastifyInstance) {
       return reply.code(502).send({ code: 'EMAIL_SEND_FAILED', detail: message })
     }
 
-    req.log.info({ to, count: tokens.length }, 'Share email sent')
+    req.log.info({ to: addresses.join(', '), tokens: tokens.map(maskToken) }, 'Share email sent')
     return { success: true }
   })
 }
