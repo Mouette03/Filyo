@@ -204,10 +204,10 @@ In the default Docker image, frontend and backend share the same origin (port 30
 
 - **Lint + type-check** (push/PR)
 - **Multi-arch build** → `ghcr.io/mouette03/filyo`
-- Tags: `latest`, `sha-xxxx`, `v1.2.9(-mariadb)`
+- Tags: `latest`, `sha-xxxx`, `v1.4.1(-mariadb)`
 
 ```bash
-docker pull ghcr.io/mouette03/filyo:v1.2.9
+docker pull ghcr.io/mouette03/filyo:v1.4.1
 ```
 
 ---
@@ -424,10 +424,10 @@ Dans l'image Docker par défaut, le frontend et le backend partagent la même or
 
 - **Lint + type-check** (push/PR)
 - **Build multi-arch** → `ghcr.io/mouette03/filyo`
-- Tags : `latest`, `sha-xxxx`, `v1.2.9(-mariadb)`
+- Tags : `latest`, `sha-xxxx`, `v1.4.1(-mariadb)`
 
 ```bash
-docker pull ghcr.io/mouette03/filyo:v1.2.9
+docker pull ghcr.io/mouette03/filyo:v1.4.1
 ```
 
 ---
