@@ -424,6 +424,9 @@ The `tus-files/` and `tus-requests/` folders contain in-progress transfers. They
 - **Passwords**: hashed with bcrypt (cost 12 for accounts, 10 for shares)
 - **JWT tokens**: signed with `JWT_SECRET`, stored in an `HttpOnly` cookie (inaccessible to JavaScript)
 - **SMTP password**: AES-encrypted with `JWT_SECRET` before database storage
+- **Sensitive data in logs**: recipient emails and share/download tokens are masked in application logs (`maskEmail`, `maskToken`) — only partial values are ever written to disk
+- **Auth events**: login (success/failure), registration, and password reset requests are logged with the client IP for abuse detection (`req.ip`, respects `TRUST_PROXY`)
+- **SMTP diagnostics**: outgoing mail attempts log the connection security mode (`ssl/tls`, `starttls`, or `plain`) without exposing credentials
 - **HTTP headers**: Fastify Helmet automatically sets security headers (X-Frame-Options, X-Content-Type-Options, Referrer-Policy…)
 - **IDOR**: every file/TUS result request verifies that the user is the owner
 - **Download tokens**: received files are never served directly by URL — a short-lived token is generated on demand for each download
@@ -871,6 +874,9 @@ Les dossiers `tus-files/` et `tus-requests/` contiennent les uploads en cours de
 - **Mots de passe** : hashés avec bcrypt (coût 12 pour les comptes, 10 pour les partages)
 - **Tokens JWT** : signés avec `JWT_SECRET`, stockés dans un cookie `HttpOnly` (inaccessible au JavaScript)
 - **Mot de passe SMTP** : chiffré en AES avec `JWT_SECRET` avant stockage en base
+- **Données sensibles dans les logs** : les emails des destinataires et les tokens de partage/téléchargement sont masqués dans les logs applicatifs (`maskEmail`, `maskToken`) — seules des valeurs partielles sont écrites sur disque
+- **Événements d'authentification** : connexion (réussie/échouée), inscription, demandes de réinitialisation de mot de passe sont loggées avec l'IP du client pour la détection d'abus (`req.ip`, respecte `TRUST_PROXY`)
+- **Diagnostic SMTP** : les tentatives d'envoi d'email loguent le mode de sécurité de connexion (`ssl/tls`, `starttls`, ou `plain`) sans exposer les identifiants
 - **Headers HTTP** : Fastify Helmet active automatiquement les headers de sécurité (X-Frame-Options, X-Content-Type-Options, Referrer-Policy…)
 - **IDOR** : chaque requête de fichier/résultat TUS vérifie que l'utilisateur est bien le propriétaire
 - **Tokens de téléchargement** : les fichiers reçus ne sont jamais servis directement par URL — un token court-vivant est généré à la demande pour chaque téléchargement
