@@ -194,17 +194,17 @@ export default function Layout() {
           {settings.appName}<span className="hidden sm:inline"> — {t('nav.footer')}</span>
         </span>
 
-        {/* Droite : Discord + GitHub */}
-        <div className="flex w-32 shrink-0 items-center justify-end gap-1.5">
+        {/* Droite : Discord + GitHub — icônes seules */}
+        <div className="flex w-32 shrink-0 items-center justify-end gap-3">
           <a
             href="https://discord.gg/XnYaXu8HKt"
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-white/60 transition-colors"
-            title="Rejoindre le Discord"
+            className="text-white/25 hover:text-white/60 transition-colors p-1"
+            title="Discord"
             aria-label="Discord Filyo"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M20.317 4.369A19.79 19.79 0 0 0 16.227 3c-.2.36-.44.85-.6 1.23a18.18 18.18 0 0 0-5.25 0c-.16-.38-.4-.87-.6-1.23A19.74 19.74 0 0 0 3.68 4.37a19.66 19.66 0 0 0-3.11 15.35 19.88 19.88 0 0 0 5.99 3.02c.48-.65.9-1.34 1.26-2.06a13.36 13.36 0 0 1-1.99-.95l.42-.31a13.6 13.6 0 0 0 11.5 0l.42.31c-.6.36-1.27.68-1.99.95.36.72.78 1.41 1.26 2.06a19.88 19.88 0 0 0 5.99-3.02A19.66 19.66 0 0 0 20.317 4.37Zm-8.07 12.59c-1.07 0-1.96-.98-1.96-2.19s.87-2.19 1.96-2.19 1.96.98 1.96 2.19-.88 2.19-1.96 2.19Zm6.25 0c-1.07 0-1.96-.98-1.96-2.19s.87-2.19 1.96-2.19 1.96.98 1.96 2.19-.88 2.19-1.96 2.19Z" />
             </svg>
           </a>
@@ -212,11 +212,11 @@ export default function Layout() {
             href="https://github.com/Mouette03/Filyo"
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-white/60 transition-colors"
-            title="Voir sur GitHub"
+            className="text-white/25 hover:text-white/60 transition-colors p-1"
+            title="GitHub"
+            aria-label="GitHub Filyo"
           >
-            <Github size={14} />
-            <span className="hidden sm:inline">GitHub</span>
+            <Github size={16} />
           </a>
         </div>
       </footer>
