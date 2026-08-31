@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useNavigate } from 'react-router'
-import { Upload, LayoutDashboard, ArrowDownUp, Plus, Settings, Users, LogOut, ChevronDown, User, Github, ArrowUpCircle, BookOpen } from 'lucide-react'
+import { Upload, LayoutDashboard, ArrowDownUp, Plus, Settings, Users, LogOut, ChevronDown, User, Github, Discord, ArrowUpCircle, BookOpen } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { useAuthStore } from '../stores/useAuthStore'
 import { useAppSettingsStore } from '../stores/useAppSettingsStore'
@@ -194,17 +194,28 @@ export default function Layout() {
           {settings.appName}<span className="hidden sm:inline"> — {t('nav.footer')}</span>
         </span>
 
-        {/* Droite : GitHub */}
-        <a
-          href="https://github.com/Mouette03/Filyo"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex w-32 shrink-0 items-center justify-end gap-1.5 hover:text-white/60 transition-colors"
-          title="Voir sur GitHub"
-        >
-          <Github size={14} />
-          <span className="hidden sm:inline">GitHub</span>
-        </a>
+        {/* Droite : Discord + GitHub */}
+        <div className="flex w-32 shrink-0 items-center justify-end gap-1.5">
+          <a
+            href="https://discord.gg/XnYaXu8HKt"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-white/60 transition-colors"
+            title="Rejoindre le Discord"
+          >
+            <Discord size={14} />
+          </a>
+          <a
+            href="https://github.com/Mouette03/Filyo"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-white/60 transition-colors"
+            title="Voir sur GitHub"
+          >
+            <Github size={14} />
+            <span className="hidden sm:inline">GitHub</span>
+          </a>
+        </div>
       </footer>
     </div>
   )
