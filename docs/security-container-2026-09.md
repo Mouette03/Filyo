@@ -71,6 +71,20 @@ MariaDB réel sont confiés au workflow `Container security and smoke tests`.
 Ce workflow teste l'architecture native amd64 du runner ; arm64 doit encore être
 validé avant une publication multiarchitecture.
 
+## Résultats GitHub Actions
+
+Sur le commit applicatif `df90cf7`, le 30 septembre 2026 :
+
+- [CI backend réussie](https://github.com/Mouette03/Filyo/actions/runs/36773326745).
+- [CI frontend réussie](https://github.com/Mouette03/Filyo/actions/runs/36773326743).
+- [Tests et scans des deux images réussis](https://github.com/Mouette03/Filyo/actions/runs/36773326879) :
+  construction amd64, absence de npm/npx/Yarn, migrations sur bases vierges,
+  endpoint de santé, requête SQL et redémarrage avec migrations déjà appliquées.
+- Trivy ne signale aucune vulnérabilité HIGH/CRITICAL avec correctif connu
+  dans les deux images testées. Les vulnérabilités sans correctif et les niveaux
+  inférieurs sont exclus de ce contrôle ; ce n'est pas une attestation
+  « zéro CVE » tous niveaux confondus.
+
 ## Publication après revue
 
 Ne pas déduire l'état de l'image installée à partir du seul audit npm.
