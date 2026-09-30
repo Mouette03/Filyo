@@ -14,10 +14,8 @@ fi
 mkdir -p /data/uploads
 chown -R node:node /data
 
-export NPM_CONFIG_UPDATE_NOTIFIER=false
-
 set +e
-gosu node npx prisma migrate deploy
+gosu node /app/node_modules/.bin/prisma migrate deploy
 PRISMA_EXIT=$?
 set -e
 

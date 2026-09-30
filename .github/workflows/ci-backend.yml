@@ -28,7 +28,7 @@ jobs:
 
       - name: Install
         working-directory: backend
-        run: npm install
+        run: npm ci
 
       - name: Check for unresolved peer deps
         working-directory: backend
@@ -36,13 +36,13 @@ jobs:
 
       - name: Full audit report
         working-directory: backend
-        run: npm audit || echo "::warning::npm audit failed or found issues, see logs above"
+        run: npm audit --audit-level=high
 
       - name: Cache node_modules
         uses: actions/cache@v4
         with:
           path: backend/node_modules
-          key: node-modules-${{ hashFiles('backend/package.json') }}
+          key: node-modules-${{ hashFiles('backend/package-lock.json') }}
 
   typecheck:
     name: 🔷 TypeScript typecheck
@@ -59,11 +59,11 @@ jobs:
         uses: actions/cache@v4
         with:
           path: backend/node_modules
-          key: node-modules-${{ hashFiles('backend/package.json') }}
+          key: node-modules-${{ hashFiles('backend/package-lock.json') }}
 
       - name: Install (if cache miss)
         working-directory: backend
-        run: npm install
+        run: npm ci
 
       - name: Prisma generate
         working-directory: backend
@@ -88,15 +88,19 @@ jobs:
         uses: actions/cache@v4
         with:
           path: backend/node_modules
-          key: node-modules-${{ hashFiles('backend/package.json') }}
+          key: node-modules-${{ hashFiles('backend/package-lock.json') }}
 
       - name: Install (if cache miss)
         working-directory: backend
-        run: npm install
+        run: npm ci
 
       - name: Build
         working-directory: backend
         run: npm run build
+
+      - name: Prisma and Nodemailer security smoke tests
+        working-directory: backend
+        run: node --test test/security-smoke.test.mjs
 
   zod-tests:
     name: 🧪 Zod schema tests
@@ -113,11 +117,11 @@ jobs:
         uses: actions/cache@v4
         with:
           path: backend/node_modules
-          key: node-modules-${{ hashFiles('backend/package.json') }}
+          key: node-modules-${{ hashFiles('backend/package-lock.json') }}
 
       - name: Install (if cache miss)
         working-directory: backend
-        run: npm install
+        run: npm ci
 
       - name: Run Zod tests
         working-directory: backend

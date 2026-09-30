@@ -10,8 +10,8 @@ ARG BUILDPLATFORM
 FROM --platform=$BUILDPLATFORM node:24-alpine AS frontend-builder
 
 WORKDIR /app/frontend
-COPY frontend/package*.json ./
-RUN npm install --silent
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci --no-audit --no-fund
 COPY frontend/ ./
 RUN npm run build
 
@@ -21,8 +21,8 @@ FROM --platform=$BUILDPLATFORM node:24-alpine AS backend-builder
 RUN apk add --no-cache openssl
 
 WORKDIR /app/backend
-COPY backend/package*.json ./
-RUN npm install --silent
+COPY backend/package.json backend/package-lock.json ./
+RUN npm ci --no-audit --no-fund
 COPY backend/ ./
 
 ARG DB_PROVIDER=sqlite
@@ -46,10 +46,18 @@ WORKDIR /app
 COPY --from=backend-builder /app/backend/dist            ./dist
 COPY --from=backend-builder /app/backend/prisma          ./prisma
 COPY --from=backend-builder /app/backend/package.json    ./package.json
+COPY --from=backend-builder /app/backend/package-lock.json ./package-lock.json
 COPY --from=backend-builder /app/backend/prisma.config.ts ./prisma.config.ts
 
 ARG DB_PROVIDER=sqlite
-RUN npm install --omit=dev --silent
+# Install native dependencies for the target architecture and glibc.
+# Do not copy node_modules from the Alpine/build-platform stage.
+# Prisma is invoked directly at runtime, so package managers are not needed.
+RUN npm ci --omit=dev --no-audit --no-fund \
+    && npm cache clean --force \
+    && rm -rf /root/.npm /usr/local/lib/node_modules/npm \
+              /usr/local/bin/npm /usr/local/bin/npx \
+              /opt/yarn-v* /usr/local/bin/yarn /usr/local/bin/yarnpkg
 
 COPY --from=frontend-builder /app/frontend/dist          ./public
 
