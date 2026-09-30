@@ -1,0 +1,48 @@
+name: Update lockfiles
+
+# Regenerates package-lock.json whenever package.json changes, so the
+# lockfiles committed on GitHub always match the declared version ranges.
+# The bot commit uses the default GITHUB_TOKEN, which does not re-trigger
+# other workflows; CI and security checks run on the next push or on the PR.
+
+on:
+  push:
+    paths:
+      - 'backend/package.json'
+      - 'frontend/package.json'
+      - '.github/workflows/update-lockfiles.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  lockfiles:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Regenerate backend lockfile
+        working-directory: backend
+        run: npm install --package-lock-only --no-audit --no-fund
+
+      - name: Regenerate frontend lockfile
+        working-directory: frontend
+        run: npm install --package-lock-only --no-audit --no-fund
+
+      - name: Commit and push updated lockfiles
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add backend/package-lock.json frontend/package-lock.json
+          if git diff --cached --quiet; then
+            echo "Lockfiles already up to date, nothing to commit."
+          else
+            git commit -m "chore: regenerate lockfiles [skip ci]"
+            git push
+          fi
