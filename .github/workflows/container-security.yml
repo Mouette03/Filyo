@@ -45,6 +45,8 @@ jobs:
           --health-interval=5s --health-timeout=5s --health-retries=30
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       # Local image only: this workflow never logs in to GHCR or pushes images.
       - name: Build production image
@@ -53,9 +55,13 @@ jobs:
       - name: Verify runtime has no package managers
         run: |
           docker run --rm --entrypoint sh filyo:security -ec '
-            ! command -v npm
-            ! command -v npx
-            ! command -v yarn
+            # `set -e` ignores commands negated with `!`: fail explicitly.
+            for manager in npm npx yarn yarnpkg; do
+              if command -v "$manager" >/dev/null 2>&1; then
+                echo "Unexpected package manager in runtime image: $manager" >&2
+                exit 1
+              fi
+            done
             test ! -d /usr/local/lib/node_modules/npm
             test -x /app/node_modules/.bin/prisma
           '

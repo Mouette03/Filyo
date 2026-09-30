@@ -1,16 +1,13 @@
 name: Update lockfiles
 
-# Regenerates package-lock.json whenever package.json changes, so the
-# lockfiles committed on GitHub always match the declared version ranges.
-# The bot commit uses the default GITHUB_TOKEN, which does not re-trigger
-# other workflows; CI and security checks run on the next push or on the PR.
+# Manual only: regenerates package-lock.json from the declared version ranges
+# on the selected branch, then commits the result to that branch.
+#
+# The bot commit uses the default GITHUB_TOKEN, which does not trigger other
+# workflows. Review the commit and run CI (push again, or re-run the checks)
+# before merging it.
 
 on:
-  push:
-    paths:
-      - 'backend/package.json'
-      - 'frontend/package.json'
-      - '.github/workflows/update-lockfiles.yml'
   workflow_dispatch:
 
 permissions:
@@ -18,10 +15,15 @@ permissions:
 
 jobs:
   lockfiles:
+    # Pushing back is only meaningful on a branch, not on a tag.
+    if: github.ref_type == 'branch'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
+      # Do not keep the write-capable token in .git/config while npm runs.
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@v4
         with:
@@ -29,20 +31,26 @@ jobs:
 
       - name: Regenerate backend lockfile
         working-directory: backend
-        run: npm install --package-lock-only --no-audit --no-fund
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
 
       - name: Regenerate frontend lockfile
         working-directory: frontend
-        run: npm install --package-lock-only --no-audit --no-fund
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
 
       - name: Commit and push updated lockfiles
+        env:
+          # The token is only exposed to this step, after npm has finished.
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add backend/package-lock.json frontend/package-lock.json
           if git diff --cached --quiet; then
             echo "Lockfiles already up to date, nothing to commit."
-          else
-            git commit -m "chore: regenerate lockfiles [skip ci]"
-            git push
+            exit 0
           fi
+          git commit -m "chore: regenerate lockfiles"
+          auth=$(printf 'x-access-token:%s' "$GITHUB_TOKEN" | base64 -w0)
+          echo "::add-mask::$auth"
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" \
+            push origin "HEAD:${GITHUB_REF_NAME}"
