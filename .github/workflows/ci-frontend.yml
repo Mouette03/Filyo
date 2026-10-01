@@ -28,7 +28,7 @@ jobs:
 
       - name: Install
         working-directory: frontend
-        run: npm install
+        run: npm ci
 
       - name: Check for unresolved peer deps
         working-directory: frontend
@@ -36,13 +36,13 @@ jobs:
 
       - name: Full audit report
         working-directory: frontend
-        run: npm audit || echo "::warning::npm audit failed or found issues, see logs above"
+        run: npm audit --audit-level=high
 
       - name: Cache node_modules
         uses: actions/cache@v4
         with:
           path: frontend/node_modules
-          key: frontend-node-modules-${{ hashFiles('frontend/package.json') }}
+          key: frontend-node-modules-${{ hashFiles('frontend/package-lock.json') }}
 
   typecheck:
     name: 🔷 TypeScript typecheck
@@ -59,11 +59,11 @@ jobs:
         uses: actions/cache@v4
         with:
           path: frontend/node_modules
-          key: frontend-node-modules-${{ hashFiles('frontend/package.json') }}
+          key: frontend-node-modules-${{ hashFiles('frontend/package-lock.json') }}
 
       - name: Install (if cache miss)
         working-directory: frontend
-        run: npm install
+        run: npm ci
 
       - name: TypeScript check
         working-directory: frontend
@@ -84,11 +84,11 @@ jobs:
         uses: actions/cache@v4
         with:
           path: frontend/node_modules
-          key: frontend-node-modules-${{ hashFiles('frontend/package.json') }}
+          key: frontend-node-modules-${{ hashFiles('frontend/package-lock.json') }}
 
       - name: Install (if cache miss)
         working-directory: frontend
-        run: npm install
+        run: npm ci
 
       - name: Build
         working-directory: frontend

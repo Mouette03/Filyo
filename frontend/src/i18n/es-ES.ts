@@ -293,7 +293,7 @@ export const esES = {
   'settings.smtpStarttlsHint': 'Exigir TLS al conectar (recomendado en el puerto 587). Desactívalo solo si tu servidor no lo soporta.',
   'settings.smtpTest': 'Probar',
   'settings.smtpSave': 'Guardar',
-  'settings.smtpTestHint': 'La prueba solo verifica la accesibilidad de red del servidor SMTP. La funcionalidad de envío de correos estará disponible en una versión futura.',
+  'settings.smtpTestHint': 'La prueba solo verifica la accesibilidad de red del servidor SMTP.',
 
   // ── Share page (public download) ─────────────────────────────
   'share.expires': 'Caduca el',

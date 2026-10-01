@@ -29,14 +29,14 @@ jobs:
       - name: Install & type-check backend
         working-directory: ./backend
         run: |
-          npm install
+          npm ci
           npx prisma generate
           npx tsc --noEmit
 
       - name: Install & type-check frontend
         working-directory: ./frontend
         run: |
-          npm install
+          npm ci
           npx tsc --noEmit
 
   # ----------------------------------------------------------------
@@ -87,6 +87,7 @@ jobs:
         with:
           context: .
           file: Dockerfile
+          pull: true
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
           build-args: DB_PROVIDER=sqlite
@@ -143,6 +144,7 @@ jobs:
         with:
           context: .
           file: Dockerfile
+          pull: true
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
           build-args: DB_PROVIDER=mariadb

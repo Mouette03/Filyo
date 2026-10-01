@@ -1,0 +1,116 @@
+name: Container security and smoke tests
+
+on:
+  push:
+    branches: ['**']
+    paths:
+      - 'Dockerfile'
+      - 'entrypoint.sh'
+      - 'backend/**'
+      - 'frontend/**'
+      - '.github/workflows/container-security.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'Dockerfile'
+      - 'entrypoint.sh'
+      - 'backend/**'
+      - 'frontend/**'
+      - '.github/workflows/container-security.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  container:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        provider: [sqlite, mariadb]
+    services:
+      mariadb:
+        image: mariadb:11
+        env:
+          MARIADB_ROOT_PASSWORD: ci-root-only
+          MARIADB_DATABASE: filyo
+          MARIADB_USER: filyo
+          MARIADB_PASSWORD: ci-filyo-only
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=5s --health-retries=30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      # Local image only: this workflow never logs in to GHCR or pushes images.
+      - name: Build production image
+        run: docker build --pull --build-arg DB_PROVIDER=${{ matrix.provider }} -t filyo:security .
+
+      - name: Verify runtime has no package managers
+        run: |
+          docker run --rm --entrypoint sh filyo:security -ec '
+            # `set -e` ignores commands negated with `!`: fail explicitly.
+            for manager in npm npx yarn yarnpkg; do
+              if command -v "$manager" >/dev/null 2>&1; then
+                echo "Unexpected package manager in runtime image: $manager" >&2
+                exit 1
+              fi
+            done
+            test ! -d /usr/local/lib/node_modules/npm
+            test -x /app/node_modules/.bin/prisma
+          '
+
+      - name: Start application and run database smoke test
+        env:
+          PROVIDER: ${{ matrix.provider }}
+        run: |
+          set -euo pipefail
+          db_args=()
+          if [ "$PROVIDER" = mariadb ]; then
+            db_args=(-e DB_HOST=127.0.0.1 -e DB_USER=filyo -e DB_PASSWORD=ci-filyo-only -e DB_NAME=filyo)
+          fi
+          docker run -d --name filyo-smoke --network host \
+            -e JWT_SECRET=ci-only-not-a-real-secret-32-characters \
+            "${db_args[@]}" filyo:security
+          wait_for_health() {
+            for attempt in $(seq 1 90); do
+              if curl --fail --silent http://127.0.0.1:3001/health; then
+                return 0
+              fi
+              sleep 2
+            done
+            docker logs filyo-smoke
+            return 1
+          }
+          wait_for_health
+          docker exec filyo-smoke gosu node node --input-type=module -e '
+            // DATABASE_URL is set by entrypoint.sh, not in docker exec sessions.
+            process.env.DATABASE_URL = process.env.DB_HOST
+              ? "mysql://filyo:ci-filyo-only@127.0.0.1:3306/filyo"
+              : "file:/data/filyo.db";
+            const { prisma } = await import("./dist/lib/prisma.js");
+            try { console.log("Users:", await prisma.user.count()); }
+            finally { await prisma.$disconnect(); }
+          '
+          docker restart filyo-smoke
+          wait_for_health
+
+      - name: Scan final image for fixable high and critical vulnerabilities
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: filyo:security
+          scanners: vuln
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+
+      - name: Application logs
+        if: always()
+        run: docker logs filyo-smoke || true

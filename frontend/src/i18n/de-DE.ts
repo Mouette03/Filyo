@@ -293,7 +293,7 @@ export const deDE = {
   'settings.smtpStarttlsHint': 'TLS beim Verbinden erzwingen (empfohlen auf Port 587). Nur deaktivieren, wenn dein Server es nicht unterstützt.',
   'settings.smtpTest': 'Testen',
   'settings.smtpSave': 'Speichern',
-  'settings.smtpTestHint': 'Der Test überprüft nur die Netzwerkerreichbarkeit des SMTP-Servers. Die E-Mail-Sendefunktion wird in einer zukünftigen Version verfügbar sein.',
+  'settings.smtpTestHint': 'Der Test überprüft nur die Netzwerkerreichbarkeit des SMTP-Servers.',
 
   // ── Share page (public download) ─────────────────────────────
   'share.expires': 'Läuft ab am',
