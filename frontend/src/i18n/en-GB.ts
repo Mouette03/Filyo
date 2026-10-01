@@ -293,7 +293,7 @@ export const enGB = {
   'settings.smtpStarttlsHint': 'Require TLS when connecting (recommended on port 587). Disable only if your server does not support it.',
   'settings.smtpTest': 'Test',
   'settings.smtpSave': 'Save',
-  'settings.smtpTestHint': 'The test only verifies network accessibility of the SMTP server. Email sending functionality will be available in a future version.',
+  'settings.smtpTestHint': 'The test only verifies network accessibility of the SMTP server.',
 
   // ── Share page (public download) ─────────────────────────────
   'share.expires': 'Expires on',

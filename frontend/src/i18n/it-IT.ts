@@ -293,7 +293,7 @@ export const itIT = {
   'settings.smtpStarttlsHint': 'Richiedi TLS durante la connessione (consigliato sulla porta 587). Disabilita solo se il tuo server non lo supporta.',
   'settings.smtpTest': 'Test',
   'settings.smtpSave': 'Salva',
-  'settings.smtpTestHint': 'Il test verifica solo l\'accessibilità di rete del server SMTP. La funzionalità di invio email sarà disponibile in una versione futura.',
+  'settings.smtpTestHint': 'Il test verifica solo l\'accessibilità di rete del server SMTP.',
 
   // ── Share page (public download) ─────────────────────────────
   'share.expires': 'Scade il',
