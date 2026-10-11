@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify'
 import bcrypt from 'bcryptjs'
 import { prisma } from '../lib/prisma.js'
+import { resetUserTwoFactor } from '../lib/twoFactorReset.js'
 
 // Toutes ces routes nécessitent d'être connecté en tant qu'ADMIN
 export async function userRoutes(app: FastifyInstance) {
@@ -154,22 +155,7 @@ export async function userRoutes(app: FastifyInstance) {
     }
     const target = await prisma.user.findUnique({ where: { id: req.params.id }, select: { id: true } })
     if (!target) return reply.code(404).send({ code: 'USER_NOT_FOUND' })
-    await prisma.$transaction([
-      prisma.user.update({
-        where: { id: target.id },
-        data: {
-          twoFactorEnabled: false,
-          twoFactorSecret: null,
-          twoFactorPendingSecret: null,
-          twoFactorPendingExpiry: null,
-          twoFactorLastUsedStep: null,
-          twoFactorEnabledAt: null,
-          sessionVersion: { increment: 1 }
-        }
-      }),
-      prisma.twoFactorRecoveryCode.deleteMany({ where: { userId: target.id } }),
-      prisma.twoFactorChallenge.deleteMany({ where: { userId: target.id } })
-    ])
+    await resetUserTwoFactor(prisma, target.id)
     req.log.warn({ adminId: req.user.id, userId: target.id }, 'Two-factor authentication reset by admin')
     return { success: true }
   })

@@ -69,7 +69,7 @@
 | **Docker** | Multi-arch images (amd64 + arm64), SQLite and MariaDB variants |
 | **Per-user storage quota** | Admin can set a storage limit per user (MB/GB); enforced on upload to prevent disk saturation |
 | **Encrypted SMTP password** | SMTP password stored encrypted in the database (AES-256-GCM, key derived from `JWT_SECRET`) |
-| **Two-factor authentication** | TOTP (authenticator app) + single-use recovery codes, configured in *My Profile → Security*; admin can make it optional or mandatory, including for self-registered accounts; admin reset for lost devices |
+| **Two-factor authentication** | TOTP (authenticator app) + single-use recovery codes, configured in *My Profile → Security*; admin can make it optional or mandatory, including for self-registered accounts; admin reset for lost devices, plus a [recovery command](#-two-factor-authentication-recovery) if no admin can log in |
 
 ---
 
@@ -118,7 +118,7 @@ labels:
 | Variable | Default | Description |
 |---|---|---|
 | `JWT_SECRET` | *required, no default* | **Required — must be set before first launch.** Also used as the AES-256-GCM encryption key for the SMTP password stored in the database. |
-| `TWO_FACTOR_ENCRYPTION_KEY` | *empty → falls back to `JWT_SECRET`* | AES-256-GCM key used to encrypt TOTP secrets in the database (`openssl rand -hex 32`). **Back it up and never change it**: without it, 2FA users can no longer log in until an admin resets their 2FA. |
+| `TWO_FACTOR_ENCRYPTION_KEY` | *empty → falls back to `JWT_SECRET`* | AES-256-GCM key used to encrypt TOTP secrets in the database (`openssl rand -hex 32`). **Back it up and never change it**: without it, 2FA users can no longer log in until their 2FA is reset (by an admin, or with the [recovery command](#-two-factor-authentication-recovery)). |
 | `PORT` | `3001` | Host port exposed by the container (internal port is always 3001) |
 | `DATA_PATH` | `./data` | Data folder (database + uploads) |
 | `LOG_LEVEL` | `info` | Minimum log level (Pino). The app emits `debug`, `info`, `warn`, `error`. Use `debug` for verbose output, `warn` for quiet, `silent` to disable all logs. |
@@ -154,6 +154,31 @@ If you run Filyo behind a reverse proxy (Traefik, Nginx, etc.), set `TRUST_PROXY
 
 > [!NOTE]
 > For the TUS upload server, `@tus/server` only accepts a boolean for `respectForwardedHeaders`. Any IP or CIDR value will therefore behave like `true` (all forwarded headers trusted). Fastify itself still validates the IP/CIDR correctly for the rest of the API.
+
+---
+
+## 🔐 Two-factor authentication: recovery
+
+Each user enables 2FA in **My Profile → Security** (authenticator app + 10 single-use recovery codes). An admin can make it **mandatory** in **Settings → Authentication**, and reset a user's 2FA from **Users → Edit** if they lost their phone.
+
+If **no admin can log in anymore** (phone and recovery codes lost), use the recovery command inside the container:
+
+```bash
+# Accounts, roles, 2FA state and 2FA policy (no secret is displayed)
+docker exec -it -u node filyo node dist/cli/two-factor.js list
+
+# Disable 2FA for an account (asks for confirmation)
+docker exec -it -u node filyo node dist/cli/two-factor.js reset admin@example.com
+
+# Optional: make 2FA optional again for everyone
+docker exec -it -u node filyo node dist/cli/two-factor.js disable-policy
+```
+
+- `reset` deletes the account's TOTP secret, recovery codes and pending logins, and signs out all its sessions. **The password is not changed.** If 2FA is still mandatory, the user logs in with their password and must set up 2FA again before using the app.
+- `-u node` runs the command as the application user. With SQLite it is required (the command refuses to run as root) so the database files keep the right owner.
+- Without an interactive terminal (scripts, `docker exec` without `-it`), add `--yes` to confirm.
+- Works with SQLite and MariaDB: the command connects to the same database as the application (`DATABASE_URL` or `DB_*` variables). Replace `filyo` with your container name if different.
+- `node dist/cli/two-factor.js --help` shows all options.
 
 ---
 
@@ -299,7 +324,7 @@ Application de partage de fichiers **auto-hébergée**, sans stockage S3. Design
 | **Docker** | Multi-arch (amd64/arm64), SQLite + MariaDB |
 | **Quota stockage par utilisateur** | L'administrateur peut définir une limite de stockage par utilisateur (MB/GB) ; appliquée lors des uploads pour éviter la saturation du disque |
 | **Chiffrement mot de passe SMTP** | Mot de passe SMTP chiffré en base (AES-256-GCM, clé dérivée de `JWT_SECRET`) |
-| **Double authentification (2FA)** | TOTP (application d'authentification) + codes de secours à usage unique, dans *Mon profil → Sécurité* ; l'admin la rend facultative ou obligatoire, y compris pour l'auto-inscription ; réinitialisation par l'admin en cas de perte du téléphone |
+| **Double authentification (2FA)** | TOTP (application d'authentification) + codes de secours à usage unique, dans *Mon profil → Sécurité* ; l'admin la rend facultative ou obligatoire, y compris pour l'auto-inscription ; réinitialisation par l'admin en cas de perte du téléphone, et [commande de secours](#-double-authentification--récupération) si plus aucun admin ne peut se connecter |
 
 ---
 
@@ -342,7 +367,7 @@ labels:
 | Variable | Défaut | Description |
 |---|---|---|
 | `JWT_SECRET` | *obligatoire, aucun défaut* | **Obligatoire — à renseigner avant le premier lancement.** Sert aussi de clé AES-256-GCM pour chiffrer le mot de passe SMTP stocké en base. |
-| `TWO_FACTOR_ENCRYPTION_KEY` | *vide → `JWT_SECRET` utilisé* | Clé AES-256-GCM de chiffrement des secrets TOTP en base (`openssl rand -hex 32`). **À sauvegarder et ne jamais changer** : sans elle, les comptes 2FA ne peuvent plus se connecter tant qu'un admin n'a pas réinitialisé leur 2FA. |
+| `TWO_FACTOR_ENCRYPTION_KEY` | *vide → `JWT_SECRET` utilisé* | Clé AES-256-GCM de chiffrement des secrets TOTP en base (`openssl rand -hex 32`). **À sauvegarder et ne jamais changer** : sans elle, les comptes 2FA ne peuvent plus se connecter tant que leur 2FA n'a pas été réinitialisée (par un admin, ou avec la [commande de secours](#-double-authentification--récupération)). |
 | `PORT` | `3001` | Port exposé sur l'hôte (le conteneur interne tourne toujours sur 3001) |
 | `DATA_PATH` | `./data` | Dossier données (base de données + uploads) |
 | `LOG_LEVEL` | `info` | Seuil minimum de log (Pino). Le code émet `debug`, `info`, `warn`, `error`. Utiliser `debug` pour plus de verbosité, `warn` pour le silence relatif, `silent` pour tout désactiver. |
@@ -376,6 +401,31 @@ Si vous exécutez Filyo derrière un reverse proxy (Traefik, Nginx, etc.), défi
 
 > [!NOTE]
 > Pour le serveur TUS, `@tus/server` n'accepte qu'un booléen pour `respectForwardedHeaders`. Toute valeur IP ou CIDR sera donc traitée comme `true` (tous les headers forwarded sont acceptés). Fastify continue de valider l'IP/CIDR correctement pour le reste de l'API.
+
+---
+
+## 🔐 Double authentification : récupération
+
+Chaque utilisateur active la 2FA dans **Mon profil → Sécurité** (application d'authentification + 10 codes de secours à usage unique). Un admin peut la rendre **obligatoire** dans **Réglages → Authentification**, et réinitialiser la 2FA d'un utilisateur depuis **Utilisateurs → Modifier** s'il a perdu son téléphone.
+
+Si **plus aucun admin ne peut se connecter** (téléphone et codes de secours perdus), utilisez la commande de secours dans le conteneur :
+
+```bash
+# Comptes, rôles, état de la 2FA et politique 2FA (aucun secret n'est affiché)
+docker exec -it -u node filyo node dist/cli/two-factor.js list
+
+# Désactiver la 2FA d'un compte (demande une confirmation)
+docker exec -it -u node filyo node dist/cli/two-factor.js reset admin@example.com
+
+# Facultatif : rendre la 2FA de nouveau facultative pour tout le monde
+docker exec -it -u node filyo node dist/cli/two-factor.js disable-policy
+```
+
+- `reset` supprime le secret TOTP du compte, ses codes de secours et ses connexions en attente, et ferme toutes ses sessions. **Le mot de passe ne change pas.** Si la 2FA est toujours obligatoire, l'utilisateur se connecte avec son mot de passe et doit reconfigurer la 2FA avant d'accéder à l'application.
+- `-u node` lance la commande avec l'utilisateur de l'application. Avec SQLite, c'est obligatoire (la commande refuse de tourner en root), pour que les fichiers de la base gardent le bon propriétaire.
+- Sans terminal interactif (script, `docker exec` sans `-it`), ajoutez `--yes` pour confirmer.
+- Fonctionne avec SQLite et MariaDB : la commande se connecte à la même base que l'application (`DATABASE_URL` ou variables `DB_*`). Remplacez `filyo` par le nom de votre conteneur s'il est différent.
+- `node dist/cli/two-factor.js --help` affiche toutes les options.
 
 ---
 

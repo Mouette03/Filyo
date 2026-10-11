@@ -106,7 +106,7 @@ jobs:
 
       - name: Two-factor authentication tests (RFC 6238 vectors + end-to-end)
         working-directory: backend
-        run: node --test test/two-factor-unit.test.mjs test/two-factor-e2e.test.mjs
+        run: node --test test/two-factor-unit.test.mjs test/two-factor-e2e.test.mjs test/two-factor-cli.test.mjs
 
   zod-tests:
     name: 🧪 Zod schema tests
