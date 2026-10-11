@@ -64,7 +64,7 @@ model TwoFactorChallenge {
 }
 
 model AppSettings {
-  id                String   @id @default("singleton")
+  id                String   @id // toujours 'singleton', fourni par le code (pas de valeur par défaut en base)
   appName           String   @default("Filyo")
   logoUrl           String?
   siteUrl           String?
