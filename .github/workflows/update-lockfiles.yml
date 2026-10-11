@@ -1,17 +1,40 @@
 name: Update lockfiles
 
-# Manual only: regenerates package-lock.json from the declared version ranges
-# on the selected branch, then commits the result to that branch.
+# Manual only. Two modes, chosen when starting the run:
+#   - sync      : regenerates package-lock.json from the declared version ranges
+#                 (after a package.json change), keeping already locked versions.
+#   - audit-fix : `npm audit fix --package-lock-only`, i.e. moves vulnerable
+#                 packages to a patched version *within the ranges already allowed*
+#                 by package.json. Never uses --force: no major upgrade, and
+#                 package.json is left untouched (the run fails otherwise).
 #
-# The bot commit uses the default GITHUB_TOKEN, which does not trigger other
-# workflows. Review the commit and run CI (push again, or re-run the checks)
-# before merging it.
+# The result is committed to the selected branch. A commit pushed with the
+# default GITHUB_TOKEN does not trigger `push` workflows, so this workflow then
+# starts the relevant CI itself through `workflow_dispatch` (allowed with
+# GITHUB_TOKEN). Review the commit and the CI results before merging.
 
 on:
   workflow_dispatch:
+    inputs:
+      mode:
+        description: 'sync = regenerate from package.json, audit-fix = patch vulnerable packages within allowed ranges'
+        type: choice
+        options:
+          - sync
+          - audit-fix
+        default: sync
+      run_ci:
+        description: 'Start CI on the branch after committing'
+        type: boolean
+        default: true
 
 permissions:
   contents: write
+  actions: write
+
+concurrency:
+  group: update-lockfiles-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   lockfiles:
@@ -29,19 +52,78 @@ jobs:
         with:
           node-version: 24
 
-      - name: Regenerate backend lockfile
-        working-directory: backend
-        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Update lockfiles (${{ inputs.mode }})
+        env:
+          MODE: ${{ inputs.mode }}
+        run: |
+          set -euo pipefail
+          for dir in backend frontend; do
+            echo "::group::$dir"
+            cd "$GITHUB_WORKSPACE/$dir"
+            if [ "$MODE" = "audit-fix" ]; then
+              # Exits 1 when some vulnerabilities cannot be fixed without --force:
+              # not an error here, the remaining ones are reported below.
+              npm audit fix --package-lock-only --ignore-scripts --no-fund \
+                || echo "::warning title=$dir::Some vulnerabilities could not be fixed within the allowed version ranges (see summary)."
+            else
+              npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+            fi
+            echo "::endgroup::"
+          done
 
-      - name: Regenerate frontend lockfile
-        working-directory: frontend
-        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Check package.json is untouched and lockfiles are valid
+        run: |
+          set -euo pipefail
+          if ! git diff --quiet -- backend/package.json frontend/package.json; then
+            git diff -- backend/package.json frontend/package.json
+            echo "::error::package.json was modified, refusing to commit."
+            exit 1
+          fi
+          for dir in backend frontend; do
+            # Fails if package.json and package-lock.json are out of sync.
+            (cd "$dir" && npm ci --dry-run --ignore-scripts --no-audit --no-fund > /dev/null)
+          done
 
-      - name: Commit and push updated lockfiles
+      - name: Summary (changed packages and remaining vulnerabilities)
+        if: always()
+        run: |
+          {
+            echo "## Lockfiles — mode \`${{ inputs.mode }}\` on \`${GITHUB_REF_NAME}\`"
+            for dir in backend frontend; do
+              echo ""
+              echo "### $dir"
+              git show "HEAD:$dir/package-lock.json" > "/tmp/$dir-old.json"
+              node -e '
+                const fs = require("fs")
+                const pk = f => JSON.parse(fs.readFileSync(f, "utf8")).packages || {}
+                const a = pk(process.argv[1]), b = pk(process.argv[2])
+                const name = p => p.replace(/^.*node_modules\//, "")
+                const rows = []
+                for (const p of new Set([...Object.keys(a), ...Object.keys(b)])) {
+                  if (!p) continue
+                  const x = a[p]?.version, y = b[p]?.version
+                  if (x !== y) rows.push(`| \`${name(p)}\` | ${x ?? "—"} | ${y ?? "—"} |`)
+                }
+                if (!rows.length) console.log("No version change.")
+                else console.log(["| Package | Before | After |", "|---|---|---|", ...rows.sort()].join("\n"))
+              ' "/tmp/$dir-old.json" "$dir/package-lock.json"
+              echo ""
+              echo "Remaining vulnerabilities (\`npm audit\`):"
+              echo '```'
+              (cd "$dir" && npm audit --package-lock-only 2>&1 | tail -n 25) || true
+              echo '```'
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Commit, push and start CI
         env:
           # The token is only exposed to this step, after npm has finished.
           GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
+          MODE: ${{ inputs.mode }}
+          RUN_CI: ${{ inputs.run_ci }}
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add backend/package-lock.json frontend/package-lock.json
@@ -49,8 +131,31 @@ jobs:
             echo "Lockfiles already up to date, nothing to commit."
             exit 0
           fi
-          git commit -m "chore: regenerate lockfiles"
+          changed=$(git diff --cached --name-only)
+          if [ "$MODE" = "audit-fix" ]; then
+            git commit -m "fix(deps): npm audit fix on lockfiles"
+          else
+            git commit -m "chore: regenerate lockfiles"
+          fi
           auth=$(printf 'x-access-token:%s' "$GITHUB_TOKEN" | base64 -w0)
           echo "::add-mask::$auth"
           git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" \
             push origin "HEAD:${GITHUB_REF_NAME}"
+
+          if [ "$RUN_CI" != "true" ]; then
+            echo "CI not requested."
+            exit 0
+          fi
+          # Same coverage as a normal push touching these files.
+          workflows="container-security.yml"
+          echo "$changed" | grep -q '^backend/'  && workflows="$workflows ci-backend.yml"
+          echo "$changed" | grep -q '^frontend/' && workflows="$workflows ci-frontend.yml"
+          for wf in $workflows; do
+            gh workflow run "$wf" --repo "$GITHUB_REPOSITORY" --ref "$GITHUB_REF_NAME"
+            echo "Started $wf on $GITHUB_REF_NAME"
+          done
+          {
+            echo ""
+            echo "### CI started on \`${GITHUB_REF_NAME}\`"
+            for wf in $workflows; do echo "- \`$wf\`"; done
+          } >> "$GITHUB_STEP_SUMMARY"

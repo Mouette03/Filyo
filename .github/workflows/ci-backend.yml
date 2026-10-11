@@ -11,6 +11,8 @@ on:
     paths:
       - 'backend/**'
       - '.github/workflows/ci-backend.yml'
+  # Manual run, also started by "Update lockfiles" after its bot commit.
+  workflow_dispatch:
 
 permissions:
   contents: read
