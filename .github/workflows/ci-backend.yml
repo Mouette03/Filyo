@@ -11,6 +11,8 @@ on:
     paths:
       - 'backend/**'
       - '.github/workflows/ci-backend.yml'
+  # Manual run, also started by "Update lockfiles" after its bot commit.
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -101,6 +103,10 @@ jobs:
       - name: Prisma and Nodemailer security smoke tests
         working-directory: backend
         run: node --test test/security-smoke.test.mjs
+
+      - name: Two-factor authentication tests (RFC 6238 vectors + end-to-end)
+        working-directory: backend
+        run: node --test test/two-factor-unit.test.mjs test/two-factor-e2e.test.mjs test/two-factor-cli.test.mjs
 
   zod-tests:
     name: 🧪 Zod schema tests

@@ -98,6 +98,15 @@ jobs:
             try { console.log("Users:", await prisma.user.count()); }
             finally { await prisma.$disconnect(); }
           '
+          # 2FA recovery command, as documented in the README (DATABASE_URL rebuilt by the command itself).
+          docker exec -u node filyo-smoke node dist/cli/two-factor.js list
+          if [ "$PROVIDER" = sqlite ]; then
+            # Must refuse to run as root with SQLite (database files would become root-owned).
+            if docker exec filyo-smoke node dist/cli/two-factor.js list; then
+              echo "two-factor CLI should refuse to run as root with SQLite" >&2
+              exit 1
+            fi
+          fi
           docker restart filyo-smoke
           wait_for_health
 

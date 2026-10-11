@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router'
-import { ArrowDownUp, Eye, EyeOff, LogIn, Mail, UserPlus } from 'lucide-react'
+import { ArrowDownUp, Eye, EyeOff, KeyRound, LogIn, Mail, ShieldCheck, UserPlus } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { login, getSettings, checkSetup, registerUser, forgotPassword } from '../api/client'
+import { login, getSettings, checkSetup, registerUser, forgotPassword, verifyTwoFactorLogin } from '../api/client'
+import type { LoginUser } from '../api/client'
 import { useAuthStore } from '../stores/useAuthStore'
 import { useAppSettingsStore } from '../stores/useAppSettingsStore'
 import { useT } from '../i18n'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 
-type Mode = 'login' | 'register' | 'forgot'
+type Mode = 'login' | 'register' | 'forgot' | 'twoFactor'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -23,6 +24,10 @@ export default function LoginPage() {
   const [forgotEmail, setForgotEmail] = useState('')
   const [loadingForgot, setLoadingForgot] = useState(false)
   const [forgotSent, setForgotSent] = useState(false)
+  // Deuxième étape de connexion (2FA)
+  const [challengeToken, setChallengeToken] = useState<string | null>(null)
+  const [twoFactorCode, setTwoFactorCode] = useState('')
+  const [useRecoveryCode, setUseRecoveryCode] = useState(false)
   const { setAuth, isAuthenticated } = useAuthStore()
   const { setSettings, settings } = useAppSettingsStore()
   const navigate = useNavigate()
@@ -41,6 +46,67 @@ export default function LoginPage() {
   const resetForm = () => {
     setEmail(''); setPassword(''); setConfirmPwd(''); setName(''); setShowPwd(false); setShowConfirmPwd(false)
     setForgotEmail(''); setForgotSent(false)
+    setChallengeToken(null); setTwoFactorCode(''); setUseRecoveryCode(false)
+  }
+
+  /** Session ouverte : configuration 2FA obligatoire d'abord, sinon accueil */
+  const finishLogin = (user: LoginUser, welcomeKey: string = 'toast.welcome') => {
+    setAuth(user)
+    if (user.twoFactorSetupRequired) {
+      toast(t('toast.twoFactorSetupRequired'))
+      navigate('/setup-2fa')
+    } else {
+      toast.success(t(welcomeKey, { name: user.name }))
+      navigate('/')
+    }
+  }
+
+  /**
+   * Connexion par mot de passe, puis selon la réponse :
+   * - session ouverte → finishLogin
+   * - 2FA activée sur le compte → étape « code » (aucune session tant que le code n'est pas validé)
+   */
+  const loginAndContinue = async (welcomeKey?: string) => {
+    const res = await login(email, password)
+    if (res.data.requiresTwoFactor) {
+      setChallengeToken(res.data.challengeToken)
+      setTwoFactorCode(''); setUseRecoveryCode(false)
+      setPassword(''); setConfirmPwd('')
+      setMode('twoFactor')
+      return
+    }
+    finishLogin(res.data.user, welcomeKey)
+  }
+
+  const handleTwoFactor = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!challengeToken || !twoFactorCode.trim()) return
+    setLoading(true)
+    try {
+      const res = await verifyTwoFactorLogin(challengeToken, twoFactorCode.trim())
+      if (res.data.method === 'recovery') {
+        toast(t('login.recoveryUsed', { count: String(res.data.recoveryCodesRemaining) }), { duration: 8000 })
+      }
+      finishLogin(res.data.user)
+    } catch (err: any) {
+      const code = err.response?.data?.code
+      if (code === 'INVALID_TWO_FACTOR_CODE') {
+        const remaining = err.response?.data?.attemptsRemaining
+        setTwoFactorCode('')
+        if (remaining === 0) {
+          toast.error(t('login.twoFactorExpired'))
+          resetForm(); setMode('login')
+        } else {
+          toast.error(t('login.invalidTwoFactorCode', { count: String(remaining ?? '') }))
+        }
+      } else if (code === 'TWO_FACTOR_CHALLENGE_EXPIRED') {
+        toast.error(t('login.twoFactorExpired'))
+        resetForm(); setMode('login')
+      } else if (err.response?.status === 429) toast.error(t('toast.tooManyRequests'))
+      else toast.error(t('common.error'))
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -48,10 +114,7 @@ export default function LoginPage() {
     if (!email || !password) return
     setLoading(true)
     try {
-      const res = await login(email, password)
-      setAuth(res.data.user)
-      toast.success(t('toast.welcome', { name: res.data.user.name }))
-      navigate('/')
+      await loginAndContinue()
     } catch (err: any) {
       const code = err.response?.data?.code
       if (code === 'INVALID_CREDENTIALS') toast.error(t('error.invalidCredentials'))
@@ -70,10 +133,7 @@ export default function LoginPage() {
     setLoading(true)
     try {
       await registerUser({ email, name, password })
-      const res = await login(email, password)
-      setAuth(res.data.user)
-      toast.success(t('toast.adminCreated', { name: res.data.user.name }))
-      navigate('/')
+      await loginAndContinue('toast.adminCreated')
     } catch (err: any) {
       const code = err.response?.data?.code
       if (code === 'EMAIL_TAKEN') toast.error(t('error.emailTaken'))
@@ -91,10 +151,8 @@ export default function LoginPage() {
     setLoading(true)
     try {
       await registerUser({ email, name, password })
-      const res = await login(email, password)
-      setAuth(res.data.user)
-      toast.success(t('toast.welcome', { name: res.data.user.name }))
-      navigate('/')
+      // Si la 2FA est obligatoire, la connexion renvoie vers /setup-2fa (finishLogin)
+      await loginAndContinue()
     } catch (err: any) {
       const code = err.response?.data?.code
       if (code === 'EMAIL_TAKEN') toast.error(t('error.emailTaken'))
@@ -146,7 +204,9 @@ export default function LoginPage() {
           ? t('login.subtitleSetup')
           : mode === 'register'
             ? t('login.subtitleRegister')
-            : t('login.subtitleLogin')}
+            : mode === 'twoFactor'
+              ? t('login.twoFactorTitle')
+              : t('login.subtitleLogin')}
       </p>
     </div>
   )
@@ -252,6 +312,47 @@ export default function LoginPage() {
             )}
           </div>
 
+        ) : mode === 'twoFactor' ? (
+          /* ── Connexion : deuxième étape (2FA) ── */
+          <form onSubmit={handleTwoFactor} className="card space-y-4">
+            <div className="flex items-center gap-2 text-sm">
+              {useRecoveryCode ? <KeyRound size={16} className="text-brand-400" /> : <ShieldCheck size={16} className="text-brand-400" />}
+              <p className="[color:var(--text-50)]">{useRecoveryCode ? t('login.recoveryHint') : t('login.twoFactorHint')}</p>
+            </div>
+            <div>
+              <label htmlFor="login-2fa-code" className="text-xs [color:var(--text-50)] mb-1.5 block font-medium uppercase tracking-wider">
+                {useRecoveryCode ? t('login.recoveryCodeLabel') : t('twofa.codeLabel')}
+              </label>
+              {useRecoveryCode ? (
+                <input key="recovery" id="login-2fa-code" name="recovery-code" type="text" value={twoFactorCode}
+                  onChange={e => setTwoFactorCode(e.target.value.toUpperCase())}
+                  autoComplete="off" autoCapitalize="characters" spellCheck={false} maxLength={16}
+                  placeholder="XXXXX-XXXXX" className="input text-center font-mono tracking-widest" autoFocus required />
+              ) : (
+                <input key="totp" id="login-2fa-code" name="one-time-code" type="text" value={twoFactorCode}
+                  onChange={e => setTwoFactorCode(e.target.value.replace(/[^\d\s]/g, ''))}
+                  inputMode="numeric" autoComplete="one-time-code" maxLength={7}
+                  placeholder="123456" className="input text-center font-mono tracking-[0.4em]" autoFocus required />
+              )}
+            </div>
+            <button type="submit" disabled={loading}
+              className="btn-primary w-full flex items-center justify-center gap-2 mt-2">
+              {loading
+                ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                : <ShieldCheck size={16} />}
+              {t('login.verifyBtn')}
+            </button>
+            <button type="button"
+              onClick={() => { setUseRecoveryCode(!useRecoveryCode); setTwoFactorCode('') }}
+              className="text-xs text-brand-400 hover:text-brand-300 transition-colors w-full text-center">
+              {useRecoveryCode ? t('login.useAuthenticatorCode') : t('login.useRecoveryCode')}
+            </button>
+            <button type="button" onClick={() => { resetForm(); setMode('login') }}
+              className="btn-secondary w-full flex items-center justify-center gap-2 text-sm">
+              <LogIn size={15} /> {t('login.backToLogin')}
+            </button>
+          </form>
+
         ) : mode === 'login' ? (
           /* ── Connexion ── */
           <form onSubmit={handleLogin} className="card space-y-4">
@@ -297,6 +398,12 @@ export default function LoginPage() {
         ) : (
           /* ── Inscription libre ── */
           <form onSubmit={handleRegister} className="card space-y-4">
+            {settings.twoFactorRequired && (
+              <div className="flex items-start gap-2 text-xs text-brand-400 bg-brand-500/10 border border-brand-500/20 rounded-lg px-3 py-2">
+                <ShieldCheck size={14} className="flex-shrink-0 mt-0.5" />
+                <span>{t('login.registerTwoFactorNotice')}</span>
+              </div>
+            )}
             <div>
               <label htmlFor="register-name" className="text-xs [color:var(--text-50)] mb-1.5 block font-medium uppercase tracking-wider">{t('login.fullName')}</label>
               <input id="register-name" name="name" type="text" value={name} onChange={e => setName(e.target.value)}

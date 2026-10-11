@@ -9,7 +9,7 @@ interface Props {
 }
 
 export default function ProtectedRoute({ children, adminOnly = false }: Props) {
-  const { isAuthenticated, isAdmin, setAuth } = useAuthStore()
+  const { isAuthenticated, isAdmin, setAuth, user } = useAuthStore()
   const [setupNeeded, setSetupNeeded] = useState<boolean | null>(null)
   const [authChecked, setAuthChecked] = useState(isAuthenticated)
 
@@ -49,6 +49,8 @@ export default function ProtectedRoute({ children, adminOnly = false }: Props) {
   if (setupNeeded) return <Navigate to="/login" replace />
 
   if (!isAuthenticated) return <Navigate to="/login" replace />
+  // 2FA obligatoire non configurée : seule la page de configuration est accessible
+  if (user?.twoFactorSetupRequired) return <Navigate to="/setup-2fa" replace />
   if (adminOnly && !isAdmin()) return <Navigate to="/" replace />
 
   return <>{children}</>

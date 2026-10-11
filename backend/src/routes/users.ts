@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify'
 import bcrypt from 'bcryptjs'
 import { prisma } from '../lib/prisma.js'
+import { resetUserTwoFactor } from '../lib/twoFactorReset.js'
 
 // Toutes ces routes nécessitent d'être connecté en tant qu'ADMIN
 export async function userRoutes(app: FastifyInstance) {
@@ -9,7 +10,7 @@ export async function userRoutes(app: FastifyInstance) {
   // GET /api/users
   app.get('/', adminOnly, async () => {
     const users = await prisma.user.findMany({
-      select: { id: true, email: true, name: true, role: true, active: true, createdAt: true, lastLogin: true, storageQuotaBytes: true },
+      select: { id: true, email: true, name: true, role: true, active: true, createdAt: true, lastLogin: true, storageQuotaBytes: true, twoFactorEnabled: true },
       orderBy: { createdAt: 'asc' }
     })
     const [filesRows, receivedRows] = await Promise.all([
@@ -68,7 +69,7 @@ export async function userRoutes(app: FastifyInstance) {
         : null
       const user = await prisma.user.create({
         data: { email, name, password: hashed, role: role === 'ADMIN' ? 'ADMIN' : 'USER', storageQuotaBytes },
-        select: { id: true, email: true, name: true, role: true, active: true, createdAt: true, storageQuotaBytes: true }
+        select: { id: true, email: true, name: true, role: true, active: true, createdAt: true, storageQuotaBytes: true, twoFactorEnabled: true }
       })
       req.log.info({ email, role: user.role }, 'User created by admin')
       return reply.code(201).send({ ...user, storageQuotaBytes: user.storageQuotaBytes?.toString() ?? null, storageUsedBytes: '0' })
@@ -110,19 +111,23 @@ export async function userRoutes(app: FastifyInstance) {
       if (email !== undefined) data.email = email
       if (role !== undefined) data.role = role === 'ADMIN' ? 'ADMIN' : 'USER'
       if (active !== undefined) data.active = active
-      if (password) data.password = await bcrypt.hash(password, 12)
+      if (password) {
+        data.password = await bcrypt.hash(password, 12)
+        // Nouveau mot de passe défini par l'admin : révoquer les sessions existantes du compte
+        data.sessionVersion = { increment: 1 }
+      }
       if (storageQuotaMB !== undefined) {
         data.storageQuotaBytes = storageQuotaMB != null && storageQuotaMB > 0
           ? BigInt(Math.round(storageQuotaMB * 1024 * 1024))
           : null
       }
 
-      let user: { id: string; email: string; name: string; role: string; active: boolean; createdAt: Date; storageQuotaBytes: bigint | null }
+      let user: { id: string; email: string; name: string; role: string; active: boolean; createdAt: Date; storageQuotaBytes: bigint | null; twoFactorEnabled: boolean }
       try {
         user = await prisma.user.update({
           where: { id: req.params.id },
           data,
-          select: { id: true, email: true, name: true, role: true, active: true, createdAt: true, storageQuotaBytes: true }
+          select: { id: true, email: true, name: true, role: true, active: true, createdAt: true, storageQuotaBytes: true, twoFactorEnabled: true }
         })
         req.log.info({ id: req.params.id }, 'User updated by admin')
       } catch (err: any) {
@@ -140,6 +145,20 @@ export async function userRoutes(app: FastifyInstance) {
       return { ...user, storageQuotaBytes: user.storageQuotaBytes?.toString() ?? null, storageUsedBytes }
     }
   )
+
+  // POST /api/users/:id/2fa/reset — réinitialiser la 2FA d'un utilisateur (téléphone perdu…)
+  // L'utilisateur devra la reconfigurer à sa prochaine connexion si elle est obligatoire.
+  app.post<{ Params: { id: string } }>('/:id/2fa/reset', adminOnly, async (req, reply) => {
+    if (req.user.id === req.params.id) {
+      // Pour son propre compte, passer par Mon profil (mot de passe + code exigés)
+      return reply.code(400).send({ code: 'CANNOT_RESET_OWN_TWO_FACTOR' })
+    }
+    const target = await prisma.user.findUnique({ where: { id: req.params.id }, select: { id: true } })
+    if (!target) return reply.code(404).send({ code: 'USER_NOT_FOUND' })
+    await resetUserTwoFactor(prisma, target.id)
+    req.log.warn({ adminId: req.user.id, userId: target.id }, 'Two-factor authentication reset by admin')
+    return { success: true }
+  })
 
   // DELETE /api/users/:id
   app.delete<{ Params: { id: string } }>('/:id', adminOnly, async (req, reply) => {

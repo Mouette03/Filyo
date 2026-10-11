@@ -13,6 +13,7 @@ import LoginPage from './pages/LoginPage'
 import UsersPage from './pages/UsersPage'
 import SettingsPage from './pages/SettingsPage'
 import ProfilePage from './pages/ProfilePage'
+import TwoFactorSetupPage from './pages/TwoFactorSetupPage'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 
@@ -68,6 +69,8 @@ export default function App() {
       <Routes>
         {/* Page de connexion */}
         <Route path="/login" element={<LoginPage />} />
+        {/* Configuration obligatoire de la 2FA (session limitée) */}
+        <Route path="/setup-2fa" element={<TwoFactorSetupPage />} />
 
         {/* Pages publiques sans layout */}
         <Route path="/s/:token" element={<SharePage />} />

@@ -39,6 +39,7 @@ export async function settingsRoutes(app: FastifyInstance) {
       uploaderEmailReq: s.uploaderEmailReq ?? 'optional',
       uploaderMsgReq: s.uploaderMsgReq ?? 'optional',
       allowRegistration: s.allowRegistration ?? false,
+      twoFactorRequired: s.twoFactorRequired ?? false,
       cleanupAfterDays: s.cleanupAfterDays ?? null,
       maxFileSizeBytes: s.maxFileSizeBytes ? s.maxFileSizeBytes.toString() : null,
       proxyUploadEnabled: s.proxyUploadEnabled ?? false,
@@ -135,6 +136,29 @@ export async function settingsRoutes(app: FastifyInstance) {
       })
       req.log.info({ allowRegistration }, 'Registration setting updated')
       return { allowRegistration: s.allowRegistration }
+    }
+  )
+
+  // PATCH /api/settings/two-factor — rendre la 2FA facultative ou obligatoire
+  app.patch<{ Body: { required: boolean } }>(
+    '/two-factor',
+    { onRequest: [app.authenticate, app.adminOnly] },
+    async (req, reply) => {
+      const { required } = req.body ?? ({} as { required: boolean })
+      if (typeof required !== 'boolean') return reply.code(400).send({ code: 'INVALID_VALUE' })
+      if (required) {
+        // L'administrateur doit avoir configuré sa propre 2FA avant de l'imposer,
+        // sinon il se retrouverait lui-même limité à la page de configuration.
+        const admin = await prisma.user.findUnique({ where: { id: req.user.id }, select: { twoFactorEnabled: true } })
+        if (!admin?.twoFactorEnabled) return reply.code(400).send({ code: 'ADMIN_TWO_FACTOR_REQUIRED_FIRST' })
+      }
+      const s = await prisma.appSettings.upsert({
+        where: { id: 'singleton' },
+        update: { twoFactorRequired: required },
+        create: { id: 'singleton', appName: 'Filyo', twoFactorRequired: required }
+      })
+      req.log.info({ twoFactorRequired: required }, 'Two-factor policy updated')
+      return { twoFactorRequired: s.twoFactorRequired }
     }
   )
 
