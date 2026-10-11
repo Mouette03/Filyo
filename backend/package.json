@@ -43,7 +43,7 @@
   },
   "overrides": {
     "@prisma/adapter-mariadb": {
-      "mariadb": "3.4.7"
+      "mariadb": "3.5.4"
     },
     "@prisma/config": {
       "deepmerge-ts": "8.0.2"
