@@ -594,4 +594,8 @@ export const deDE = {
   'confirm.resetTwoFactorMsg': "Seine Sitzungen werden beendet. Ist die 2FA verpflichtend, muss er sie neu einrichten.",
   'toast.twoFactorReset': "2FA zurückgesetzt",
   'toast.twoFactorSetupRequired': "Richten Sie die Zwei-Faktor-Authentifizierung ein, um fortzufahren",
+  'users.twoFactorLabel': "Zwei-Faktor-Authentifizierung",
+  'users.twoFactorSelfHint': "Verwalten Sie Ihre eigene 2FA unter Mein Profil.",
+  'users.resetTwoFactorHint': "Verwenden, wenn der Benutzer sein Telefon und seine Wiederherstellungscodes verloren hat.",
+  'users.twoFactorNotEnabledHint': "Der Benutzer hat die Zwei-Faktor-Authentifizierung nicht eingerichtet.",
 }

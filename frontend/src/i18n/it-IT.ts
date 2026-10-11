@@ -594,4 +594,8 @@ export const itIT = {
   'confirm.resetTwoFactorMsg': "Le sue sessioni verranno chiuse. Dovrà riconfigurare la 2FA se è obbligatoria.",
   'toast.twoFactorReset': "2FA reimpostata",
   'toast.twoFactorSetupRequired': "Configura l'autenticazione a due fattori per continuare",
+  'users.twoFactorLabel': "Autenticazione a due fattori",
+  'users.twoFactorSelfHint': "Gestisci la tua 2FA da Il mio profilo.",
+  'users.resetTwoFactorHint': "Da usare se l'utente ha perso il telefono e i codici di recupero.",
+  'users.twoFactorNotEnabledHint': "L'utente non ha configurato l'autenticazione a due fattori.",
 }

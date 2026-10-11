@@ -377,6 +377,29 @@ export default function UsersPage() {
                           </div>
                         </div>
                       </div>
+                      {/* Double authentification : état + réinitialisation (téléphone et codes de secours perdus) */}
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-3 py-3 px-4 bg-white/3 rounded-xl">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium flex flex-wrap items-center gap-2">
+                            {t('users.twoFactorLabel')}
+                            <span className={`badge ${u.twoFactorEnabled ? 'badge-green' : 'badge-orange'}`}>
+                              {u.twoFactorEnabled ? t('twofa.statusEnabled') : t('twofa.statusDisabled')}
+                            </span>
+                          </p>
+                          <p className="text-xs text-white/40 mt-0.5">
+                            {u.id === me?.id ? t('users.twoFactorSelfHint') : u.twoFactorEnabled ? t('users.resetTwoFactorHint') : t('users.twoFactorNotEnabledHint')}
+                          </p>
+                        </div>
+                        {u.id !== me?.id && u.twoFactorEnabled && (
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDialog({ title: t('confirm.resetTwoFactor'), message: t('confirm.resetTwoFactorMsg'), onConfirm: () => handleResetTwoFactor(u.id) })}
+                            className="btn-danger flex items-center justify-center gap-1.5 text-xs px-3 py-2 flex-shrink-0"
+                          >
+                            <ShieldOff size={12} /> {t('users.resetTwoFactor')}
+                          </button>
+                        )}
+                      </div>
                       <div className="flex gap-2">
                         <button onClick={() => saveEdit(u.id)} className="btn-primary flex items-center gap-1.5 py-2 px-4 text-sm">
                           <Check size={13} /> {t('common.save')}
@@ -387,67 +410,72 @@ export default function UsersPage() {
                       </div>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-xl bg-brand-500/15 flex items-center justify-center text-brand-400 font-bold flex-shrink-0">
-                        {u.name.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-semibold">{u.name}</span>
-                          <span className={`badge ${u.role === 'ADMIN' ? 'badge-blue' : 'badge-green'} flex items-center gap-1`}>
-                            {u.role === 'ADMIN' ? <ShieldCheck size={10} /> : <User size={10} />}
-                            {u.role === 'ADMIN' ? 'Admin' : t('role.user')}
-                          </span>
-                          {!u.active && <span className="badge badge-red">{t('common.inactive')}</span>}
-                          {u.id === me?.id && <span className="badge badge-orange">{t('common.you')}</span>}
-                          {u.twoFactorEnabled && (
-                            <span className="badge badge-green flex items-center gap-1" title={t('twofa.statusEnabled')}>
-                              <Lock size={10} />{t('users.twoFactorBadge')}
-                            </span>
-                          )}
+                    <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
+                      <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
+                        {/* Avatar aligné sur le nom */}
+                        <div className="w-10 h-10 rounded-xl bg-brand-500/15 flex items-center justify-center text-brand-400 font-bold flex-shrink-0">
+                          {u.name.charAt(0).toUpperCase()}
                         </div>
-                        <p className="text-xs text-white/40 mt-0.5">
-                          {u.email}
-                        </p>
-                        <p className="text-xs text-white/30 mt-0.5">
-                          {t('users.createdAt', { date: formatDate(u.createdAt) })}
-                          {u.lastLogin ? ` · ${t('users.lastLogin', { date: formatDate(u.lastLogin) })}` : ` · ${t('users.neverConnected')}`}
-                        </p>
-                        {(() => {
-                          const usedBytes = parseInt(u.storageUsedBytes || '0')
-                          const quotaBytes = u.storageQuotaBytes ? parseInt(u.storageQuotaBytes) : null
-                          if (quotaBytes === null || quotaBytes === 0) return (
-                            <p className="text-xs text-white/25 mt-0.5">{formatBytes(usedBytes)} · {t('users.quotaUnlimited')}</p>
-                          )
-                          const pct = Math.min(100, Math.round(usedBytes / quotaBytes * 100))
-                          return (
-                            <div className="mt-1.5 flex items-center gap-2">
-                              <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
-                                <div className={`h-full rounded-full transition-all ${pct >= 90 ? 'bg-red-500' : pct >= 70 ? 'bg-yellow-500' : 'bg-brand-500'}`} style={{ width: `${pct}%` }} />
+                        <div className="flex-1 min-w-0">
+                          {/* Nom puis e-mail, chacun sur sa ligne */}
+                          <p className="font-semibold truncate">{u.name}</p>
+                          <p className="text-xs text-white/40 truncate">{u.email}</p>
+                          {/* Badges toujours dans le même ordre : rôle · 2FA · inactif · vous */}
+                          <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                            <span className={`badge ${u.role === 'ADMIN' ? 'badge-blue' : 'badge-green'} flex items-center gap-1`}>
+                              {u.role === 'ADMIN' ? <ShieldCheck size={10} /> : <User size={10} />}
+                              {u.role === 'ADMIN' ? 'Admin' : t('role.user')}
+                            </span>
+                            {u.twoFactorEnabled && (
+                              <span className="badge badge-green flex items-center gap-1" title={t('twofa.statusEnabled')}>
+                                <Lock size={10} />{t('users.twoFactorBadge')}
+                              </span>
+                            )}
+                            {!u.active && <span className="badge badge-red">{t('common.inactive')}</span>}
+                            {u.id === me?.id && <span className="badge badge-orange">{t('common.you')}</span>}
+                          </div>
+                          {/* Dates sur deux lignes fixes */}
+                          <div className="mt-2 space-y-0.5 text-xs text-white/30">
+                            <p>{t('users.createdAt', { date: formatDate(u.createdAt) })}</p>
+                            <p>{u.lastLogin ? t('users.lastLogin', { date: formatDate(u.lastLogin) }) : t('users.neverConnected')}</p>
+                          </div>
+                          {(() => {
+                            const usedBytes = parseInt(u.storageUsedBytes || '0')
+                            const quotaBytes = u.storageQuotaBytes ? parseInt(u.storageQuotaBytes) : null
+                            if (quotaBytes === null || quotaBytes === 0) return (
+                              <p className="text-xs text-white/25 mt-1.5">{formatBytes(usedBytes)} · {t('users.quotaUnlimited')}</p>
+                            )
+                            const pct = Math.min(100, Math.round(usedBytes / quotaBytes * 100))
+                            return (
+                              <div className="mt-2 flex items-center gap-2">
+                                <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
+                                  <div className={`h-full rounded-full transition-all ${pct >= 90 ? 'bg-red-500' : pct >= 70 ? 'bg-yellow-500' : 'bg-brand-500'}`} style={{ width: `${pct}%` }} />
+                                </div>
+                                <span className="text-xs text-white/30 whitespace-nowrap">{t('users.quotaUsed', { used: formatBytes(usedBytes), quota: formatBytes(quotaBytes) })}</span>
                               </div>
-                              <span className="text-xs text-white/30 whitespace-nowrap">{t('users.quotaUsed', { used: formatBytes(usedBytes), quota: formatBytes(quotaBytes) })}</span>
-                            </div>
-                          )
-                        })()}
+                            )
+                          })()}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <button onClick={() => startEdit(u)} className="btn-secondary flex items-center gap-1.5 text-xs px-2.5 sm:px-3 py-2">
-                          <Pencil size={12} /><span className="hidden sm:inline">{t('common.edit')}</span>
+                      {/* Actions : barre en bas sur mobile, colonne fixe alignée en haut sur ordinateur.
+                          Toujours 2 emplacements (modifier, supprimer) pour garder les mêmes alignements. */}
+                      <div className="flex items-center justify-end gap-2 flex-shrink-0 border-t border-white/5 pt-3 sm:border-0 sm:pt-0">
+                        <button onClick={() => startEdit(u)} className="btn-secondary flex items-center gap-1.5 text-xs px-3 py-2">
+                          <Pencil size={12} /><span>{t('common.edit')}</span>
                         </button>
-                        {u.id !== me?.id && u.twoFactorEnabled && (
+                        {u.id !== me?.id ? (
                           <button
-                            onClick={() => setConfirmDialog({ title: t('confirm.resetTwoFactor'), message: t('confirm.resetTwoFactorMsg'), onConfirm: () => handleResetTwoFactor(u.id) })}
-                            className="btn-secondary flex items-center gap-1.5 text-xs px-2.5 py-2"
-                            title={t('users.resetTwoFactor')}
-                            aria-label={t('users.resetTwoFactor')}
+                            onClick={() => setConfirmDialog({ title: t('confirm.deleteUser'), message: t('confirm.irreversible'), onConfirm: () => handleDelete(u.id) })}
+                            className="btn-danger flex items-center gap-1 text-xs px-2.5 py-2"
+                            title={t('common.delete')}
+                            aria-label={t('common.delete')}
                           >
-                            <ShieldOff size={12} /><span className="hidden lg:inline">{t('users.resetTwoFactor')}</span>
-                          </button>
-                        )}
-                        {u.id !== me?.id && (
-                          <button onClick={() => setConfirmDialog({ title: t('confirm.deleteUser'), message: t('confirm.irreversible'), onConfirm: () => handleDelete(u.id) })} className="btn-danger flex items-center gap-1 text-xs px-2.5 py-2">
                             <Trash2 size={12} />
                           </button>
+                        ) : (
+                          <span className="btn-danger invisible flex items-center gap-1 text-xs px-2.5 py-2" aria-hidden="true">
+                            <Trash2 size={12} />
+                          </span>
                         )}
                       </div>
                     </div>

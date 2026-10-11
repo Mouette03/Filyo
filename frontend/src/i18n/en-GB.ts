@@ -594,4 +594,8 @@ export const enGB = {
   'confirm.resetTwoFactorMsg': "Their sessions will be closed. They will need to set up 2FA again if it is mandatory.",
   'toast.twoFactorReset': "2FA reset",
   'toast.twoFactorSetupRequired': "Set up two-factor authentication to continue",
+  'users.twoFactorLabel': "Two-factor authentication",
+  'users.twoFactorSelfHint': "Manage your own 2FA from My Profile.",
+  'users.resetTwoFactorHint': "Use this if the user has lost their phone and recovery codes.",
+  'users.twoFactorNotEnabledHint': "The user has not set up two-factor authentication.",
 }

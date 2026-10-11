@@ -594,4 +594,8 @@ export const frFR = {
   'confirm.resetTwoFactorMsg': "Ses sessions seront fermées. Il devra reconfigurer la 2FA si elle est obligatoire.",
   'toast.twoFactorReset': "2FA réinitialisée",
   'toast.twoFactorSetupRequired': "Configurez la double authentification pour continuer",
+  'users.twoFactorLabel': "Double authentification",
+  'users.twoFactorSelfHint': "Gérez votre propre 2FA depuis Mon profil.",
+  'users.resetTwoFactorHint': "À utiliser si l'utilisateur a perdu son téléphone et ses codes de secours.",
+  'users.twoFactorNotEnabledHint': "L'utilisateur n'a pas configuré la double authentification.",
 }

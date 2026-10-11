@@ -594,4 +594,8 @@ export const esES = {
   'confirm.resetTwoFactorMsg': "Se cerrarán sus sesiones. Deberá volver a configurar la 2FA si es obligatoria.",
   'toast.twoFactorReset': "2FA restablecida",
   'toast.twoFactorSetupRequired': "Configure la autenticación de dos factores para continuar",
+  'users.twoFactorLabel': "Autenticación de dos factores",
+  'users.twoFactorSelfHint': "Gestione su propia 2FA desde Mi perfil.",
+  'users.resetTwoFactorHint': "Úselo si el usuario ha perdido su teléfono y sus códigos de recuperación.",
+  'users.twoFactorNotEnabledHint': "El usuario no ha configurado la autenticación de dos factores.",
 }

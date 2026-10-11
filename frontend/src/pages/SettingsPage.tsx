@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { Settings, Upload, Trash2, Check, Type, Image, RefreshCw, Mail, Eye, EyeOff, Wifi, Globe, Users, Clock, ShieldCheck } from 'lucide-react'
+import { Settings, Upload, Trash2, Check, Type, Image, RefreshCw, Mail, Eye, EyeOff, Wifi, Globe, Users, Clock } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { updateAppName, uploadLogo, deleteLogo, getSmtpSettings, updateSmtpSettings, testSmtp, updateSiteUrl, updateUploaderFields, updateAllowRegistration, updateTwoFactorPolicy, updateCleanupSetting, updateMaxFileSize, updateProxyUpload } from '../api/client'
 import { useAppSettingsStore } from '../stores/useAppSettingsStore'
@@ -396,7 +396,7 @@ export default function SettingsPage() {
         </div>
         <div className="flex items-center justify-between py-3 px-4 bg-white/3 rounded-xl mt-3">
           <div className="min-w-0 mr-4">
-            <p className="text-sm font-medium flex items-center gap-1.5"><ShieldCheck size={14} className="text-brand-400" />{t('settings.twoFactorRequired')}</p>
+            <p className="text-sm font-medium">{t('settings.twoFactorRequired')}</p>
             <p className="text-xs text-white/40 mt-0.5">{t('settings.twoFactorRequiredHint')}</p>
           </div>
           <div className="flex items-center gap-2">
