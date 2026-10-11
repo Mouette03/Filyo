@@ -12,13 +12,6 @@ CREATE TABLE `User` (
     `storageQuotaBytes` BIGINT NULL,
     `resetToken` VARCHAR(191) NULL,
     `resetTokenExpiry` DATETIME(3) NULL,
-    `twoFactorEnabled` BOOLEAN NOT NULL DEFAULT false,
-    `twoFactorSecret` VARCHAR(191) NULL,
-    `twoFactorPendingSecret` VARCHAR(191) NULL,
-    `twoFactorPendingExpiry` DATETIME(3) NULL,
-    `twoFactorLastUsedStep` INTEGER NULL,
-    `twoFactorEnabledAt` DATETIME(3) NULL,
-    `sessionVersion` INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -37,7 +30,6 @@ CREATE TABLE `AppSettings` (
     `uploaderEmailReq` VARCHAR(191) NOT NULL DEFAULT 'optional',
     `uploaderMsgReq` VARCHAR(191) NOT NULL DEFAULT 'optional',
     `allowRegistration` BOOLEAN NOT NULL DEFAULT false,
-    `twoFactorRequired` BOOLEAN NOT NULL DEFAULT false,
     `cleanupAfterDays` INTEGER NULL,
     `maxFileSizeBytes` BIGINT NULL,
     `proxyUploadEnabled` BOOLEAN NOT NULL DEFAULT false,
@@ -111,28 +103,6 @@ CREATE TABLE `ReceivedFile` (
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-CREATE TABLE `TwoFactorRecoveryCode` (
-    `id` VARCHAR(191) NOT NULL,
-    `userId` VARCHAR(191) NOT NULL,
-    `codeHash` VARCHAR(191) NOT NULL,
-    `usedAt` DATETIME(3) NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    INDEX `TwoFactorRecoveryCode_userId_idx`(`userId`),
-    PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
-CREATE TABLE `TwoFactorChallenge` (
-    `id` VARCHAR(191) NOT NULL,
-    `tokenHash` VARCHAR(191) NOT NULL,
-    `userId` VARCHAR(191) NOT NULL,
-    `attempts` INTEGER NOT NULL DEFAULT 0,
-    `expiresAt` DATETIME(3) NOT NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    UNIQUE INDEX `TwoFactorChallenge_tokenHash_key`(`tokenHash`),
-    INDEX `TwoFactorChallenge_userId_idx`(`userId`),
-    PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
 CREATE UNIQUE INDEX `User_email_key` ON `User`(`email`);
 CREATE UNIQUE INDEX `Share_token_key` ON `Share`(`token`);
 CREATE UNIQUE INDEX `UploadRequest_token_key` ON `UploadRequest`(`token`);
@@ -149,8 +119,3 @@ ALTER TABLE `UploadRequest` ADD CONSTRAINT `UploadRequest_userId_fkey`
 ALTER TABLE `ReceivedFile` ADD CONSTRAINT `ReceivedFile_uploadRequestId_fkey`
     FOREIGN KEY (`uploadRequestId`) REFERENCES `UploadRequest`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
-ALTER TABLE `TwoFactorRecoveryCode` ADD CONSTRAINT `TwoFactorRecoveryCode_userId_fkey`
-    FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
-ALTER TABLE `TwoFactorChallenge` ADD CONSTRAINT `TwoFactorChallenge_userId_fkey`
-    FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
