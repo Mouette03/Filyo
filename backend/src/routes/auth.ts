@@ -10,6 +10,8 @@ import { getAppSettings } from '../lib/appSettings.js'
 import { createSmtpTransport } from '../lib/smtp.js'
 import { t, escapeHtml, normalizeLang } from '../lib/i18n/index.js'
 import { EMAIL_DARK_CSS, getEmailLogoSrc } from '../lib/emailHelpers.js'
+import { setSessionCookie, isTwoFactorRequired, checkSession } from '../lib/session.js'
+import { CHALLENGE_TTL_MS, generateChallengeToken, hashChallengeToken } from '../lib/twoFactor.js'
 
 const AVATAR_DIR = path.join(UPLOAD_DIR, 'avatars')
 
@@ -70,22 +72,36 @@ export async function authRoutes(app: FastifyInstance) {
       return reply.code(401).send({ code: 'INVALID_CREDENTIALS' })
     }
 
+    // 2FA activée : aucune session n'est créée tant que le second facteur n'est pas validé.
+    // Le client reçoit un challenge opaque, à usage unique, valable 5 minutes (voir /api/auth/2fa/verify).
+    if (user.twoFactorEnabled) {
+      const challengeToken = generateChallengeToken()
+      await prisma.twoFactorChallenge.deleteMany({
+        where: { OR: [{ userId: user.id }, { expiresAt: { lt: new Date() } }] }
+      })
+      await prisma.twoFactorChallenge.create({
+        data: {
+          userId: user.id,
+          tokenHash: hashChallengeToken(challengeToken),
+          expiresAt: new Date(Date.now() + CHALLENGE_TTL_MS)
+        }
+      })
+      req.log.info({ userId: user.id, ip: req.ip }, 'Password accepted, two-factor code required')
+      return reply.send({ requiresTwoFactor: true, challengeToken })
+    }
+
     await prisma.user.update({ where: { id: user.id }, data: { lastLogin: new Date() } })
     req.log.info({ userId: user.id, email: user.email, ip: req.ip }, 'Login successful')
 
-    const token = app.jwt.sign(
-      { id: user.id, email: user.email, name: user.name, role: user.role },
-      { expiresIn: '7d' }
-    )
-
-    reply.setCookie('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-      path: '/',
-      maxAge: 60 * 60 * 24 * 7 // 7 jours
+    // 2FA obligatoire mais pas encore configurée : la session est limitée à la page de configuration
+    const twoFactorSetupRequired = await isTwoFactorRequired()
+    setSessionCookie(app, reply, user)
+    return reply.send({
+      user: {
+        id: user.id, email: user.email, name: user.name, role: user.role, avatarUrl: user.avatarUrl ?? null,
+        twoFactorEnabled: false, twoFactorSetupRequired
+      }
     })
-    return reply.send({ user: { id: user.id, email: user.email, name: user.name, role: user.role, avatarUrl: user.avatarUrl ?? null } })
   })
 
   // POST /api/auth/logout
@@ -95,13 +111,14 @@ export async function authRoutes(app: FastifyInstance) {
   })
 
   // GET /api/auth/me — vérifier le token
-  app.get('/me', { onRequest: [app.authenticate] }, async (req) => {
+  app.get('/me', { onRequest: [app.authenticate], config: { allowTwoFactorSetup: true } }, async (req) => {
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
-      select: { id: true, email: true, name: true, role: true, avatarUrl: true, createdAt: true, lastLogin: true, cleanupAfterDays: true }
+      select: { id: true, email: true, name: true, role: true, avatarUrl: true, createdAt: true, lastLogin: true, cleanupAfterDays: true, twoFactorEnabled: true }
     })
     if (!user) throw { statusCode: 401, code: 'NOT_FOUND' }
-    return user
+    const twoFactorRequired = await isTwoFactorRequired()
+    return { ...user, twoFactorRequired, twoFactorSetupRequired: twoFactorRequired && !user.twoFactorEnabled }
   })
 
   // POST /api/auth/register — premier utilisateur OU admin connecté
@@ -116,11 +133,9 @@ export async function authRoutes(app: FastifyInstance) {
     // Si ce n'est pas le premier, vérifier que l'appelant est admin OU que l'inscription libre est activée
     let isAdmin = false
     if (count > 0) {
-      try {
-        await req.jwtVerify()
-        const caller = req.user
-        if (caller.role === 'ADMIN') isAdmin = true
-      } catch { /* non authentifié */ }
+      // Session complète requise (sessionVersion à jour, 2FA configurée si elle est obligatoire)
+      const session = await checkSession(req)
+      if (session.ok && !session.setupRequired && session.user.role === 'ADMIN') isAdmin = true
 
       if (!isAdmin) {
         const settings = await getAppSettings()
@@ -154,7 +169,8 @@ export async function authRoutes(app: FastifyInstance) {
     })
 
     req.log.info({ email: user.email, role: user.role, ip: req.ip }, 'User created')
-    return reply.code(201).send(user)
+    // twoFactorRequired : le client sait qu'une configuration 2FA suivra la première connexion
+    return reply.code(201).send({ ...user, twoFactorRequired: await isTwoFactorRequired() })
   })
 
   // POST /api/auth/avatar — uploader son avatar
@@ -245,7 +261,12 @@ export async function authRoutes(app: FastifyInstance) {
     const ok = await bcrypt.compare(currentPassword, user.password)
     if (!ok) return reply.code(400).send({ code: 'WRONG_PASSWORD' })
     const hashed = await bcrypt.hash(newPassword, 12)
-    await prisma.user.update({ where: { id: req.user.id }, data: { password: hashed } })
+    // Révoquer les autres sessions, puis renouveler celle de l'appareil courant
+    const updated = await prisma.user.update({
+      where: { id: req.user.id },
+      data: { password: hashed, sessionVersion: { increment: 1 } }
+    })
+    setSessionCookie(app, reply, updated)
     req.log.info({ userId: req.user.id }, 'Password changed')
     return { success: true }
   })
@@ -386,10 +407,15 @@ export async function authRoutes(app: FastifyInstance) {
     if (!user) return reply.code(400).send({ code: 'INVALID_RESET_TOKEN' })
 
     const hashed = await bcrypt.hash(password, 12)
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { password: hashed, resetToken: null, resetTokenExpiry: null }
-    })
+    // La réinitialisation du mot de passe ne désactive PAS la 2FA (récupération distincte).
+    // Elle révoque les sessions ouvertes et les connexions en attente du second facteur.
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: user.id },
+        data: { password: hashed, resetToken: null, resetTokenExpiry: null, sessionVersion: { increment: 1 } }
+      }),
+      prisma.twoFactorChallenge.deleteMany({ where: { userId: user.id } })
+    ])
     req.log.info({ userId: user.id, ip: req.ip }, 'Password reset')
     return reply.send({ success: true })
   })

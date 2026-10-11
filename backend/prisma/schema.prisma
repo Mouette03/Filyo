@@ -24,8 +24,43 @@ model User {
   storageQuotaBytes  BigInt?       // null=illimité
   resetToken         String?
   resetTokenExpiry   DateTime?
+  // ── Authentification à deux facteurs (TOTP) ──
+  twoFactorEnabled        Boolean   @default(false)
+  twoFactorSecret         String?   // secret TOTP chiffré (AES-256-GCM, préfixe "enc:")
+  twoFactorPendingSecret  String?   // secret en cours d'enrôlement (chiffré), non encore validé
+  twoFactorPendingExpiry  DateTime?
+  twoFactorLastUsedStep   Int?      // dernière période TOTP acceptée (anti-rejeu)
+  twoFactorEnabledAt      DateTime?
+  sessionVersion          Int       @default(0) // incrémenté pour invalider les sessions existantes
   files          File[]
   uploadRequests UploadRequest[]
+  recoveryCodes      TwoFactorRecoveryCode[]
+  twoFactorChallenges TwoFactorChallenge[]
+}
+
+// Codes de secours 2FA : empreintes HMAC uniquement, usage unique
+model TwoFactorRecoveryCode {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash  String
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+// Connexion en attente du deuxième facteur (mot de passe déjà validé)
+model TwoFactorChallenge {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attempts  Int      @default(0)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 model AppSettings {
@@ -43,6 +78,7 @@ model AppSettings {
   uploaderEmailReq  String   @default("optional")
   uploaderMsgReq    String   @default("optional")
   allowRegistration Boolean  @default(false)
+  twoFactorRequired Boolean  @default(false) // 2FA obligatoire pour tous les comptes
   cleanupAfterDays  Int?     // max autorisé : null=désactivé, 0=dès expiration, N=N jours max après expiration
   maxFileSizeBytes  BigInt?  // null=illimité
   proxyUploadEnabled   Boolean  @default(false)  // mode upload proxy-compatible (chunking TUS côté client)

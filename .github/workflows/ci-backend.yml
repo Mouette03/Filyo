@@ -102,6 +102,10 @@ jobs:
         working-directory: backend
         run: node --test test/security-smoke.test.mjs
 
+      - name: Two-factor authentication tests (RFC 6238 vectors + end-to-end)
+        working-directory: backend
+        run: node --test test/two-factor-unit.test.mjs test/two-factor-e2e.test.mjs
+
   zod-tests:
     name: 🧪 Zod schema tests
     runs-on: ubuntu-latest

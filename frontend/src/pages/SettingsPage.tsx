@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
-import { Settings, Upload, Trash2, Check, Type, Image, RefreshCw, Mail, Eye, EyeOff, Wifi, Globe, Users, Clock } from 'lucide-react'
+import { Settings, Upload, Trash2, Check, Type, Image, RefreshCw, Mail, Eye, EyeOff, Wifi, Globe, Users, Clock, ShieldCheck } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { updateAppName, uploadLogo, deleteLogo, getSmtpSettings, updateSmtpSettings, testSmtp, updateSiteUrl, updateUploaderFields, updateAllowRegistration, updateCleanupSetting, updateMaxFileSize, updateProxyUpload } from '../api/client'
+import { updateAppName, uploadLogo, deleteLogo, getSmtpSettings, updateSmtpSettings, testSmtp, updateSiteUrl, updateUploaderFields, updateAllowRegistration, updateTwoFactorPolicy, updateCleanupSetting, updateMaxFileSize, updateProxyUpload } from '../api/client'
 import { useAppSettingsStore } from '../stores/useAppSettingsStore'
 import { useT } from '../i18n'
 import type { FieldReq } from '../types/common'
@@ -53,6 +53,26 @@ export default function SettingsPage() {
   const [allowRegistration, setAllowRegistration] = useState(settings.allowRegistration)
   const [savingRegistration, setSavingRegistration] = useState(false)
   useEffect(() => { setAllowRegistration(settings.allowRegistration) }, [settings.allowRegistration])
+
+  // Double authentification : facultative / obligatoire
+  const [twoFactorRequired, setTwoFactorRequired] = useState(settings.twoFactorRequired ?? false)
+  const [savingTwoFactor, setSavingTwoFactor] = useState(false)
+  useEffect(() => { setTwoFactorRequired(settings.twoFactorRequired ?? false) }, [settings.twoFactorRequired])
+
+  const handleToggleTwoFactor = async () => {
+    const next = !twoFactorRequired
+    setSavingTwoFactor(true)
+    try {
+      await updateTwoFactorPolicy(next)
+      setTwoFactorRequired(next)
+      setSettings({ twoFactorRequired: next })
+      toast.success(next ? t('settings.twoFactorRequiredEnabled') : t('settings.twoFactorRequiredDisabled'))
+    } catch (err: any) {
+      if (err.response?.data?.code === 'ADMIN_TWO_FACTOR_REQUIRED_FIRST') toast.error(t('settings.twoFactorAdminFirst'), { duration: 6000 })
+      else toast.error(t('toast.saveError'))
+    }
+    setSavingTwoFactor(false)
+  }
 
   // Nettoyage automatique
   const [cleanupAfterDays, setCleanupAfterDays] = useState<number | null>(settings.cleanupAfterDays)
@@ -372,6 +392,26 @@ export default function SettingsPage() {
             >
               <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${allowRegistration ? 'translate-x-6' : 'translate-x-1'}`} />
             </div>
+          </div>
+        </div>
+        <div className="flex items-center justify-between py-3 px-4 bg-white/3 rounded-xl mt-3">
+          <div className="min-w-0 mr-4">
+            <p className="text-sm font-medium flex items-center gap-1.5"><ShieldCheck size={14} className="text-brand-400" />{t('settings.twoFactorRequired')}</p>
+            <p className="text-xs text-white/40 mt-0.5">{t('settings.twoFactorRequiredHint')}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {savingTwoFactor && <div className="w-4 h-4 border-2 border-brand-500/30 border-t-brand-500 rounded-full animate-spin" />}
+            <button
+              type="button"
+              role="switch"
+              aria-checked={twoFactorRequired}
+              aria-label={t('settings.twoFactorRequired')}
+              disabled={savingTwoFactor}
+              onClick={handleToggleTwoFactor}
+              className={`w-11 h-6 rounded-full cursor-pointer transition-colors relative flex-shrink-0 ${twoFactorRequired ? 'bg-brand-500' : 'bg-white/20'}`}
+            >
+              <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${twoFactorRequired ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
           </div>
         </div>
       </div>

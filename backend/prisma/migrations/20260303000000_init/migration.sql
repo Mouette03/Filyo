@@ -12,7 +12,14 @@ CREATE TABLE "User" (
     "cleanupAfterDays" INTEGER,
     "storageQuotaBytes" BIGINT,
     "resetToken" TEXT,
-    "resetTokenExpiry" DATETIME
+    "resetTokenExpiry" DATETIME,
+    "twoFactorEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "twoFactorSecret" TEXT,
+    "twoFactorPendingSecret" TEXT,
+    "twoFactorPendingExpiry" DATETIME,
+    "twoFactorLastUsedStep" INTEGER,
+    "twoFactorEnabledAt" DATETIME,
+    "sessionVersion" INTEGER NOT NULL DEFAULT 0
 );
 
 -- CreateTable
@@ -31,6 +38,7 @@ CREATE TABLE "AppSettings" (
     "uploaderEmailReq" TEXT NOT NULL DEFAULT 'optional',
     "uploaderMsgReq" TEXT NOT NULL DEFAULT 'optional',
     "allowRegistration" BOOLEAN NOT NULL DEFAULT false,
+    "twoFactorRequired" BOOLEAN NOT NULL DEFAULT false,
     "cleanupAfterDays" INTEGER,
     "maxFileSizeBytes" BIGINT,
     "proxyUploadEnabled" BOOLEAN NOT NULL DEFAULT false,
@@ -106,6 +114,36 @@ CREATE TABLE "ReceivedFile" (
     "uploadedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "ReceivedFile_uploadRequestId_fkey" FOREIGN KEY ("uploadRequestId") REFERENCES "UploadRequest" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
+
+-- CreateTable
+CREATE TABLE "TwoFactorRecoveryCode" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "userId" TEXT NOT NULL,
+    "codeHash" TEXT NOT NULL,
+    "usedAt" DATETIME,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "TwoFactorRecoveryCode_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE "TwoFactorChallenge" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "tokenHash" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "attempts" INTEGER NOT NULL DEFAULT 0,
+    "expiresAt" DATETIME NOT NULL,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "TwoFactorChallenge_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- CreateIndex
+CREATE INDEX "TwoFactorRecoveryCode_userId_idx" ON "TwoFactorRecoveryCode"("userId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "TwoFactorChallenge_tokenHash_key" ON "TwoFactorChallenge"("tokenHash");
+
+-- CreateIndex
+CREATE INDEX "TwoFactorChallenge_userId_idx" ON "TwoFactorChallenge"("userId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");

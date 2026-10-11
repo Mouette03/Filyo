@@ -15,6 +15,7 @@ services:
       NODE_ENV: production
       TRUST_PROXY: ${TRUST_PROXY:-false}
       JWT_SECRET: ${JWT_SECRET}
+      TWO_FACTOR_ENCRYPTION_KEY: ${TWO_FACTOR_ENCRYPTION_KEY:-}
       LOG_LEVEL: ${LOG_LEVEL:-info}
     volumes:
       - ${DATA_PATH:-./data}:/data

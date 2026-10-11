@@ -9,12 +9,13 @@ import helmet from '@fastify/helmet'
 import path from 'path'
 import { existsSync, readFileSync } from 'fs'
 import { readFile } from 'fs/promises'
-import { prisma } from './lib/prisma.js'
+import { checkSession } from './lib/session.js'
 import { fileRoutes } from './routes/files.js'
 import { shareRoutes } from './routes/shares.js'
 import { uploadRequestRoutes } from './routes/uploadRequests.js'
 import { adminRoutes } from './routes/admin.js'
 import { authRoutes } from './routes/auth.js'
+import { twoFactorRoutes } from './routes/twoFactor.js'
 import { userRoutes } from './routes/users.js'
 import { settingsRoutes } from './routes/settings.js'
 import { runScheduledCleanup, cleanupExpiredTusUploads } from './lib/cleanup.js'
@@ -64,17 +65,18 @@ const app = Fastify({
 // ── Décorateurs d'authentification ──────────────────────────────────────────
 app.decorate('authenticate', async function (req: FastifyRequest, reply: FastifyReply) {
   try {
-    await req.jwtVerify()
-    // Vérifier que l'utilisateur existe toujours en base (protège contre tokens d'anciennes instances)
-    const user = await prisma.user.findUnique({
-      where: { id: req.user.id },
-      select: { id: true, active: true, role: true }
-    })
-    if (!user || !user.active) {
+    // Vérifie le JWT, l'existence et l'activité du compte, ainsi que sessionVersion
+    // (protège contre les tokens d'anciennes instances et les sessions révoquées)
+    const session = await checkSession(req)
+    if (!session.ok) {
       return reply.code(401).send({ code: 'INVALID_TOKEN' })
     }
     // Rafraîchir le rôle depuis la DB pour éviter des tokens avec des rôles obsolètes
-    req.user.role = user.role
+    req.user.role = session.user.role
+    // 2FA obligatoire mais pas encore configurée : seules les routes d'enrôlement sont accessibles
+    if (session.setupRequired && !req.routeOptions.config?.allowTwoFactorSetup) {
+      return reply.code(403).send({ code: 'TWO_FACTOR_SETUP_REQUIRED' })
+    }
   } catch {
     return reply.code(401).send({ code: 'INVALID_TOKEN' })
   }
@@ -167,6 +169,7 @@ async function bootstrap() {
 
   // ── Routes ──
   await app.register(authRoutes,          { prefix: '/api/auth' })
+  await app.register(twoFactorRoutes,     { prefix: '/api/auth/2fa' })
   await app.register(userRoutes,          { prefix: '/api/users' })
   await app.register(settingsRoutes,      { prefix: '/api/settings' })
   await app.register(fileRoutes,          { prefix: '/api/files' })

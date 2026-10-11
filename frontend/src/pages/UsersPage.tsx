@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Users, Plus, Trash2, Pencil, Check, X, ShieldCheck, User, Files, FolderInput, ChevronDown } from 'lucide-react'
+import { Users, Plus, Trash2, Pencil, Check, X, ShieldCheck, ShieldOff, User, Files, FolderInput, ChevronDown, Lock } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { listUsers, createUser, updateUser, deleteUser, getAllFilesAdmin, getAllUploadRequestsAdmin, deleteFile, deleteUploadRequest } from '../api/client'
+import { listUsers, createUser, updateUser, deleteUser, resetUserTwoFactor, getAllFilesAdmin, getAllUploadRequestsAdmin, deleteFile, deleteUploadRequest } from '../api/client'
 import { formatDate, formatBytes, getFileIcon } from '../lib/utils'
 import { useAuthStore } from '../stores/useAuthStore'
 import { useT } from '../i18n'
@@ -11,6 +11,7 @@ interface UserItem {
   id: string; name: string; email: string; role: string
   active: boolean; createdAt: string; lastLogin: string | null
   storageQuotaBytes: string | null; storageUsedBytes: string
+  twoFactorEnabled?: boolean
 }
 
 interface AdminFile {
@@ -159,6 +160,18 @@ export default function UsersPage() {
       await deleteUser(id)
       setUsers(prev => prev.filter(u => u.id !== id))
       toast.success(t('toast.userDeleted'))
+    } catch (err: any) {
+      const code = err.response?.data?.code
+      if (code === 'USER_NOT_FOUND') toast.error(t('error.userNotFound'))
+      else toast.error(t('common.error'))
+    }
+  }
+
+  const handleResetTwoFactor = async (id: string) => {
+    try {
+      await resetUserTwoFactor(id)
+      setUsers(prev => prev.map(u => u.id === id ? { ...u, twoFactorEnabled: false } : u))
+      toast.success(t('toast.twoFactorReset'))
     } catch (err: any) {
       const code = err.response?.data?.code
       if (code === 'USER_NOT_FOUND') toast.error(t('error.userNotFound'))
@@ -387,6 +400,11 @@ export default function UsersPage() {
                           </span>
                           {!u.active && <span className="badge badge-red">{t('common.inactive')}</span>}
                           {u.id === me?.id && <span className="badge badge-orange">{t('common.you')}</span>}
+                          {u.twoFactorEnabled && (
+                            <span className="badge badge-green flex items-center gap-1" title={t('twofa.statusEnabled')}>
+                              <Lock size={10} />{t('users.twoFactorBadge')}
+                            </span>
+                          )}
                         </div>
                         <p className="text-xs text-white/40 mt-0.5">
                           {u.email}
@@ -416,6 +434,16 @@ export default function UsersPage() {
                         <button onClick={() => startEdit(u)} className="btn-secondary flex items-center gap-1.5 text-xs px-2.5 sm:px-3 py-2">
                           <Pencil size={12} /><span className="hidden sm:inline">{t('common.edit')}</span>
                         </button>
+                        {u.id !== me?.id && u.twoFactorEnabled && (
+                          <button
+                            onClick={() => setConfirmDialog({ title: t('confirm.resetTwoFactor'), message: t('confirm.resetTwoFactorMsg'), onConfirm: () => handleResetTwoFactor(u.id) })}
+                            className="btn-secondary flex items-center gap-1.5 text-xs px-2.5 py-2"
+                            title={t('users.resetTwoFactor')}
+                            aria-label={t('users.resetTwoFactor')}
+                          >
+                            <ShieldOff size={12} /><span className="hidden lg:inline">{t('users.resetTwoFactor')}</span>
+                          </button>
+                        )}
                         {u.id !== me?.id && (
                           <button onClick={() => setConfirmDialog({ title: t('confirm.deleteUser'), message: t('confirm.irreversible'), onConfirm: () => handleDelete(u.id) })} className="btn-danger flex items-center gap-1 text-xs px-2.5 py-2">
                             <Trash2 size={12} />

@@ -69,6 +69,7 @@
 | **Docker** | Multi-arch images (amd64 + arm64), SQLite and MariaDB variants |
 | **Per-user storage quota** | Admin can set a storage limit per user (MB/GB); enforced on upload to prevent disk saturation |
 | **Encrypted SMTP password** | SMTP password stored encrypted in the database (AES-256-GCM, key derived from `JWT_SECRET`) |
+| **Two-factor authentication** | TOTP (authenticator app) + single-use recovery codes, configured in *My Profile → Security*; admin can make it optional or mandatory, including for self-registered accounts; admin reset for lost devices |
 
 ---
 
@@ -117,6 +118,7 @@ labels:
 | Variable | Default | Description |
 |---|---|---|
 | `JWT_SECRET` | *required, no default* | **Required — must be set before first launch.** Also used as the AES-256-GCM encryption key for the SMTP password stored in the database. |
+| `TWO_FACTOR_ENCRYPTION_KEY` | *empty → falls back to `JWT_SECRET`* | AES-256-GCM key used to encrypt TOTP secrets in the database (`openssl rand -hex 32`). **Back it up and never change it**: without it, 2FA users can no longer log in until an admin resets their 2FA. |
 | `PORT` | `3001` | Host port exposed by the container (internal port is always 3001) |
 | `DATA_PATH` | `./data` | Data folder (database + uploads) |
 | `LOG_LEVEL` | `info` | Minimum log level (Pino). The app emits `debug`, `info`, `warn`, `error`. Use `debug` for verbose output, `warn` for quiet, `silent` to disable all logs. |
@@ -297,6 +299,7 @@ Application de partage de fichiers **auto-hébergée**, sans stockage S3. Design
 | **Docker** | Multi-arch (amd64/arm64), SQLite + MariaDB |
 | **Quota stockage par utilisateur** | L'administrateur peut définir une limite de stockage par utilisateur (MB/GB) ; appliquée lors des uploads pour éviter la saturation du disque |
 | **Chiffrement mot de passe SMTP** | Mot de passe SMTP chiffré en base (AES-256-GCM, clé dérivée de `JWT_SECRET`) |
+| **Double authentification (2FA)** | TOTP (application d'authentification) + codes de secours à usage unique, dans *Mon profil → Sécurité* ; l'admin la rend facultative ou obligatoire, y compris pour l'auto-inscription ; réinitialisation par l'admin en cas de perte du téléphone |
 
 ---
 
@@ -339,6 +342,7 @@ labels:
 | Variable | Défaut | Description |
 |---|---|---|
 | `JWT_SECRET` | *obligatoire, aucun défaut* | **Obligatoire — à renseigner avant le premier lancement.** Sert aussi de clé AES-256-GCM pour chiffrer le mot de passe SMTP stocké en base. |
+| `TWO_FACTOR_ENCRYPTION_KEY` | *vide → `JWT_SECRET` utilisé* | Clé AES-256-GCM de chiffrement des secrets TOTP en base (`openssl rand -hex 32`). **À sauvegarder et ne jamais changer** : sans elle, les comptes 2FA ne peuvent plus se connecter tant qu'un admin n'a pas réinitialisé leur 2FA. |
 | `PORT` | `3001` | Port exposé sur l'hôte (le conteneur interne tourne toujours sur 3001) |
 | `DATA_PATH` | `./data` | Dossier données (base de données + uploads) |
 | `LOG_LEVEL` | `info` | Seuil minimum de log (Pino). Le code émet `debug`, `info`, `warn`, `error`. Utiliser `debug` pour plus de verbosité, `warn` pour le silence relatif, `silent` pour tout désactiver. |
