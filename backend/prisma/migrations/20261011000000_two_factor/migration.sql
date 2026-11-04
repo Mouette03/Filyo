@@ -8,6 +8,8 @@ ALTER TABLE "User" ADD COLUMN "twoFactorPendingExpiry" DATETIME;
 ALTER TABLE "User" ADD COLUMN "twoFactorLastUsedStep" INTEGER;
 ALTER TABLE "User" ADD COLUMN "twoFactorEnabledAt" DATETIME;
 ALTER TABLE "User" ADD COLUMN "sessionVersion" INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "User" ADD COLUMN "twoFactorFailedAttempts" INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "User" ADD COLUMN "twoFactorLockedUntil" DATETIME;
 
 -- AlterTable
 ALTER TABLE "AppSettings" ADD COLUMN "twoFactorRequired" BOOLEAN NOT NULL DEFAULT false;

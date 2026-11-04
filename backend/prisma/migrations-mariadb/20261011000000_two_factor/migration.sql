@@ -9,6 +9,10 @@ ALTER TABLE `User`
     ADD COLUMN `twoFactorEnabledAt` DATETIME(3) NULL,
     ADD COLUMN `sessionVersion` INTEGER NOT NULL DEFAULT 0;
 
+ALTER TABLE `User`
+    ADD COLUMN `twoFactorFailedAttempts` INTEGER NOT NULL DEFAULT 0,
+    ADD COLUMN `twoFactorLockedUntil` DATETIME(3) NULL;
+
 ALTER TABLE `AppSettings`
     ADD COLUMN `twoFactorRequired` BOOLEAN NOT NULL DEFAULT false;
 
