@@ -37,7 +37,8 @@ jobs:
           MARIADB_ROOT_PASSWORD: ci-root-only
           MARIADB_DATABASE: filyo
           MARIADB_USER: filyo
-          MARIADB_PASSWORD: ci-filyo-only
+          # Caractères réservés dans les URL : vérifie l'encodage de DB_USER/DB_PASSWORD
+          MARIADB_PASSWORD: 'ci-filyo:p@ss/w#rd?%'
         ports:
           - 3306:3306
         options: >-
@@ -73,7 +74,7 @@ jobs:
           set -euo pipefail
           db_args=()
           if [ "$PROVIDER" = mariadb ]; then
-            db_args=(-e DB_HOST=127.0.0.1 -e DB_USER=filyo -e DB_PASSWORD=ci-filyo-only -e DB_NAME=filyo)
+            db_args=(-e DB_HOST=127.0.0.1 -e DB_USER=filyo -e 'DB_PASSWORD=ci-filyo:p@ss/w#rd?%' -e DB_NAME=filyo)
           fi
           docker run -d --name filyo-smoke --network host \
             -e JWT_SECRET=ci-only-not-a-real-secret-32-characters \
@@ -91,9 +92,9 @@ jobs:
           wait_for_health
           docker exec filyo-smoke gosu node node --input-type=module -e '
             // DATABASE_URL is set by entrypoint.sh, not in docker exec sessions.
-            process.env.DATABASE_URL = process.env.DB_HOST
-              ? "mysql://filyo:ci-filyo-only@127.0.0.1:3306/filyo"
-              : "file:/data/filyo.db";
+            // Same resolution as entrypoint.sh (DB_USER/DB_PASSWORD URL-encoded).
+            const { resolveDatabaseUrl } = await import("./dist/lib/databaseUrl.js");
+            process.env.DATABASE_URL = resolveDatabaseUrl();
             const { prisma } = await import("./dist/lib/prisma.js");
             try { console.log("Users:", await prisma.user.count()); }
             finally { await prisma.$disconnect(); }

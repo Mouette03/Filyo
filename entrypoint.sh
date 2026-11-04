@@ -1,13 +1,12 @@
 #!/bin/sh
 set -e
 
-# Reconstruction DATABASE_URL selon le mode
+# Reconstruction DATABASE_URL selon le mode (MariaDB si DB_HOST, sinon SQLite).
+# Calculée par dist/lib/databaseUrl.js, comme la commande de secours 2FA : DB_USER et
+# DB_PASSWORD sont encodés, les caractères @ : / # ? % ne cassent donc plus l'URL.
 if [ -z "$DATABASE_URL" ]; then
-  if [ -n "$DB_HOST" ]; then
-    export DATABASE_URL="mysql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT:-3306}/${DB_NAME}?connection_limit=10&connect_timeout=10&pool_timeout=20&socket_timeout=60"
-  else
-    export DATABASE_URL="file:/data/filyo.db"
-  fi
+  DATABASE_URL="$(node /app/dist/lib/databaseUrl.js)"
+  export DATABASE_URL
 fi
 
 # Fix permissions sur le volume data

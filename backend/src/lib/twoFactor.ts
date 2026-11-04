@@ -20,6 +20,16 @@ export const RECOVERY_CODE_COUNT = 10
 export const CHALLENGE_TTL_MS = 5 * 60 * 1000
 /** Nombre maximal de codes erronés par challenge */
 export const CHALLENGE_MAX_ATTEMPTS = 5
+/** Codes erronés tolérés par compte, tous challenges confondus, avant blocage temporaire */
+export const ACCOUNT_MAX_FAILED_ATTEMPTS = 10
+/** Durée du blocage de la connexion 2FA d'un compte après trop de codes erronés */
+export const ACCOUNT_LOCK_MS = 15 * 60 * 1000
+
+/** Secondes restantes avant la fin du blocage 2FA d'un compte, ou 0 s'il n'est pas bloqué. */
+export function twoFactorLockRemainingSeconds(lockedUntil: Date | null | undefined, now = new Date()): number {
+  if (!lockedUntil) return 0
+  return Math.max(0, Math.ceil((lockedUntil.getTime() - now.getTime()) / 1000))
+}
 /** Durée de vie d'un enrôlement en attente (QR code affiché, premier code non encore saisi) */
 export const PENDING_SETUP_TTL_MS = 10 * 60 * 1000
 

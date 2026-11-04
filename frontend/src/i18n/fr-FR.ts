@@ -598,4 +598,7 @@ export const frFR = {
   'users.twoFactorSelfHint': "Gérez votre propre 2FA depuis Mon profil.",
   'users.resetTwoFactorHint': "À utiliser si l'utilisateur a perdu son téléphone et ses codes de secours.",
   'users.twoFactorNotEnabledHint': "L'utilisateur n'a pas configuré la double authentification.",
+  'twofa.statusLoadError': "Impossible de charger l'état de la double authentification.",
+  'login.twoFactorLocked': "Trop de codes incorrects. Connexion bloquée pendant {{minutes}} min.",
+  'common.retry': "Réessayer",
 }

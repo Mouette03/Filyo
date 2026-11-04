@@ -92,8 +92,13 @@ jobs:
             for dir in backend frontend; do
               echo ""
               echo "### $dir"
-              git show "HEAD:$dir/package-lock.json" > "/tmp/$dir-old.json"
-              node -e '
+              # Ne jamais interrompre le résumé : un lockfile absent ou invalide est signalé
+              # ici, et l'échec d'origine reste visible dans l'étape concernée.
+              if ! git show "HEAD:$dir/package-lock.json" > "/tmp/$dir-old.json" 2>/dev/null; then
+                echo "Previous lockfile not found in HEAD: no comparison."
+              elif [ ! -f "$dir/package-lock.json" ]; then
+                echo "Lockfile missing after the update step: no comparison."
+              elif ! node -e '
                 const fs = require("fs")
                 const pk = f => JSON.parse(fs.readFileSync(f, "utf8")).packages || {}
                 const a = pk(process.argv[1]), b = pk(process.argv[2])
@@ -106,7 +111,9 @@ jobs:
                 }
                 if (!rows.length) console.log("No version change.")
                 else console.log(["| Package | Before | After |", "|---|---|---|", ...rows.sort()].join("\n"))
-              ' "/tmp/$dir-old.json" "$dir/package-lock.json"
+              ' "/tmp/$dir-old.json" "$dir/package-lock.json"; then
+                echo "Could not compare lockfiles (invalid JSON?)."
+              fi
               echo ""
               echo "Remaining vulnerabilities (\`npm audit\`):"
               echo '```'

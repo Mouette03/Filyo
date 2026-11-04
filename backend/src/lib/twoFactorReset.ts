@@ -3,6 +3,7 @@ import type { PrismaClient } from '../generated/prisma/client.js'
 /**
  * Désactive la 2FA d'un utilisateur et supprime tout ce qui y est lié :
  * secret, enrôlement en attente, codes de secours, connexions en attente.
+ * Lève aussi un éventuel blocage après trop de codes erronés.
  * Les sessions ouvertes sont révoquées (sessionVersion + 1).
  * Utilisé par la route admin et par la commande de secours (src/cli/two-factor.ts).
  */
@@ -17,6 +18,8 @@ export async function resetUserTwoFactor(prisma: PrismaClient, userId: string): 
         twoFactorPendingExpiry: null,
         twoFactorLastUsedStep: null,
         twoFactorEnabledAt: null,
+        twoFactorFailedAttempts: 0,
+        twoFactorLockedUntil: null,
         sessionVersion: { increment: 1 }
       }
     }),

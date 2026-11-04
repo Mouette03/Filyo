@@ -598,4 +598,7 @@ export const itIT = {
   'users.twoFactorSelfHint': "Gestisci la tua 2FA da Il mio profilo.",
   'users.resetTwoFactorHint': "Da usare se l'utente ha perso il telefono e i codici di recupero.",
   'users.twoFactorNotEnabledHint': "L'utente non ha configurato l'autenticazione a due fattori.",
+  'twofa.statusLoadError': "Impossibile caricare lo stato dell'autenticazione a due fattori.",
+  'login.twoFactorLocked': "Troppi codici errati. Accesso bloccato per {{minutes}} min.",
+  'common.retry': "Riprova",
 }

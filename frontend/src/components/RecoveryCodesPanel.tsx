@@ -42,8 +42,14 @@ export default function RecoveryCodesPanel({ codes, onDone }: Props) {
     const a = document.createElement('a')
     a.href = url
     a.download = `${(settings.appName || 'filyo').toLowerCase().replace(/[^a-z0-9]+/g, '-')}-recovery-codes.txt`
+    a.rel = 'noopener'
+    // Certains navigateurs (Firefox, Safari) exigent que le lien soit dans le document
+    document.body.appendChild(a)
     a.click()
-    URL.revokeObjectURL(url)
+    a.remove()
+    // Libérer l'URL seulement après le démarrage du téléchargement : la révoquer tout de suite
+    // peut l'interrompre selon le navigateur.
+    setTimeout(() => URL.revokeObjectURL(url), 60_000)
   }
 
   return (

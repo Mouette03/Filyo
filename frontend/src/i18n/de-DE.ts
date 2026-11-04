@@ -598,4 +598,7 @@ export const deDE = {
   'users.twoFactorSelfHint': "Verwalten Sie Ihre eigene 2FA unter Mein Profil.",
   'users.resetTwoFactorHint': "Verwenden, wenn der Benutzer sein Telefon und seine Wiederherstellungscodes verloren hat.",
   'users.twoFactorNotEnabledHint': "Der Benutzer hat die Zwei-Faktor-Authentifizierung nicht eingerichtet.",
+  'twofa.statusLoadError': "Der Status der Zwei-Faktor-Authentifizierung konnte nicht geladen werden.",
+  'login.twoFactorLocked': "Zu viele falsche Codes. Anmeldung für {{minutes}} Min. gesperrt.",
+  'common.retry': "Erneut versuchen",
 }

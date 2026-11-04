@@ -11,7 +11,7 @@ import { createSmtpTransport } from '../lib/smtp.js'
 import { t, escapeHtml, normalizeLang } from '../lib/i18n/index.js'
 import { EMAIL_DARK_CSS, getEmailLogoSrc } from '../lib/emailHelpers.js'
 import { setSessionCookie, isTwoFactorRequired, checkSession } from '../lib/session.js'
-import { CHALLENGE_TTL_MS, generateChallengeToken, hashChallengeToken } from '../lib/twoFactor.js'
+import { CHALLENGE_TTL_MS, generateChallengeToken, hashChallengeToken, twoFactorLockRemainingSeconds } from '../lib/twoFactor.js'
 
 const AVATAR_DIR = path.join(UPLOAD_DIR, 'avatars')
 
@@ -75,6 +75,15 @@ export async function authRoutes(app: FastifyInstance) {
     // 2FA activée : aucune session n'est créée tant que le second facteur n'est pas validé.
     // Le client reçoit un challenge opaque, à usage unique, valable 5 minutes (voir /api/auth/2fa/verify).
     if (user.twoFactorEnabled) {
+      // Compte bloqué après trop de codes erronés : pas de nouveau challenge (le blocage ne peut
+      // pas être contourné en redemandant une connexion). Seul quelqu'un qui connaît le mot de
+      // passe voit ce message.
+      const lockedFor = twoFactorLockRemainingSeconds(user.twoFactorLockedUntil)
+      if (lockedFor > 0) {
+        req.log.warn({ userId: user.id, ip: req.ip, retryAfterSeconds: lockedFor }, 'Login refused: two-factor locked')
+        return reply.code(429).header('retry-after', String(lockedFor))
+          .send({ code: 'TWO_FACTOR_LOCKED', retryAfterSeconds: lockedFor })
+      }
       const challengeToken = generateChallengeToken()
       await prisma.twoFactorChallenge.deleteMany({
         where: { OR: [{ userId: user.id }, { expiresAt: { lt: new Date() } }] }

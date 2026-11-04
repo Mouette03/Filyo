@@ -26,9 +26,18 @@ export default function TwoFactorProfileSection() {
   const [loading, setLoading] = useState(false)
   const [newCodes, setNewCodes] = useState<string[]>([])
 
-  const load = () => getTwoFactorStatus()
-    .then(res => setStatus(res.data))
-    .catch(() => setStatus(null))
+  // Chargement, erreur et résultat sont distincts : un échec n'affiche plus un chargement sans fin
+  const [loadError, setLoadError] = useState(false)
+  const [statusLoading, setStatusLoading] = useState(false)
+
+  const load = () => {
+    setStatusLoading(true)
+    setLoadError(false)
+    return getTwoFactorStatus()
+      .then(res => setStatus(res.data))
+      .catch(() => { setStatus(null); setLoadError(true) })
+      .finally(() => setStatusLoading(false))
+  }
 
   useEffect(() => { load() }, [])
 
@@ -84,8 +93,15 @@ export default function TwoFactorProfileSection() {
         </div>
       )}
 
-      {!status ? (
-        <RefreshCw size={16} className="text-brand-400 animate-spin" />
+      {!status && loadError && !statusLoading ? (
+        <div role="alert" className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg px-3 py-2 text-xs text-red-400 bg-red-500/10 border border-red-500/20">
+          <span className="flex-1">{t('twofa.statusLoadError')}</span>
+          <button type="button" onClick={() => { load() }} className="btn-secondary flex items-center justify-center gap-1.5 text-xs px-3 py-1.5">
+            <RefreshCw size={12} /> {t('common.retry')}
+          </button>
+        </div>
+      ) : !status ? (
+        <RefreshCw size={16} className="text-brand-400 animate-spin" aria-label={t('common.loading')} />
       ) : view === 'setup' ? (
         <TwoFactorSetup onDone={backToStatus} onCancel={backToStatus} />
       ) : view === 'codes' ? (

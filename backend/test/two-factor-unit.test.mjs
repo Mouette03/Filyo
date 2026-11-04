@@ -70,3 +70,17 @@ test('Secrets are encrypted at rest and otpauth URL is well formed', async () =>
   const svg = await tf.buildQrSvg(url)
   assert.match(svg, /^<svg/)
 })
+
+test('MariaDB URL: DB_USER/DB_PASSWORD are URL-encoded', async () => {
+  const { buildMariaDbUrl, resolveDatabaseUrl } = await import('../dist/lib/databaseUrl.js')
+  const env = { DB_HOST: 'db', DB_USER: 'us:er@x', DB_PASSWORD: 'p@ss:w/rd#?%& é', DB_NAME: 'filyo' }
+  const u = new URL(buildMariaDbUrl(env))
+  assert.equal(u.protocol, 'mysql:')
+  assert.equal(u.hostname, 'db')
+  assert.equal(u.port, '3306')
+  assert.equal(u.pathname, '/filyo')
+  assert.equal(decodeURIComponent(u.username), env.DB_USER)
+  assert.equal(decodeURIComponent(u.password), env.DB_PASSWORD)
+  assert.equal(new URL(buildMariaDbUrl({ ...env, DB_PORT: '3307' })).port, '3307')
+  assert.equal(resolveDatabaseUrl({ DATABASE_URL: 'file:/data/x.db', ...env }), 'file:/data/x.db', 'explicit DATABASE_URL wins')
+})

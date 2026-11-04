@@ -598,4 +598,7 @@ export const enGB = {
   'users.twoFactorSelfHint': "Manage your own 2FA from My Profile.",
   'users.resetTwoFactorHint': "Use this if the user has lost their phone and recovery codes.",
   'users.twoFactorNotEnabledHint': "The user has not set up two-factor authentication.",
+  'twofa.statusLoadError': "Could not load the two-factor authentication status.",
+  'login.twoFactorLocked': "Too many incorrect codes. Sign-in is locked for {{minutes}} min.",
+  'common.retry': "Retry",
 }

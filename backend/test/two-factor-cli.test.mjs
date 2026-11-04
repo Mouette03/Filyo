@@ -133,6 +133,27 @@ test('Two-factor recovery command (dist/cli/two-factor.js)', { timeout: 120_000 
     r = await call('POST', '/auth/login', { body: { email: 'Admin@Example.com', password: 'admin-password' } })
     assert.equal(r.data.user.twoFactorSetupRequired, false)
 
+    // ── E-mail ambigu (même adresse, casse différente) : aucune modification ──
+    // Possible avec MariaDB (collation insensible) ou des comptes anciens en SQLite.
+    await db.user.create({ data: { email: 'admin@example.COM', name: 'Doublon', password: 'x', twoFactorEnabled: true, twoFactorSecret: 'enc:dummy' } })
+    r = cli('reset', 'ADMIN@example.com', '--yes')
+    assert.equal(r.code, 1, r.out)
+    assert.match(r.out, /Several accounts/)
+    assert.match(r.out, /Admin@Example\.com/)
+    assert.match(r.out, /admin@example\.COM/)
+    assert.equal((await db.user.findUnique({ where: { email: 'admin@example.COM' } })).twoFactorEnabled, true, 'nothing changed when ambiguous')
+    assert.equal(cli('reset', 'admin@example.COM', '--yes').code, 0, 'exact email still works')
+    assert.equal((await db.user.findUnique({ where: { email: 'admin@example.COM' } })).twoFactorEnabled, false)
+
+    // ── list : verrou 2FA affiché, levé par reset ──
+    const locked = new Date(Date.now() + 10 * 60_000)
+    await db.user.update({ where: { email: 'admin@example.COM' }, data: { twoFactorEnabled: true, twoFactorSecret: 'enc:dummy', twoFactorLockedUntil: locked, twoFactorFailedAttempts: 3 } })
+    assert.match(cli('list').out, new RegExp(`locked until ${locked.toISOString().replace(/[.]/g, '\\.')}`))
+    assert.equal(cli('reset', 'admin@example.COM', '--yes').code, 0)
+    const unlocked = await db.user.findUnique({ where: { email: 'admin@example.COM' } })
+    assert.equal(unlocked.twoFactorLockedUntil, null)
+    assert.equal(unlocked.twoFactorFailedAttempts, 0)
+
     // ── Refus en root avec SQLite (sauf --allow-root) ──
     if (process.getuid?.() === 0) {
       const res = spawnSync(process.execPath, ['dist/cli/two-factor.js', 'list'], { cwd: backend, env: { ...process.env, DATABASE_URL: url }, encoding: 'utf8' })

@@ -1,11 +1,14 @@
-import { FastifyInstance } from 'fastify'
+import { FastifyInstance, FastifyReply } from 'fastify'
 import bcrypt from 'bcryptjs'
 import { z } from 'zod'
 import { prisma } from '../lib/prisma.js'
 import { getAppSettings } from '../lib/appSettings.js'
 import { setSessionCookie, isTwoFactorRequired } from '../lib/session.js'
 import {
+  ACCOUNT_LOCK_MS,
+  ACCOUNT_MAX_FAILED_ATTEMPTS,
   CHALLENGE_MAX_ATTEMPTS,
+  twoFactorLockRemainingSeconds,
   PENDING_SETUP_TTL_MS,
   buildOtpauthUrl,
   buildQrSvg,
@@ -72,6 +75,12 @@ async function consumeSecondFactor(user: SecondFactorUser, rawCode: string): Pro
   return used.count === 1 ? 'recovery' : null
 }
 
+/** Réponse « connexion 2FA bloquée » : 429 + délai avant de pouvoir réessayer. */
+function sendLocked(reply: FastifyReply, retryAfterSeconds: number) {
+  return reply.code(429).header('retry-after', String(retryAfterSeconds))
+    .send({ code: 'TWO_FACTOR_LOCKED', retryAfterSeconds })
+}
+
 function publicUser(u: { id: string; email: string; name: string; role: string; avatarUrl: string | null; twoFactorEnabled: boolean }) {
   return { id: u.id, email: u.email, name: u.name, role: u.role, avatarUrl: u.avatarUrl ?? null, twoFactorEnabled: u.twoFactorEnabled }
 }
@@ -118,11 +127,41 @@ export async function twoFactorRoutes(app: FastifyInstance) {
       return reply.code(401).send({ code: 'TWO_FACTOR_CHALLENGE_EXPIRED' })
     }
 
+    // Compte bloqué (trop de codes erronés) : aucun code n'est vérifié pendant le blocage
+    const lockedFor = twoFactorLockRemainingSeconds(user.twoFactorLockedUntil, now)
+    if (lockedFor > 0) {
+      await prisma.twoFactorChallenge.deleteMany({ where: { userId: user.id } })
+      return sendLocked(reply, lockedFor)
+    }
+
     const method = await consumeSecondFactor(user, body.data.code)
     if (!method) {
+      // Compteur par compte, persistant : il n'est pas remis à zéro par un nouveau challenge
+      const { twoFactorFailedAttempts: failures } = await prisma.user.update({
+        where: { id: user.id },
+        data: { twoFactorFailedAttempts: { increment: 1 } },
+        select: { twoFactorFailedAttempts: true }
+      })
+      if (failures >= ACCOUNT_MAX_FAILED_ATTEMPTS) {
+        const lockedUntil = new Date(Date.now() + ACCOUNT_LOCK_MS)
+        // Une seule requête pose le blocage, même en cas d'essais parallèles
+        const locked = await prisma.user.updateMany({
+          where: {
+            id: user.id,
+            twoFactorFailedAttempts: { gte: ACCOUNT_MAX_FAILED_ATTEMPTS },
+            OR: [{ twoFactorLockedUntil: null }, { twoFactorLockedUntil: { lte: new Date() } }]
+          },
+          data: { twoFactorLockedUntil: lockedUntil, twoFactorFailedAttempts: 0 }
+        })
+        await prisma.twoFactorChallenge.deleteMany({ where: { userId: user.id } })
+        if (locked.count === 1) {
+          req.log.warn({ userId: user.id, email: user.email, ip: req.ip, failures, lockedUntil }, 'Two-factor login locked: too many invalid codes')
+        }
+        return sendLocked(reply, Math.ceil(ACCOUNT_LOCK_MS / 1000))
+      }
       const attemptsRemaining = Math.max(0, CHALLENGE_MAX_ATTEMPTS - (challenge.attempts + 1))
       if (attemptsRemaining === 0) await prisma.twoFactorChallenge.deleteMany({ where: { id: challenge.id } })
-      req.log.warn({ userId: user.id, ip: req.ip, attemptsRemaining }, 'Two-factor verification failed')
+      req.log.warn({ userId: user.id, ip: req.ip, attemptsRemaining, accountFailures: failures }, 'Two-factor verification failed')
       return reply.code(401).send({ code: 'INVALID_TWO_FACTOR_CODE', attemptsRemaining })
     }
 
@@ -130,7 +169,10 @@ export async function twoFactorRoutes(app: FastifyInstance) {
     const consumed = await prisma.twoFactorChallenge.deleteMany({ where: { id: challenge.id } })
     if (consumed.count !== 1) return reply.code(401).send({ code: 'TWO_FACTOR_CHALLENGE_EXPIRED' })
 
-    await prisma.user.update({ where: { id: user.id }, data: { lastLogin: new Date() } })
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { lastLogin: new Date(), twoFactorFailedAttempts: 0, twoFactorLockedUntil: null }
+    })
     const recoveryCodesRemaining = await prisma.twoFactorRecoveryCode.count({ where: { userId: user.id, usedAt: null } })
     req.log.info({ userId: user.id, email: user.email, ip: req.ip, method }, 'Login successful (2FA)')
 

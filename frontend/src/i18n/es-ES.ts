@@ -598,4 +598,7 @@ export const esES = {
   'users.twoFactorSelfHint': "Gestione su propia 2FA desde Mi perfil.",
   'users.resetTwoFactorHint': "Úselo si el usuario ha perdido su teléfono y sus códigos de recuperación.",
   'users.twoFactorNotEnabledHint': "El usuario no ha configurado la autenticación de dos factores.",
+  'twofa.statusLoadError': "No se pudo cargar el estado de la autenticación de dos factores.",
+  'login.twoFactorLocked': "Demasiados códigos incorrectos. Inicio de sesión bloqueado durante {{minutes}} min.",
+  'common.retry': "Reintentar",
 }

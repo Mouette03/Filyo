@@ -32,6 +32,8 @@ model User {
   twoFactorLastUsedStep   Int?      // dernière période TOTP acceptée (anti-rejeu)
   twoFactorEnabledAt      DateTime?
   sessionVersion          Int       @default(0) // incrémenté pour invalider les sessions existantes
+  twoFactorFailedAttempts Int       @default(0) // codes 2FA erronés à la connexion, tous challenges confondus
+  twoFactorLockedUntil    DateTime? // connexion 2FA bloquée jusqu'à cette date (trop de codes erronés)
   files          File[]
   uploadRequests UploadRequest[]
   recoveryCodes      TwoFactorRecoveryCode[]

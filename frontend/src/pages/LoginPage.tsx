@@ -78,6 +78,12 @@ export default function LoginPage() {
     finishLogin(res.data.user, welcomeKey)
   }
 
+  /** Compte bloqué après trop de codes erronés : délai arrondi à la minute supérieure */
+  const toastTwoFactorLocked = (retryAfterSeconds?: number) => {
+    const minutes = Math.max(1, Math.ceil((Number(retryAfterSeconds) || 900) / 60))
+    toast.error(t('login.twoFactorLocked', { minutes: String(minutes) }), { duration: 8000 })
+  }
+
   const handleTwoFactor = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!challengeToken || !twoFactorCode.trim()) return
@@ -102,6 +108,10 @@ export default function LoginPage() {
       } else if (code === 'TWO_FACTOR_CHALLENGE_EXPIRED') {
         toast.error(t('login.twoFactorExpired'))
         resetForm(); setMode('login')
+      } else if (code === 'TWO_FACTOR_LOCKED') {
+        toastTwoFactorLocked(err.response?.data?.retryAfterSeconds)
+        setTwoFactorCode('')
+        resetForm(); setMode('login')
       } else if (err.response?.status === 429) toast.error(t('toast.tooManyRequests'))
       else toast.error(t('common.error'))
     } finally {
@@ -118,6 +128,7 @@ export default function LoginPage() {
     } catch (err: any) {
       const code = err.response?.data?.code
       if (code === 'INVALID_CREDENTIALS') toast.error(t('error.invalidCredentials'))
+      else if (code === 'TWO_FACTOR_LOCKED') toastTwoFactorLocked(err.response?.data?.retryAfterSeconds)
       else if (err.response?.status === 429) toast.error(t('toast.tooManyRequests'))
       else toast.error(t('toast.incorrectCredentials'))
     } finally {

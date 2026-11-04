@@ -136,6 +136,8 @@ labels:
 **SQLite** : `DATABASE_URL=file:/data/filyo.db`
 **MariaDB** : `DB_HOST`, `DB_USER`, `DB_PASSWORD`, etc.
 
+`DB_USER` and `DB_PASSWORD` are URL-encoded automatically: special characters (`@ : / # ? %`…) are supported, so use the raw password. If you had percent-encoded it yourself as a workaround, put back the plain value. A `DATABASE_URL` you set yourself is used as is and must stay encoded.
+
 ---
 
 ## 🛡️ Note on `TRUST_PROXY`
@@ -161,6 +163,8 @@ If you run Filyo behind a reverse proxy (Traefik, Nginx, etc.), set `TRUST_PROXY
 
 Each user enables 2FA in **My Profile → Security** (authenticator app + 10 single-use recovery codes). An admin can make it **mandatory** in **Settings → Authentication**, and reset a user's 2FA from **Users → Edit** if they lost their phone.
 
+**Lockout:** after **10 invalid 2FA codes** on the same account (all logins and IP addresses combined), 2FA login for that account is blocked for **15 minutes**, even with the right password. A successful login resets the counter. An admin reset (**Users → Edit**) or the `reset` command below lifts the lock immediately.
+
 If **no admin can log in anymore** (phone and recovery codes lost), use the recovery command inside the container:
 
 ```bash
@@ -174,10 +178,11 @@ docker exec -it -u node filyo node dist/cli/two-factor.js reset admin@example.co
 docker exec -it -u node filyo node dist/cli/two-factor.js disable-policy
 ```
 
-- `reset` deletes the account's TOTP secret, recovery codes and pending logins, and signs out all its sessions. **The password is not changed.** If 2FA is still mandatory, the user logs in with their password and must set up 2FA again before using the app.
+- `reset` deletes the account's TOTP secret, recovery codes and pending logins, lifts any 2FA lockout, and signs out all its sessions. **The password is not changed.** If 2FA is still mandatory, the user logs in with their password and must set up 2FA again before using the app.
 - `-u node` runs the command as the application user. With SQLite it is required (the command refuses to run as root) so the database files keep the right owner.
 - Without an interactive terminal (scripts, `docker exec` without `-it`), add `--yes` to confirm.
 - Works with SQLite and MariaDB: the command connects to the same database as the application (`DATABASE_URL` or `DB_*` variables). Replace `filyo` with your container name if different.
+- If several accounts match the email with different letter case, the command changes nothing and lists them: run it again with the exact email.
 - `node dist/cli/two-factor.js --help` shows all options.
 
 ---
@@ -385,6 +390,8 @@ labels:
 **SQLite** : `DATABASE_URL=file:/data/filyo.db`
 **MariaDB** : `DB_HOST`, `DB_USER`, `DB_PASSWORD`, etc.
 
+`DB_USER` et `DB_PASSWORD` sont encodés automatiquement dans l'URL : les caractères spéciaux (`@ : / # ? %`…) sont acceptés, indiquez le mot de passe tel quel. Si vous l'aviez encodé vous-même (`%40`…) pour contourner le problème, remettez la valeur en clair. Un `DATABASE_URL` défini manuellement est utilisé tel quel et doit rester encodé.
+
 ## 🛡️ Note sur `TRUST_PROXY`
 
 Si vous exécutez Filyo derrière un reverse proxy (Traefik, Nginx, etc.), définissez `TRUST_PROXY` dans votre environnement ou votre fichier `.env` afin que le serveur Fastify fasse confiance aux en-têtes `X-Forwarded-*` et récupère correctement l'adresse IP du client, le protocole et l'origine. Les fichiers Docker fournis définissent par défaut `TRUST_PROXY=false`.
@@ -408,6 +415,8 @@ Si vous exécutez Filyo derrière un reverse proxy (Traefik, Nginx, etc.), défi
 
 Chaque utilisateur active la 2FA dans **Mon profil → Sécurité** (application d'authentification + 10 codes de secours à usage unique). Un admin peut la rendre **obligatoire** dans **Réglages → Authentification**, et réinitialiser la 2FA d'un utilisateur depuis **Utilisateurs → Modifier** s'il a perdu son téléphone.
 
+**Blocage :** après **10 codes 2FA erronés** sur un même compte (toutes connexions et adresses IP confondues), la connexion 2FA de ce compte est bloquée **15 minutes**, même avec le bon mot de passe. Une connexion réussie remet le compteur à zéro. Une réinitialisation par un admin (**Utilisateurs → Modifier**) ou la commande `reset` ci-dessous lève le blocage immédiatement.
+
 Si **plus aucun admin ne peut se connecter** (téléphone et codes de secours perdus), utilisez la commande de secours dans le conteneur :
 
 ```bash
@@ -421,10 +430,11 @@ docker exec -it -u node filyo node dist/cli/two-factor.js reset admin@example.co
 docker exec -it -u node filyo node dist/cli/two-factor.js disable-policy
 ```
 
-- `reset` supprime le secret TOTP du compte, ses codes de secours et ses connexions en attente, et ferme toutes ses sessions. **Le mot de passe ne change pas.** Si la 2FA est toujours obligatoire, l'utilisateur se connecte avec son mot de passe et doit reconfigurer la 2FA avant d'accéder à l'application.
+- `reset` supprime le secret TOTP du compte, ses codes de secours et ses connexions en attente, lève un éventuel blocage 2FA et ferme toutes ses sessions. **Le mot de passe ne change pas.** Si la 2FA est toujours obligatoire, l'utilisateur se connecte avec son mot de passe et doit reconfigurer la 2FA avant d'accéder à l'application.
 - `-u node` lance la commande avec l'utilisateur de l'application. Avec SQLite, c'est obligatoire (la commande refuse de tourner en root), pour que les fichiers de la base gardent le bon propriétaire.
 - Sans terminal interactif (script, `docker exec` sans `-it`), ajoutez `--yes` pour confirmer.
 - Fonctionne avec SQLite et MariaDB : la commande se connecte à la même base que l'application (`DATABASE_URL` ou variables `DB_*`). Remplacez `filyo` par le nom de votre conteneur s'il est différent.
+- Si plusieurs comptes correspondent à l'e-mail avec une casse différente, la commande ne modifie rien et les liste : relancez-la avec l'e-mail exact.
 - `node dist/cli/two-factor.js --help` affiche toutes les options.
 
 ---

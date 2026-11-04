@@ -9,6 +9,7 @@
  * Ne lit ni n'affiche aucun secret. La réinitialisation est identique à celle de la page Utilisateurs.
  */
 import { createInterface } from 'node:readline/promises'
+import { resolveDatabaseUrl } from '../lib/databaseUrl.js'
 
 const USAGE = `Filyo — two-factor authentication recovery
 
@@ -18,7 +19,8 @@ Usage:
 
   node dist/cli/two-factor.js reset <email> [--yes]
       Disable 2FA for this account: deletes its TOTP secret, recovery codes and
-      pending logins, and signs out all its sessions. The password is unchanged.
+      pending logins, lifts a lockout after too many invalid codes, and signs out
+      all its sessions. The password is unchanged.
       If 2FA is mandatory, the user will have to set it up again after logging in.
 
   node dist/cli/two-factor.js disable-policy [--yes]
@@ -51,16 +53,6 @@ function parseArgs(argv: string[]): Args {
 }
 
 class UsageError extends Error {}
-
-/** Même logique que entrypoint.sh, pour viser la même base que l'application. */
-function resolveDatabaseUrl(): string {
-  if (process.env.DATABASE_URL) return process.env.DATABASE_URL
-  const { DB_HOST, DB_USER, DB_PASSWORD, DB_PORT, DB_NAME } = process.env
-  if (DB_HOST) {
-    return `mysql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT || '3306'}/${DB_NAME}?connection_limit=10&connect_timeout=10&pool_timeout=20&socket_timeout=60`
-  }
-  return 'file:/data/filyo.db'
-}
 
 async function confirm(question: string, yes: boolean): Promise<boolean> {
   if (yes) return true
@@ -116,7 +108,7 @@ async function main(): Promise<number> {
       const [users, settings] = await Promise.all([
         prisma.user.findMany({
           orderBy: [{ role: 'asc' }, { email: 'asc' }],
-          select: { email: true, name: true, role: true, active: true, twoFactorEnabled: true }
+          select: { email: true, name: true, role: true, active: true, twoFactorEnabled: true, twoFactorLockedUntil: true }
         }),
         prisma.appSettings.findUnique({ where: { id: 'singleton' }, select: { twoFactorRequired: true } })
       ])
@@ -124,7 +116,10 @@ async function main(): Promise<number> {
       if (!users.length) { console.log('No accounts.'); return 0 }
       console.table(users.map(u => ({
         email: u.email, name: u.name, role: u.role,
-        active: u.active ? 'yes' : 'no', '2FA': u.twoFactorEnabled ? 'enabled' : 'disabled'
+        active: u.active ? 'yes' : 'no',
+        '2FA': !u.twoFactorEnabled ? 'disabled'
+          : u.twoFactorLockedUntil && u.twoFactorLockedUntil > new Date()
+            ? `enabled, locked until ${u.twoFactorLockedUntil.toISOString()}` : 'enabled'
       })))
       return 0
     }
@@ -138,6 +133,12 @@ async function main(): Promise<number> {
         // SQLite compare les e-mails en respectant la casse : on tolère une différence de majuscules.
         const all = await prisma.user.findMany({ select: { id: true, email: true, role: true, twoFactorEnabled: true } })
         const matches = all.filter(u => u.email.toLowerCase() === email.toLowerCase())
+        if (matches.length > 1) {
+          console.error(`Several accounts match "${email}" when ignoring case:\n` +
+            matches.map(u => `  - ${u.email}`).join('\n') +
+            '\nRun the command again with the exact email.')
+          return 1
+        }
         if (matches.length === 1) user = matches[0]
       }
       if (!user) {
