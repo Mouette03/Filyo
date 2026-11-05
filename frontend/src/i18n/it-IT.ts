@@ -350,6 +350,8 @@ export const itIT = {
   'users.lastLogin': 'Ultimo accesso {{date}}',
   'users.createdAt': 'Creato {{date}}',
   'users.quotaLabel': 'Quota di archiviazione',
+  'users.quotaUnit': 'Unità della quota di archiviazione',
+  'users.accountStatus': 'Stato dell’account',
   'users.quotaPlaceholder': 'Illimitato',
   'users.quotaUnlimited': 'Illimitato',
   'users.quotaUsed': '{{used}} / {{quota}} usati',

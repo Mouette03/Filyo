@@ -350,6 +350,8 @@ export const deDE = {
   'users.lastLogin': 'Letzte Anmeldung {{date}}',
   'users.createdAt': 'Erstellt {{date}}',
   'users.quotaLabel': 'Speicherkontingent',
+  'users.quotaUnit': 'Einheit des Speicherkontingents',
+  'users.accountStatus': 'Kontostatus',
   'users.quotaPlaceholder': 'Unbegrenzt',
   'users.quotaUnlimited': 'Unbegrenzt',
   'users.quotaUsed': '{{used}} / {{quota}} genutzt',

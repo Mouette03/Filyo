@@ -334,51 +334,61 @@ export default function UsersPage() {
               {users.map(u => (
                 <div key={u.id} className="card">
                   {editId === u.id ? (
-                    <div className="space-y-3">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div>
-                          <label className="text-xs text-white/50 mb-1.5 block">{t('users.nameLabel')}</label>
-                          <input value={editName} onChange={e => setEditName(e.target.value)} className="input text-sm py-2" />
+                    <div className="space-y-5">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="min-w-0">
+                          <label htmlFor={`edit-name-${u.id}`} className="text-xs text-white/60 mb-1.5 block">{t('users.nameLabel')}</label>
+                          <input id={`edit-name-${u.id}`} value={editName} onChange={e => setEditName(e.target.value)} className="input text-sm min-h-11" />
                         </div>
-                        <div>
-                          <label className="text-xs text-white/50 mb-1.5 block">{t('users.emailLabel')}</label>
-                          <input type="email" value={editEmail} onChange={e => setEditEmail(e.target.value)} className="input text-sm py-2" />
+                        <div className="min-w-0">
+                          <label htmlFor={`edit-email-${u.id}`} className="text-xs text-white/60 mb-1.5 block">{t('users.emailLabel')}</label>
+                          <input id={`edit-email-${u.id}`} type="email" value={editEmail} onChange={e => setEditEmail(e.target.value)} className="input text-sm min-h-11" />
                         </div>
-                        <div>
-                          <label className="text-xs text-white/50 mb-1.5 block">{t('users.roleLabel')}</label>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="min-w-0">
+                          <label htmlFor={`edit-role-${u.id}`} className="text-xs text-white/60 mb-1.5 block">{t('users.roleLabel')}</label>
                           <select
+                            id={`edit-role-${u.id}`}
                             value={editRole}
                             onChange={e => setEditRole(e.target.value)}
                             disabled={editId === me?.id}
-                            className={`input bg-surface-700 text-sm py-2 ${editId === me?.id ? 'opacity-40 cursor-not-allowed' : ''}`}
+                            className={`input bg-surface-700 text-sm min-h-11 ${editId === me?.id ? 'opacity-40 cursor-not-allowed' : ''}`}
                           >
                             <option value="USER">{t('role.user')}</option>
                             <option value="ADMIN">{t('role.admin')}</option>
                           </select>
                         </div>
-                        <div className="flex items-end gap-3">
-                          <label className={`flex items-center gap-2 pb-2 ${editId === me?.id ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}>
-                            <div
-                              onClick={() => editId !== me?.id && setEditActive(!editActive)}
-                              className={`w-10 h-5 rounded-full transition-colors relative ${editActive ? 'bg-brand-500' : 'bg-white/20'} ${editId === me?.id ? 'pointer-events-none' : ''}`}>
-                              <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${editActive ? 'translate-x-5' : 'translate-x-0.5'}`} />
-                            </div>
-                            <span className="text-sm text-white/60">{editActive ? t('common.active') : t('common.inactive')}</span>
-                          </label>
-                        </div>
-                        <div>
-                          <label className="text-xs text-white/50 mb-1.5 block">{t('users.quotaLabel')}</label>
+                        <div className="min-w-0">
+                          <label htmlFor={`edit-quota-${u.id}`} className="text-xs text-white/60 mb-1.5 block">{t('users.quotaLabel')}</label>
                           <div className="flex gap-2">
-                            <input type="number" min="0.01" step="0.01" value={editQuotaMB} onChange={e => setEditQuotaMB(e.target.value)} placeholder={t('users.quotaPlaceholder')} className="input text-sm py-2 flex-1 min-w-0" />
-                            <select value={editQuotaUnit} onChange={e => setEditQuotaUnit(e.target.value as 'MB' | 'GB')} className="input bg-surface-700 text-sm py-2 w-20 flex-shrink-0">
+                            <input id={`edit-quota-${u.id}`} type="number" min="0.01" step="0.01" value={editQuotaMB} onChange={e => setEditQuotaMB(e.target.value)} placeholder={t('users.quotaPlaceholder')} className="input text-sm min-h-11 flex-1 min-w-0" />
+                            <select aria-label={t('users.quotaUnit')} value={editQuotaUnit} onChange={e => setEditQuotaUnit(e.target.value as 'MB' | 'GB')} className="input bg-surface-700 text-sm min-h-11 w-20 flex-shrink-0">
                               <option value="MB">MB</option>
                               <option value="GB">GB</option>
                             </select>
                           </div>
                         </div>
+                        <div className="min-w-0 sm:col-span-2 lg:col-span-1">
+                          <p id={`edit-status-${u.id}`} className="text-xs text-white/60 mb-1.5">{t('users.accountStatus')}</p>
+                          <button
+                            type="button"
+                            role="switch"
+                            aria-checked={editActive}
+                            aria-labelledby={`edit-status-${u.id}`}
+                            disabled={editId === me?.id}
+                            onClick={() => setEditActive(!editActive)}
+                            className="flex items-center gap-3 min-h-11 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-800 disabled:opacity-40 disabled:cursor-not-allowed"
+                          >
+                            <span aria-hidden="true" className={`w-10 h-5 rounded-full transition-colors relative flex-shrink-0 ${editActive ? 'bg-brand-500' : 'bg-white/20'}`}>
+                              <span className={`absolute top-0.5 left-0 w-4 h-4 bg-white rounded-full shadow transition-transform ${editActive ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                            </span>
+                            <span className="text-sm text-white/70">{editActive ? t('common.active') : t('common.inactive')}</span>
+                          </button>
+                        </div>
                       </div>
                       {/* Double authentification : état + réinitialisation (téléphone et codes de secours perdus) */}
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-3 py-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-4 border-t border-white/10 pt-5">
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium flex flex-wrap items-center gap-2">
                             {t('users.twoFactorLabel')}
@@ -386,7 +396,7 @@ export default function UsersPage() {
                               {u.twoFactorEnabled ? t('twofa.statusEnabled') : t('twofa.statusDisabled')}
                             </span>
                           </p>
-                          <p className="text-xs text-white/40 mt-0.5">
+                          <p className="text-xs text-white/60 mt-1 leading-relaxed">
                             {u.id === me?.id ? t('users.twoFactorSelfHint') : u.twoFactorEnabled ? t('users.resetTwoFactorHint') : t('users.twoFactorNotEnabledHint')}
                           </p>
                         </div>
@@ -394,17 +404,17 @@ export default function UsersPage() {
                           <button
                             type="button"
                             onClick={() => setConfirmDialog({ title: t('confirm.resetTwoFactor'), message: t('confirm.resetTwoFactorMsg'), onConfirm: () => handleResetTwoFactor(u.id) })}
-                            className="btn-danger flex items-center justify-center gap-1.5 text-xs px-3 py-2 flex-shrink-0"
+                            className="btn-danger flex items-center justify-center gap-1.5 text-sm px-4 min-h-11 flex-shrink-0 w-full sm:w-auto"
                           >
                             <ShieldOff size={12} /> {t('users.resetTwoFactor')}
                           </button>
                         )}
                       </div>
-                      <div className="flex gap-2">
-                        <button onClick={() => saveEdit(u.id)} className="btn-primary flex items-center gap-1.5 py-2 px-4 text-sm">
+                      <div className="flex flex-wrap sm:justify-end gap-3 border-t border-white/10 pt-4">
+                        <button onClick={() => saveEdit(u.id)} className="btn-primary flex items-center justify-center gap-1.5 min-h-11 px-4 text-sm flex-1 sm:flex-none">
                           <Check size={13} /> {t('common.save')}
                         </button>
-                        <button onClick={() => setEditId(null)} className="btn-secondary flex items-center gap-1.5 py-2 px-4 text-sm">
+                        <button onClick={() => setEditId(null)} className="btn-secondary flex items-center justify-center gap-1.5 min-h-11 px-4 text-sm flex-1 sm:flex-none">
                           <X size={13} /> {t('common.cancel')}
                         </button>
                       </div>

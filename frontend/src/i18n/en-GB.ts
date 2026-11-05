@@ -350,6 +350,8 @@ export const enGB = {
   'users.lastLogin': 'Last login {{date}}',
   'users.createdAt': 'Created {{date}}',
   'users.quotaLabel': 'Storage quota',
+  'users.quotaUnit': 'Storage quota unit',
+  'users.accountStatus': 'Account status',
   'users.quotaPlaceholder': 'Unlimited',
   'users.quotaUnlimited': 'Unlimited',
   'users.quotaUsed': '{{used}} / {{quota}} used',

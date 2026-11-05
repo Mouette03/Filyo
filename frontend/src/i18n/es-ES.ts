@@ -350,6 +350,8 @@ export const esES = {
   'users.lastLogin': 'Último acceso {{date}}',
   'users.createdAt': 'Creado {{date}}',
   'users.quotaLabel': 'Límite de almacenamiento',
+  'users.quotaUnit': 'Unidad del límite de almacenamiento',
+  'users.accountStatus': 'Estado de la cuenta',
   'users.quotaPlaceholder': 'Ilimitado',
   'users.quotaUnlimited': 'Ilimitado',
   'users.quotaUsed': '{{used}} / {{quota}} usados',

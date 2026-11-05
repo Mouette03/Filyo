@@ -350,6 +350,8 @@ export const frFR = {
   'users.lastLogin': 'Dernière connexion {{date}}',
   'users.createdAt': 'Créé {{date}}',
   'users.quotaLabel': 'Quota de stockage',
+  'users.quotaUnit': 'Unité du quota de stockage',
+  'users.accountStatus': 'État du compte',
   'users.quotaPlaceholder': 'Illimité',
   'users.quotaUnlimited': 'Illimité',
   'users.quotaUsed': '{{used}} / {{quota}} utilisé',
