@@ -67,7 +67,12 @@ test('Two-factor authentication end-to-end', { timeout: 120_000 }, async () => {
       const text = await res.text()
       return { status: res.status, data: text ? JSON.parse(text) : null, cookie: tokenCookie(res) }
     }
-    const nextCode = (secret) => tf.hotp(secret, tf.currentStep() + 1) // période suivante : jamais encore utilisée
+    const unusedCurrentCode = async (secret) => {
+      const user = await db.user.findUnique({ where: { email: 'admin@example.com' } })
+      const nextPeriod = (user.twoFactorLastUsedStep + 1) * tf.TOTP_PERIOD_SECONDS * 1000
+      if (nextPeriod > Date.now()) await new Promise(resolve => setTimeout(resolve, nextPeriod - Date.now() + 100))
+      return tf.totp(secret)
+    }
 
     // ── Premier admin, connexion sans 2FA (parcours inchangé) ──
     assert.equal((await call('POST', '/auth/register', { body: { email: 'admin@example.com', name: 'Admin', password: 'admin-password' } })).status, 201)
@@ -142,12 +147,12 @@ test('Two-factor authentication end-to-end', { timeout: 120_000 }, async () => {
     assert.equal(r.data.recoveryCodesRemaining, 9)
     assert.ok(r.cookie)
     admin = r.cookie
-    assert.equal((await call('POST', '/auth/2fa/verify', { body: { challengeToken, code: nextCode(adminSecret) } })).data.code, 'TWO_FACTOR_CHALLENGE_EXPIRED', 'challenge single use')
+    assert.equal((await call('POST', '/auth/2fa/verify', { body: { challengeToken, code: tf.totp(adminSecret) } })).data.code, 'TWO_FACTOR_CHALLENGE_EXPIRED', 'challenge single use')
 
     r = await call('POST', '/auth/login', { body: { email: 'admin@example.com', password: 'admin-password' } }) // login 4
     challengeToken = r.data.challengeToken
     assert.equal((await call('POST', '/auth/2fa/verify', { body: { challengeToken, code: recoveryCodes[0] } })).data.code, 'INVALID_TWO_FACTOR_CODE', 'recovery code single use')
-    const totpCode = nextCode(adminSecret)
+    const totpCode = await unusedCurrentCode(adminSecret)
     r = await call('POST', '/auth/2fa/verify', { body: { challengeToken, code: totpCode } })
     assert.equal(r.status, 200)
     assert.equal(r.data.method, 'totp')

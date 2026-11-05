@@ -71,6 +71,12 @@ test('Two-factor account lockout', { timeout: 120_000 }, async () => {
     }
     const creds = { email: 'admin@example.com', password: 'admin-password' }
     const account = () => db.user.findUnique({ where: { email: creds.email } })
+    const unusedCurrentCode = async (secret) => {
+      const user = await account()
+      const nextPeriod = (user.twoFactorLastUsedStep + 1) * tf.TOTP_PERIOD_SECONDS * 1000
+      if (nextPeriod > Date.now()) await new Promise(resolve => setTimeout(resolve, nextPeriod - Date.now() + 100))
+      return tf.totp(secret)
+    }
     const login = (ip) => call('POST', '/auth/login', { ip, body: creds })
     const verify = (ip, challengeToken, code) => call('POST', '/auth/2fa/verify', { ip, body: { challengeToken, code } })
 
@@ -87,7 +93,7 @@ test('Two-factor account lockout', { timeout: 120_000 }, async () => {
     assert.equal(r.data.requiresTwoFactor, true)
     assert.equal((await verify('198.51.100.2', r.data.challengeToken, '000000')).status, 401)
     assert.equal((await account()).twoFactorFailedAttempts, 1)
-    r = await verify('198.51.100.2', r.data.challengeToken, tf.hotp(secret, tf.currentStep() + 1))
+    r = await verify('198.51.100.2', r.data.challengeToken, await unusedCurrentCode(secret))
     assert.equal(r.status, 200)
     assert.equal((await account()).twoFactorFailedAttempts, 0, 'success resets the account counter')
 
@@ -142,7 +148,7 @@ test('Two-factor account lockout', { timeout: 120_000 }, async () => {
     await db.user.update({ where: { email: creds.email }, data: { twoFactorLockedUntil: new Date(Date.now() - 1000), twoFactorFailedAttempts: 0 } })
     r = await login('192.0.2.3')
     assert.equal(r.data.requiresTwoFactor, true, 'expired lock no longer blocks login')
-    r = await verify('192.0.2.3', r.data.challengeToken, tf.hotp(secret2, tf.currentStep() + 1))
+    r = await verify('192.0.2.3', r.data.challengeToken, await unusedCurrentCode(secret2))
     assert.equal(r.status, 200)
     assert.equal((await account()).twoFactorLockedUntil, null, 'success clears an expired lock')
   } finally {

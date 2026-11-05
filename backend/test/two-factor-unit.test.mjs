@@ -32,17 +32,27 @@ test('HOTP/TOTP match the RFC 6238 test vectors', () => {
   }
 })
 
-test('verifyTotp accepts ±1 period and rejects replays', () => {
+test('verifyTotp accepts only the current period and rejects replays', () => {
   const now = 1_700_000_000_000
   const step = tf.currentStep(now)
-  const secret = tf.generateTotpSecret()
+  const secret = RFC_SECRET
   assert.equal(tf.verifyTotp(secret, tf.hotp(secret, step), null, now), step)
-  assert.equal(tf.verifyTotp(secret, tf.hotp(secret, step - 1), null, now), step - 1)
-  assert.equal(tf.verifyTotp(secret, tf.hotp(secret, step + 1), null, now), step + 1)
+  assert.equal(tf.verifyTotp(secret, tf.hotp(secret, step - 1), null, now), null)
+  assert.equal(tf.verifyTotp(secret, tf.hotp(secret, step + 1), null, now), null)
   assert.equal(tf.verifyTotp(secret, tf.hotp(secret, step - 2), null, now), null)
   assert.equal(tf.verifyTotp(secret, tf.hotp(secret, step), step, now), null, 'replay refused')
   assert.equal(tf.verifyTotp(secret, '12 34 5', null, now), null)
   assert.equal(tf.verifyTotp(secret, 'abcdef', null, now), null)
+})
+
+test('a TOTP expires exactly at the next server period boundary', () => {
+  const boundary = 1_700_000_010_000
+  const step = tf.currentStep(boundary - 1)
+  const code = tf.hotp(RFC_SECRET, step)
+  assert.equal(tf.verifyTotp(RFC_SECRET, code, null, boundary - 1), step)
+  assert.equal(tf.verifyTotp(RFC_SECRET, code, null, boundary), null)
+  assert.equal(tf.verifyTotp(RFC_SECRET, tf.hotp(RFC_SECRET, step + 1), null, boundary - 1), null)
+  assert.equal(tf.verifyTotp(RFC_SECRET, tf.hotp(RFC_SECRET, step + 1), null, boundary), step + 1)
 })
 
 test('Recovery codes: format, normalisation and hashing', () => {
