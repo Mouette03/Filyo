@@ -378,7 +378,7 @@ export default function UsersPage() {
                         </div>
                       </div>
                       {/* Double authentification : état + réinitialisation (téléphone et codes de secours perdus) */}
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-3 py-3 px-4 bg-white/3 rounded-xl">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-3 py-3">
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium flex flex-wrap items-center gap-2">
                             {t('users.twoFactorLabel')}
