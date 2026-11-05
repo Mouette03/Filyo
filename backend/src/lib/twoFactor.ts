@@ -13,8 +13,8 @@ import { encrypt, decrypt } from './crypto.js'
 
 export const TOTP_PERIOD_SECONDS = 30
 export const TOTP_DIGITS = 6
-/** Tolérance de décalage d'horloge : ±1 période (±30 s) */
-export const TOTP_WINDOW = 1
+/** Vérification stricte : seule la période courante est acceptée, sans tolérance d'horloge. */
+export const TOTP_WINDOW = 0
 export const RECOVERY_CODE_COUNT = 10
 /** Durée de vie d'un challenge de connexion (mot de passe validé, code attendu) */
 export const CHALLENGE_TTL_MS = 5 * 60 * 1000
