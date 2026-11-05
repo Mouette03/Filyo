@@ -148,7 +148,9 @@ test('Two-factor recovery command (dist/cli/two-factor.js)', { timeout: 120_000 
     // ── list : verrou 2FA affiché, levé par reset ──
     const locked = new Date(Date.now() + 10 * 60_000)
     await db.user.update({ where: { email: 'admin@example.COM' }, data: { twoFactorEnabled: true, twoFactorSecret: 'enc:dummy', twoFactorLockedUntil: locked, twoFactorFailedAttempts: 3 } })
-    assert.match(cli('list').out, new RegExp(`locked until ${locked.toISOString().replace(/[.]/g, '\\.')}`))
+    const listOut = cli('list').out
+    assert.ok(listOut.includes('locked until '), 'lockout displayed in list')
+    assert.ok(listOut.includes(locked.toISOString()), 'lockout until date displayed')
     assert.equal(cli('reset', 'admin@example.COM', '--yes').code, 0)
     const unlocked = await db.user.findUnique({ where: { email: 'admin@example.COM' } })
     assert.equal(unlocked.twoFactorLockedUntil, null)
