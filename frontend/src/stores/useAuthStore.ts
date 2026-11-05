@@ -7,6 +7,9 @@ interface AuthUser {
   role: 'ADMIN' | 'USER'
   avatarUrl?: string | null
   cleanupAfterDays?: number | null
+  twoFactorEnabled?: boolean
+  /** 2FA obligatoire mais pas encore configurée : accès limité à /setup-2fa */
+  twoFactorSetupRequired?: boolean
 }
 
 interface AuthStore {
@@ -18,6 +21,7 @@ interface AuthStore {
   updateAvatar: (avatarUrl: string | null) => void
   updateName: (name: string) => void
   updateCleanupPref: (cleanupAfterDays: number | null) => void
+  setTwoFactorState: (state: { twoFactorEnabled: boolean; twoFactorSetupRequired?: boolean }) => void
 }
 
 export const useAuthStore = create<AuthStore>()((set, get) => ({
@@ -37,5 +41,9 @@ export const useAuthStore = create<AuthStore>()((set, get) => ({
   updateCleanupPref: (cleanupAfterDays) => {
     const u = get().user
     if (u) set({ user: { ...u, cleanupAfterDays } })
+  },
+  setTwoFactorState: ({ twoFactorEnabled, twoFactorSetupRequired = false }) => {
+    const u = get().user
+    if (u) set({ user: { ...u, twoFactorEnabled, twoFactorSetupRequired } })
   }
 }))

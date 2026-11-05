@@ -27,6 +27,10 @@ api.interceptors.response.use(
       useAuthStore.getState().logout()
       window.location.href = '/login'
     }
+    // 2FA obligatoire mais pas encore configurée : renvoyer vers la page de configuration
+    if (err.response?.status === 403 && code === 'TWO_FACTOR_SETUP_REQUIRED' && window.location.pathname !== '/setup-2fa') {
+      window.location.href = '/setup-2fa'
+    }
     return Promise.reject(err)
   }
 )
@@ -36,8 +40,37 @@ export const logoutApi = () => api.post('/auth/logout')
 export const checkSetup = () => api.get('/auth/setup')
 export const getMe = () => api.get('/auth/me')
 
+export interface LoginUser {
+  id: string
+  email: string
+  name: string
+  role: 'ADMIN' | 'USER'
+  avatarUrl?: string | null
+  twoFactorEnabled?: boolean
+  twoFactorSetupRequired?: boolean
+}
+
+/** Réponse de /auth/login : session ouverte, ou second facteur attendu */
+export type LoginResponse =
+  | { requiresTwoFactor: true; challengeToken: string; user?: undefined }
+  | { requiresTwoFactor?: false; user: LoginUser }
+
 export const login = (email: string, password: string) =>
-  api.post('/auth/login', { email, password })
+  api.post<LoginResponse>('/auth/login', { email, password })
+
+// ---- Double authentification (2FA) ----
+export const verifyTwoFactorLogin = (challengeToken: string, code: string) =>
+  api.post<{ user: LoginUser; method: 'totp' | 'recovery'; recoveryCodesRemaining: number }>('/auth/2fa/verify', { challengeToken, code })
+export const getTwoFactorStatus = () =>
+  api.get<{ enabled: boolean; enabledAt: string | null; required: boolean; recoveryCodesRemaining: number }>('/auth/2fa/status')
+export const startTwoFactorSetup = (password: string) =>
+  api.post<{ secret: string; otpauthUrl: string; qrSvg: string; expiresInSeconds: number }>('/auth/2fa/setup', { password })
+export const enableTwoFactor = (code: string) =>
+  api.post<{ recoveryCodes: string[]; user: LoginUser }>('/auth/2fa/enable', { code })
+export const disableTwoFactor = (password: string, code: string) =>
+  api.post('/auth/2fa/disable', { password, code })
+export const regenerateRecoveryCodes = (password: string, code: string) =>
+  api.post<{ recoveryCodes: string[] }>('/auth/2fa/recovery-codes/regenerate', { password, code })
 
 export const registerUser = (data: { email: string; name: string; password: string; role?: string }) =>
   api.post('/auth/register', data)
@@ -57,6 +90,7 @@ export const createUser = (data: { email: string; name: string; password: string
 export const updateUser = (id: string, data: Partial<{ name: string; email: string; role: string; active: boolean; password: string; storageQuotaMB: number | null }>) =>
   api.patch(`/users/${id}`, data)
 export const deleteUser = (id: string) => api.delete(`/users/${id}`)
+export const resetUserTwoFactor = (id: string) => api.post(`/users/${id}/2fa/reset`)
 
 // ---- Réglages ----
 export const getSettings = () => api.get('/settings')
@@ -130,6 +164,9 @@ export const updateUploaderFields = (data: {
 
 export const updateAllowRegistration = (allowRegistration: boolean) =>
   api.patch('/settings/registration', { allowRegistration })
+
+export const updateTwoFactorPolicy = (required: boolean) =>
+  api.patch<{ twoFactorRequired: boolean }>('/settings/two-factor', { required })
 
 export const updateCleanupSetting = (cleanupAfterDays: number | null) =>
   api.patch('/settings/cleanup', { cleanupAfterDays })

@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import { uploadAvatar, deleteAvatar, changePassword, updateProfile, updateCleanupPreference, getSettings } from '../api/client'
 import { useAuthStore } from '../stores/useAuthStore'
 import { useT } from '../i18n'
+import TwoFactorProfileSection from '../components/TwoFactorProfileSection'
 
 /**
  * Render the user profile UI with controls to view and update avatar, display name, password, and automatic cleanup preference.
@@ -264,6 +265,9 @@ export default function ProfilePage() {
           </button>
         </div>
       </div>
+
+      {/* Section Sécurité : double authentification */}
+      <TwoFactorProfileSection />
 
       {/* Section Langue */}
       <div className="card mb-5">

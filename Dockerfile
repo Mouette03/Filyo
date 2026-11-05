@@ -35,9 +35,11 @@ RUN if [ "$DB_PROVIDER" = "mariadb" ]; then \
 RUN npm run build
 
 # ── Stage 3 : Image de production ───────────────────────────────
-FROM node:24-slim AS runner
+# Debian 13 (Trixie) + correctifs de sécurité Debian appliqués à chaque build
+FROM node:24-trixie-slim AS runner
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get upgrade -y \
+    && apt-get install -y --no-install-recommends \
         dumb-init openssl gosu wget \
     && rm -rf /var/lib/apt/lists/*
 

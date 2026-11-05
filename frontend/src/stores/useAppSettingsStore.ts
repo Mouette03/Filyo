@@ -6,6 +6,7 @@ interface AppSettings {
   appName: string
   logoUrl: string | null
   allowRegistration: boolean
+  twoFactorRequired: boolean
   siteUrl: string
   uploaderNameReq: FieldReq
   uploaderEmailReq: FieldReq
@@ -29,6 +30,7 @@ export const useAppSettingsStore = create<AppSettingsStore>()(
         appName: 'Filyo',
         logoUrl: null,
         allowRegistration: false,
+        twoFactorRequired: false,
         siteUrl: '',
         uploaderNameReq: 'optional',
         uploaderEmailReq: 'optional',

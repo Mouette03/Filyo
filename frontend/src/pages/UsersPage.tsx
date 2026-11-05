@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Users, Plus, Trash2, Pencil, Check, X, ShieldCheck, User, Files, FolderInput, ChevronDown } from 'lucide-react'
+import { Users, Plus, Trash2, Pencil, Check, X, ShieldCheck, ShieldOff, User, Files, FolderInput, ChevronDown, Lock } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { listUsers, createUser, updateUser, deleteUser, getAllFilesAdmin, getAllUploadRequestsAdmin, deleteFile, deleteUploadRequest } from '../api/client'
+import { listUsers, createUser, updateUser, deleteUser, resetUserTwoFactor, getAllFilesAdmin, getAllUploadRequestsAdmin, deleteFile, deleteUploadRequest } from '../api/client'
 import { formatDate, formatBytes, getFileIcon } from '../lib/utils'
 import { useAuthStore } from '../stores/useAuthStore'
 import { useT } from '../i18n'
@@ -11,6 +11,7 @@ interface UserItem {
   id: string; name: string; email: string; role: string
   active: boolean; createdAt: string; lastLogin: string | null
   storageQuotaBytes: string | null; storageUsedBytes: string
+  twoFactorEnabled?: boolean
 }
 
 interface AdminFile {
@@ -159,6 +160,18 @@ export default function UsersPage() {
       await deleteUser(id)
       setUsers(prev => prev.filter(u => u.id !== id))
       toast.success(t('toast.userDeleted'))
+    } catch (err: any) {
+      const code = err.response?.data?.code
+      if (code === 'USER_NOT_FOUND') toast.error(t('error.userNotFound'))
+      else toast.error(t('common.error'))
+    }
+  }
+
+  const handleResetTwoFactor = async (id: string) => {
+    try {
+      await resetUserTwoFactor(id)
+      setUsers(prev => prev.map(u => u.id === id ? { ...u, twoFactorEnabled: false } : u))
+      toast.success(t('toast.twoFactorReset'))
     } catch (err: any) {
       const code = err.response?.data?.code
       if (code === 'USER_NOT_FOUND') toast.error(t('error.userNotFound'))
@@ -321,105 +334,158 @@ export default function UsersPage() {
               {users.map(u => (
                 <div key={u.id} className="card">
                   {editId === u.id ? (
-                    <div className="space-y-3">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div>
-                          <label className="text-xs text-white/50 mb-1.5 block">{t('users.nameLabel')}</label>
-                          <input value={editName} onChange={e => setEditName(e.target.value)} className="input text-sm py-2" />
+                    <div className="space-y-5">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="min-w-0">
+                          <label htmlFor={`edit-name-${u.id}`} className="text-xs text-white/60 mb-1.5 block">{t('users.nameLabel')}</label>
+                          <input id={`edit-name-${u.id}`} value={editName} onChange={e => setEditName(e.target.value)} className="input text-sm min-h-11" />
                         </div>
-                        <div>
-                          <label className="text-xs text-white/50 mb-1.5 block">{t('users.emailLabel')}</label>
-                          <input type="email" value={editEmail} onChange={e => setEditEmail(e.target.value)} className="input text-sm py-2" />
+                        <div className="min-w-0">
+                          <label htmlFor={`edit-email-${u.id}`} className="text-xs text-white/60 mb-1.5 block">{t('users.emailLabel')}</label>
+                          <input id={`edit-email-${u.id}`} type="email" value={editEmail} onChange={e => setEditEmail(e.target.value)} className="input text-sm min-h-11" />
                         </div>
-                        <div>
-                          <label className="text-xs text-white/50 mb-1.5 block">{t('users.roleLabel')}</label>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="min-w-0">
+                          <label htmlFor={`edit-role-${u.id}`} className="text-xs text-white/60 mb-1.5 block">{t('users.roleLabel')}</label>
                           <select
+                            id={`edit-role-${u.id}`}
                             value={editRole}
                             onChange={e => setEditRole(e.target.value)}
                             disabled={editId === me?.id}
-                            className={`input bg-surface-700 text-sm py-2 ${editId === me?.id ? 'opacity-40 cursor-not-allowed' : ''}`}
+                            className={`input bg-surface-700 text-sm min-h-11 ${editId === me?.id ? 'opacity-40 cursor-not-allowed' : ''}`}
                           >
                             <option value="USER">{t('role.user')}</option>
                             <option value="ADMIN">{t('role.admin')}</option>
                           </select>
                         </div>
-                        <div className="flex items-end gap-3">
-                          <label className={`flex items-center gap-2 pb-2 ${editId === me?.id ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}>
-                            <div
-                              onClick={() => editId !== me?.id && setEditActive(!editActive)}
-                              className={`w-10 h-5 rounded-full transition-colors relative ${editActive ? 'bg-brand-500' : 'bg-white/20'} ${editId === me?.id ? 'pointer-events-none' : ''}`}>
-                              <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${editActive ? 'translate-x-5' : 'translate-x-0.5'}`} />
-                            </div>
-                            <span className="text-sm text-white/60">{editActive ? t('common.active') : t('common.inactive')}</span>
-                          </label>
-                        </div>
-                        <div>
-                          <label className="text-xs text-white/50 mb-1.5 block">{t('users.quotaLabel')}</label>
+                        <div className="min-w-0">
+                          <label htmlFor={`edit-quota-${u.id}`} className="text-xs text-white/60 mb-1.5 block">{t('users.quotaLabel')}</label>
                           <div className="flex gap-2">
-                            <input type="number" min="0.01" step="0.01" value={editQuotaMB} onChange={e => setEditQuotaMB(e.target.value)} placeholder={t('users.quotaPlaceholder')} className="input text-sm py-2 flex-1 min-w-0" />
-                            <select value={editQuotaUnit} onChange={e => setEditQuotaUnit(e.target.value as 'MB' | 'GB')} className="input bg-surface-700 text-sm py-2 w-20 flex-shrink-0">
+                            <input id={`edit-quota-${u.id}`} type="number" min="0.01" step="0.01" value={editQuotaMB} onChange={e => setEditQuotaMB(e.target.value)} placeholder={t('users.quotaPlaceholder')} className="input text-sm min-h-11 flex-1 min-w-0" />
+                            <select aria-label={t('users.quotaUnit')} value={editQuotaUnit} onChange={e => setEditQuotaUnit(e.target.value as 'MB' | 'GB')} className="input bg-surface-700 text-sm min-h-11 w-20 flex-shrink-0">
                               <option value="MB">MB</option>
                               <option value="GB">GB</option>
                             </select>
                           </div>
                         </div>
+                        <div className="min-w-0 sm:col-span-2 lg:col-span-1">
+                          <p id={`edit-status-${u.id}`} className="text-xs text-white/60 mb-1.5">{t('users.accountStatus')}</p>
+                          <button
+                            type="button"
+                            role="switch"
+                            aria-checked={editActive}
+                            aria-labelledby={`edit-status-${u.id}`}
+                            disabled={editId === me?.id}
+                            onClick={() => setEditActive(!editActive)}
+                            className="flex items-center gap-3 min-h-11 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-800 disabled:opacity-40 disabled:cursor-not-allowed"
+                          >
+                            <span aria-hidden="true" className={`w-10 h-5 rounded-full transition-colors relative flex-shrink-0 ${editActive ? 'bg-brand-500' : 'bg-white/20'}`}>
+                              <span className={`absolute top-0.5 left-0 w-4 h-4 bg-white rounded-full shadow transition-transform ${editActive ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                            </span>
+                            <span className="text-sm text-white/70">{editActive ? t('common.active') : t('common.inactive')}</span>
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex gap-2">
-                        <button onClick={() => saveEdit(u.id)} className="btn-primary flex items-center gap-1.5 py-2 px-4 text-sm">
+                      {/* Double authentification : état + réinitialisation (téléphone et codes de secours perdus) */}
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-4 border-t border-white/10 pt-5">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium flex flex-wrap items-center gap-2">
+                            {t('users.twoFactorLabel')}
+                            <span className={`badge ${u.twoFactorEnabled ? 'badge-green' : 'badge-orange'}`}>
+                              {u.twoFactorEnabled ? t('twofa.statusEnabled') : t('twofa.statusDisabled')}
+                            </span>
+                          </p>
+                          <p className="text-xs text-white/60 mt-1 leading-relaxed">
+                            {u.id === me?.id ? t('users.twoFactorSelfHint') : u.twoFactorEnabled ? t('users.resetTwoFactorHint') : t('users.twoFactorNotEnabledHint')}
+                          </p>
+                        </div>
+                        {u.id !== me?.id && u.twoFactorEnabled && (
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDialog({ title: t('confirm.resetTwoFactor'), message: t('confirm.resetTwoFactorMsg'), onConfirm: () => handleResetTwoFactor(u.id) })}
+                            className="btn-danger flex items-center justify-center gap-1.5 text-sm px-4 min-h-11 flex-shrink-0 w-full sm:w-auto"
+                          >
+                            <ShieldOff size={12} /> {t('users.resetTwoFactor')}
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap sm:justify-end gap-3 border-t border-white/10 pt-4">
+                        <button onClick={() => saveEdit(u.id)} className="btn-primary flex items-center justify-center gap-1.5 min-h-11 px-4 text-sm flex-1 sm:flex-none">
                           <Check size={13} /> {t('common.save')}
                         </button>
-                        <button onClick={() => setEditId(null)} className="btn-secondary flex items-center gap-1.5 py-2 px-4 text-sm">
+                        <button onClick={() => setEditId(null)} className="btn-secondary flex items-center justify-center gap-1.5 min-h-11 px-4 text-sm flex-1 sm:flex-none">
                           <X size={13} /> {t('common.cancel')}
                         </button>
                       </div>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-xl bg-brand-500/15 flex items-center justify-center text-brand-400 font-bold flex-shrink-0">
-                        {u.name.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-semibold">{u.name}</span>
-                          <span className={`badge ${u.role === 'ADMIN' ? 'badge-blue' : 'badge-green'} flex items-center gap-1`}>
-                            {u.role === 'ADMIN' ? <ShieldCheck size={10} /> : <User size={10} />}
-                            {u.role === 'ADMIN' ? 'Admin' : t('role.user')}
-                          </span>
-                          {!u.active && <span className="badge badge-red">{t('common.inactive')}</span>}
-                          {u.id === me?.id && <span className="badge badge-orange">{t('common.you')}</span>}
+                    <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
+                      <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
+                        {/* Avatar aligné sur le nom */}
+                        <div className="w-10 h-10 rounded-xl bg-brand-500/15 flex items-center justify-center text-brand-400 font-bold flex-shrink-0">
+                          {u.name.charAt(0).toUpperCase()}
                         </div>
-                        <p className="text-xs text-white/40 mt-0.5">
-                          {u.email}
-                        </p>
-                        <p className="text-xs text-white/30 mt-0.5">
-                          {t('users.createdAt', { date: formatDate(u.createdAt) })}
-                          {u.lastLogin ? ` · ${t('users.lastLogin', { date: formatDate(u.lastLogin) })}` : ` · ${t('users.neverConnected')}`}
-                        </p>
-                        {(() => {
-                          const usedBytes = parseInt(u.storageUsedBytes || '0')
-                          const quotaBytes = u.storageQuotaBytes ? parseInt(u.storageQuotaBytes) : null
-                          if (quotaBytes === null || quotaBytes === 0) return (
-                            <p className="text-xs text-white/25 mt-0.5">{formatBytes(usedBytes)} · {t('users.quotaUnlimited')}</p>
-                          )
-                          const pct = Math.min(100, Math.round(usedBytes / quotaBytes * 100))
-                          return (
-                            <div className="mt-1.5 flex items-center gap-2">
-                              <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
-                                <div className={`h-full rounded-full transition-all ${pct >= 90 ? 'bg-red-500' : pct >= 70 ? 'bg-yellow-500' : 'bg-brand-500'}`} style={{ width: `${pct}%` }} />
+                        <div className="flex-1 min-w-0">
+                          {/* Nom puis e-mail, chacun sur sa ligne */}
+                          <p className="font-semibold truncate">{u.name}</p>
+                          <p className="text-xs text-white/40 truncate">{u.email}</p>
+                          {/* Badges toujours dans le même ordre : rôle · 2FA · inactif · vous */}
+                          <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                            <span className={`badge ${u.role === 'ADMIN' ? 'badge-blue' : 'badge-green'} flex items-center gap-1`}>
+                              {u.role === 'ADMIN' ? <ShieldCheck size={10} /> : <User size={10} />}
+                              {u.role === 'ADMIN' ? 'Admin' : t('role.user')}
+                            </span>
+                            {u.twoFactorEnabled && (
+                              <span className="badge badge-green flex items-center gap-1" title={t('twofa.statusEnabled')}>
+                                <Lock size={10} />{t('users.twoFactorBadge')}
+                              </span>
+                            )}
+                            {!u.active && <span className="badge badge-red">{t('common.inactive')}</span>}
+                            {u.id === me?.id && <span className="badge badge-orange">{t('common.you')}</span>}
+                          </div>
+                          {/* Dates sur deux lignes fixes */}
+                          <div className="mt-2 space-y-0.5 text-xs text-white/30">
+                            <p>{t('users.createdAt', { date: formatDate(u.createdAt) })}</p>
+                            <p>{u.lastLogin ? t('users.lastLogin', { date: formatDate(u.lastLogin) }) : t('users.neverConnected')}</p>
+                          </div>
+                          {(() => {
+                            const usedBytes = parseInt(u.storageUsedBytes || '0')
+                            const quotaBytes = u.storageQuotaBytes ? parseInt(u.storageQuotaBytes) : null
+                            if (quotaBytes === null || quotaBytes === 0) return (
+                              <p className="text-xs text-white/25 mt-1.5">{formatBytes(usedBytes)} · {t('users.quotaUnlimited')}</p>
+                            )
+                            const pct = Math.min(100, Math.round(usedBytes / quotaBytes * 100))
+                            return (
+                              <div className="mt-2 flex items-center gap-2">
+                                <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
+                                  <div className={`h-full rounded-full transition-all ${pct >= 90 ? 'bg-red-500' : pct >= 70 ? 'bg-yellow-500' : 'bg-brand-500'}`} style={{ width: `${pct}%` }} />
+                                </div>
+                                <span className="text-xs text-white/30 whitespace-nowrap">{t('users.quotaUsed', { used: formatBytes(usedBytes), quota: formatBytes(quotaBytes) })}</span>
                               </div>
-                              <span className="text-xs text-white/30 whitespace-nowrap">{t('users.quotaUsed', { used: formatBytes(usedBytes), quota: formatBytes(quotaBytes) })}</span>
-                            </div>
-                          )
-                        })()}
+                            )
+                          })()}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <button onClick={() => startEdit(u)} className="btn-secondary flex items-center gap-1.5 text-xs px-2.5 sm:px-3 py-2">
-                          <Pencil size={12} /><span className="hidden sm:inline">{t('common.edit')}</span>
+                      {/* Actions : barre en bas sur mobile, colonne fixe alignée en haut sur ordinateur.
+                          Toujours 2 emplacements (modifier, supprimer) pour garder les mêmes alignements. */}
+                      <div className="flex items-center justify-end gap-2 flex-shrink-0 border-t border-white/5 pt-3 sm:border-0 sm:pt-0">
+                        <button onClick={() => startEdit(u)} className="btn-secondary flex items-center gap-1.5 text-xs px-3 py-2">
+                          <Pencil size={12} /><span>{t('common.edit')}</span>
                         </button>
-                        {u.id !== me?.id && (
-                          <button onClick={() => setConfirmDialog({ title: t('confirm.deleteUser'), message: t('confirm.irreversible'), onConfirm: () => handleDelete(u.id) })} className="btn-danger flex items-center gap-1 text-xs px-2.5 py-2">
+                        {u.id !== me?.id ? (
+                          <button
+                            onClick={() => setConfirmDialog({ title: t('confirm.deleteUser'), message: t('confirm.irreversible'), onConfirm: () => handleDelete(u.id) })}
+                            className="btn-danger flex items-center gap-1 text-xs px-2.5 py-2"
+                            title={t('common.delete')}
+                            aria-label={t('common.delete')}
+                          >
                             <Trash2 size={12} />
                           </button>
+                        ) : (
+                          <span className="btn-danger invisible flex items-center gap-1 text-xs px-2.5 py-2" aria-hidden="true">
+                            <Trash2 size={12} />
+                          </span>
                         )}
                       </div>
                     </div>
